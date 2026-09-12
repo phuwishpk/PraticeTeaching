@@ -1,204 +1,76 @@
-import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
+import { createRoomState } from '../../shared/roomState';
 
 const RoomContext = createContext();
 
-// ---- Default State ----
-const DEFAULT_STATE = {
-  pin: '8492',
-  phase: 1, // 1: Lobby, 2: Senses, 3: Word Cloud, 4: Digital, 5: Analog, 6: Sensors
-  students: [],
-  senses: { eyes: false, ears: false, hands: false },
-  digitalValue: 0,
-  analogValue: 0,
-  digitalPresses: [],
-  analogValues: {},
-  wordSubmissions: [],
-  floatingEmojis: [],
-  quizVotes: {},
-  quizRevealed: false,
-  logicVotes: {},
-  architectureVotes: { esp32: {}, wifi: {}, cloud: {} },
-  currentVoteItem: 'esp32',
-  canvasImages: [],
-};
-
-const STORAGE_KEY = 'iot_room_state_v2';
-
-function loadState() {
-  try {
-    const s = localStorage.getItem(STORAGE_KEY);
-    return s ? { ...DEFAULT_STATE, ...JSON.parse(s) } : { ...DEFAULT_STATE };
-  } catch {
-    return { ...DEFAULT_STATE };
-  }
-}
-
 export function RoomProvider({ children }) {
-  const [roomState, setRoomStateLocal] = useState(loadState);
-  const broadcastRef = useRef(null);
+  const [roomState, setRoomState] = useState(createRoomState);
+  const [connected, setConnected] = useState(false);
+  const [error, setError] = useState('');
+  const [joinUrl, setJoinUrl] = useState(`${window.location.origin}/client`);
+  const version = useRef({ instance: null, revision: -1 });
+  const queue = useRef(Promise.resolve());
+  const acceptSnapshot = useCallback(snapshot => {
+    const current = version.current;
+    if (snapshot.instance !== current.instance || snapshot.revision >= current.revision) {
+      version.current = { instance: snapshot.instance, revision: snapshot.revision };
+      setRoomState(snapshot.state);
+    }
+  }, []);
 
   useEffect(() => {
-    // BroadcastChannel syncs across same-origin tabs better than storage events
-    try {
-      broadcastRef.current = new BroadcastChannel(STORAGE_KEY);
-      broadcastRef.current.onmessage = (e) => {
-        setRoomStateLocal(e.data);
-      };
-    } catch {
-      // Fallback to storage events (Safari)
-      const onStorage = (e) => {
-        if (e.key === STORAGE_KEY && e.newValue) {
-          try { setRoomStateLocal(JSON.parse(e.newValue)); } catch {}
-        }
-      };
-      window.addEventListener('storage', onStorage);
-      return () => window.removeEventListener('storage', onStorage);
-    }
-    return () => broadcastRef.current?.close();
-  }, []);
+    const stream = new EventSource('/api/room/events');
+    stream.onmessage = event => {
+      acceptSnapshot(JSON.parse(event.data));
+      setConnected(true);
+    };
+    stream.onerror = () => setConnected(false);
+    fetch('/api/room/info').then(response => response.json()).then(info => setJoinUrl(info.joinUrl)).catch(() => {});
+    return () => stream.close();
+  }, [acceptSnapshot]);
 
-  const setState = useCallback((updater) => {
-    setRoomStateLocal((prev) => {
-      const next = typeof updater === 'function' ? updater(prev) : { ...prev, ...updater };
-      // Save to localStorage for persistence and fallback sync
-      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); } catch {}
-      // Broadcast to other tabs via BroadcastChannel
-      try { broadcastRef.current?.postMessage(next); } catch {}
-      return next;
-    });
-  }, []);
-
-  // ── Actions ──────────────────────────────────────────────
-  const setPhase = useCallback((phase) => setState({ phase }), [setState]);
-
-  const joinRoom = useCallback((name) => {
-    setState((prev) => ({
-      ...prev,
-      students: [...prev.students, { id: Date.now(), name }],
-    }));
-  }, [setState]);
-
-  const sendFloatingEmoji = useCallback((emoji, name) => {
-    const id = Date.now() + Math.random();
-    setState((prev) => ({
-      ...prev,
-      floatingEmojis: [...prev.floatingEmojis, { id, emoji, name }],
-    }));
-    // Remove after 3 seconds
-    setTimeout(() => {
-      setState((prev) => ({
-        ...prev,
-        floatingEmojis: prev.floatingEmojis.filter((e) => e.id !== id),
-      }));
-    }, 3000);
-  }, [setState]);
-
-  const activateSense = useCallback((sense) => {
-    setState((prev) => ({
-      ...prev,
-      senses: { ...prev.senses, [sense]: true },
-    }));
-  }, [setState]);
-
-  const updateDigital = useCallback((val, name) => {
-    setState((prev) => {
-      let presses = prev.digitalPresses || [];
-      if (val) {
-        if (!presses.includes(name)) presses = [...presses, name];
-      } else {
-        presses = presses.filter(n => n !== name);
+  const dispatch = useCallback((type, payload = {}) => {
+    // Serializing a client's actions preserves slider and navigation order.
+    const request = queue.current.then(async () => {
+      try {
+        const response = await fetch('/api/room/actions', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type, payload }), signal: AbortSignal.timeout(8000),
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'ส่งคำสั่งไม่สำเร็จ');
+        acceptSnapshot(result);
+        setError('');
+        return true;
+      } catch (err) {
+        setError(err.name === 'TypeError' || err.name === 'TimeoutError' ? 'ส่งคำสั่งไม่สำเร็จ ตรวจสอบการเชื่อมต่อแล้วลองอีกครั้ง' : err.message);
+        return false;
       }
-      return { ...prev, digitalPresses: presses, digitalValue: presses.length > 0 ? 1 : 0 };
     });
-  }, [setState]);
+    queue.current = request;
+    return request;
+  }, [acceptSnapshot]);
 
-  const updateAnalog = useCallback((val, name) => {
-    setState((prev) => ({
-      ...prev,
-      analogValues: { ...(prev.analogValues || {}), [name]: val }
-    }));
-  }, [setState]);
-
-  const setVoteItem = useCallback((item) => {
-    setState({ currentVoteItem: item });
-  }, [setState]);
-
-  const submitVote = useCallback((item, layer, name) => {
-    setState((prev) => ({
-      ...prev,
-      architectureVotes: {
-        ...prev.architectureVotes,
-        [item]: { ...prev.architectureVotes[item], [name]: layer }
-      }
-    }));
-  }, [setState]);
-
-  const submitCanvas = useCallback((image, name) => {
-    setState((prev) => ({
-      ...prev,
-      canvasImages: [...prev.canvasImages, { image, name }]
-    }));
-  }, [setState]);
-
-  const submitWord = useCallback((word, name) => {
-    setState((prev) => ({
-      ...prev,
-      wordSubmissions: [...prev.wordSubmissions, { word: word.trim().toLowerCase(), name, id: Date.now() }],
-    }));
-  }, [setState]);
-
-  const addFloatingEmoji = useCallback((emoji) => {
-    setState((prev) => ({
-      ...prev,
-      floatingEmojis: [
-        ...(prev.floatingEmojis || []),
-        { id: Date.now() + Math.random(), emoji, x: Math.random() * 100 }
-      ].slice(-50) // limit to 50
-    }));
-  }, [setState]);
-
-  const voteQuiz = useCallback((option, name) => {
-    setState((prev) => ({
-      ...prev,
-      quizVotes: { ...(prev.quizVotes || {}), [name]: option }
-    }));
-  }, [setState]);
-
-  const revealQuiz = useCallback((reveal) => {
-    setState({ quizRevealed: reveal });
-  }, [setState]);
-
-  const voteLogic = useCallback((option, name) => {
-    setState((prev) => ({
-      ...prev,
-      logicVotes: { ...(prev.logicVotes || {}), [name]: option }
-    }));
-  }, [setState]);
-
-  const resetRoom = useCallback(() => {
-    try { localStorage.removeItem(STORAGE_KEY); } catch {}
-    setState({ ...DEFAULT_STATE });
-  }, [setState]);
+  const setPhase = useCallback(phase => dispatch('phase', { phase }), [dispatch]);
+  const setPresentation = useCallback(patch => dispatch('presentation', { phase: roomState.phase, ...patch }), [dispatch, roomState.phase]);
+  const joinRoom = useCallback((name, pin) => dispatch('join', { name, pin }), [dispatch]);
+  const updateDigital = useCallback((value, name) => dispatch('digital', { value, name }), [dispatch]);
+  const updateAnalog = useCallback((value, name) => dispatch('analog', { value, name }), [dispatch]);
+  const setVoteItem = useCallback(item => dispatch('voteItem', { item }), [dispatch]);
+  const submitVote = useCallback((item, layer, name) => dispatch('architectureVote', { item, layer, name }), [dispatch]);
+  const submitWord = useCallback((word, name) => dispatch('word', { word, name }), [dispatch]);
+  const sendFloatingEmoji = useCallback((emoji, name) => dispatch('emoji', { emoji, name }), [dispatch]);
+  const addFloatingEmoji = useCallback(emoji => dispatch('emoji', { emoji }), [dispatch]);
+  const voteQuiz = useCallback((option, name) => dispatch('quizVote', { option, name }), [dispatch]);
+  const revealQuiz = useCallback(reveal => dispatch('quizReveal', { reveal }), [dispatch]);
+  const voteLogic = useCallback((option, name) => dispatch('logicVote', { option, name }), [dispatch]);
+  const activateSense = useCallback(sense => dispatch('sense', { sense }), [dispatch]);
+  const resetRoom = useCallback(() => dispatch('reset'), [dispatch]);
 
   return (
-    <RoomContext.Provider value={{
-      roomState,
-      setPhase,
-      joinRoom,
-      sendFloatingEmoji,
-      activateSense,
-      updateDigital,
-      updateAnalog,
-      setVoteItem,
-      submitVote,
-      submitCanvas,
-      submitWord,
-      addFloatingEmoji,
-      voteQuiz,
-      revealQuiz,
-      voteLogic,
-      resetRoom,
-    }}>
+    <RoomContext.Provider value={{ roomState, connected, error, joinUrl, setPhase, setPresentation, joinRoom,
+      updateDigital, updateAnalog, setVoteItem, submitVote, submitWord, sendFloatingEmoji,
+      addFloatingEmoji, voteQuiz, revealQuiz, voteLogic, activateSense, resetRoom }}>
       {children}
     </RoomContext.Provider>
   );

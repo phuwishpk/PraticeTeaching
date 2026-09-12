@@ -195,25 +195,20 @@ function HostProblem() {
           
           <motion.div animate={{ background: ['rgba(255,0,0,0.1)', 'rgba(255,0,0,0.2)', 'rgba(255,0,0,0.1)'] }} transition={{ repeat: Infinity, duration: 1 }}
             style={{ padding: '2rem', border: '2px solid #ff4d4d', borderRadius: 16, boxShadow: '0 0 20px rgba(255,0,0,0.2)' }}>
-            <h3 style={{ color: '#ff6b6b', margin: '0 0 1rem 0', fontSize: '1.8rem' }}>⚠️ ปัญหาของ "สมองที่มองไม่เห็น"</h3>
+            <h3 style={{ color: '#ff6b6b', margin: '0 0 1rem 0', fontSize: '1.8rem' }}>⚠️ สมองที่มองไม่เห็น</h3>
             <p style={{ color: 'white', fontSize: '1.2rem', margin: 0, lineHeight: 1.6, textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
-              บอร์ด ESP32 ประมวลผลตามโปรแกรมได้ แต่การรู้ว่าห้องร้อนหรือหนาว มืดหรือสว่าง
-              ต้องอาศัย <b>เซนเซอร์ที่เหมาะกับสิ่งที่จะวัด</b> เพื่อส่งข้อมูลจากสภาพแวดล้อมให้บอร์ด
+              ESP32 ประมวลผลได้ แต่มัน <b>ตาบอด หูหนวก</b> ไม่รู้ว่าห้องร้อนหรือหนาว มืดหรือสว่าง
             </p>
           </motion.div>
 
           <div className="flex-center" style={{ flex: 1 }}>
-            <motion.div animate={{ opacity: [1, 0.5, 1] }} transition={{ repeat: Infinity, duration: 1.5 }}
-              style={{ fontSize: '8rem', filter: 'grayscale(100%) brightness(0.5)' }}>
-              🎛️
-            </motion.div>
+            <img src="/images/esp32_board_1789207904514.jpg" alt="ESP32" style={{ width: '80%', maxHeight: 200, objectFit: 'cover', borderRadius: 16, border: '2px solid rgba(255,255,255,0.2)' }} />
           </div>
 
           <div style={{ background: 'rgba(0,240,255,0.1)', border: '2px solid var(--neon-blue)', borderRadius: 16, padding: '2rem', boxShadow: '0 0 20px rgba(0,240,255,0.2)' }}>
-            <h3 style={{ color: 'var(--neon-blue)', margin: '0 0 1rem 0', fontSize: '1.8rem' }}>💡 ทางแก้: "เซนเซอร์ (Sensor)"</h3>
+            <h3 style={{ color: 'var(--neon-blue)', margin: '0 0 1rem 0', fontSize: '1.8rem' }}>💡 เซนเซอร์ (Sensor)</h3>
             <p style={{ color: 'white', fontSize: '1.2rem', margin: 0, lineHeight: 1.6, textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
-              เราจึงต้องติดตั้ง "อวัยวะรับสัมผัส" (เช่น <span style={{color: 'var(--neon-blue)', fontWeight: 'bold'}}>ตา หู จมูก ผิวหนัง</span>) เพื่อคอยตรวจจับสภาพแวดล้อม
-              แล้วแปลงเป็น "สัญญาณไฟฟ้า" ส่งกลับไปให้สมองประมวลผล
+              อวัยวะรับสัมผัส (ตา หู จมูก ผิวหนัง) ที่แปลงสภาพแวดล้อมเป็น <b>สัญญาณไฟฟ้า</b> ให้สมอง
             </p>
           </div>
         </div>
@@ -278,13 +273,12 @@ function HostDigital() {
         {/* Left: Theory */}
         <div className="glass-panel" style={{ flex: 1, padding: '2.5rem', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
           <div style={{ padding: '2rem', border: '2px solid var(--neon-blue)', borderRadius: 16, background: 'rgba(0,240,255,0.05)' }}>
-            <h3 style={{ color: 'var(--neon-blue)', margin: '0 0 1rem 0', fontSize: '1.8rem' }}>1. สัญญาณ Digital (ดิจิทัล)</h3>
+            <h3 style={{ color: 'var(--neon-blue)', margin: '0 0 1rem 0', fontSize: '1.8rem' }}>1. สัญญาณ Digital</h3>
             <p style={{ color: 'white', fontSize: '1.2rem', margin: 0, lineHeight: 1.6 }}>
-              คอมพิวเตอร์และบอร์ด ESP32 คุยกันด้วยภาษาไฟฟ้าพื้นฐานที่มีแค่ 2 สถานะ คือ:
+              ภาษาไฟฟ้าที่มีแค่ 2 สถานะ:
               <br/><br/>
-              <b>0 (LOW)</b> = ระดับลอจิกต่ำ<br/>
-              <b>1 (HIGH)</b> = ระดับลอจิกสูง<br/><br/>
-              ในกิจกรรมนี้: กด = 1, ปล่อย = 0 ส่วนวงจรจริงอาจกำหนดกลับกันได้
+              <b>0 (LOW)</b> = ปิด (ไม่มีไฟ)<br/>
+              <b>1 (HIGH)</b> = เปิด (มีไฟ)
             </p>
           </div>
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '5rem', filter: val ? 'drop-shadow(0 0 30px #ff4d4d)' : 'grayscale(100%)' }}>
@@ -344,11 +338,11 @@ function HostAnalog() {
         {/* Left: Theory */}
         <div className="glass-panel" style={{ flex: 1, padding: '2.5rem', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
           <div style={{ padding: '2rem', border: '2px solid var(--neon-purple)', borderRadius: 16, background: 'rgba(188,19,254,0.05)' }}>
-            <h3 style={{ color: 'var(--neon-purple)', margin: '0 0 1rem 0', fontSize: '1.8rem' }}>2. สัญญาณ Analog (แอนะล็อก)</h3>
+            <h3 style={{ color: 'var(--neon-purple)', margin: '0 0 1rem 0', fontSize: '1.8rem' }}>2. สัญญาณ Analog</h3>
             <p style={{ color: 'white', fontSize: '1.2rem', margin: 0, lineHeight: 1.6 }}>
-              ธรรมชาติไม่ได้มีแค่ เปิด/ปิด แต่มีความต่อเนื่อง เช่น ความสว่าง อุณหภูมิ เสียง
+              ค่าที่มีความต่อเนื่อง เช่น ความสว่าง หรือ อุณหภูมิ
               <br/><br/>
-              ADC แปลงแรงดัน Analog เป็นค่าดิจิทัล เมื่อใช้ความละเอียด <b>12 บิต</b> จะได้ค่าดิบ <b>0 ถึง 4095</b> ซึ่งยังไม่ใช่หน่วยอุณหภูมิหรือเปอร์เซ็นต์ความชื้น
+              ESP32 อ่านค่าเป็นตัวเลขได้ <b>0 - 4095</b>
             </p>
           </div>
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '5rem' }}>
@@ -393,19 +387,19 @@ function HostAnalog() {
 // ─── Scene 6: Sensor Catalog ────────────────────────────────────────────────
 function HostCatalog() {
   const sensors = [
-    { name: 'LDR (Light Dependent Resistor)', type: 'Analog', desc: 'ใช้วัดความสว่างของแสง ยิ่งสว่างความต้านทานยิ่งลด', icon: '☀️' },
-    { name: 'DHT11', type: 'Digital (Data)', desc: 'ใช้วัดอุณหภูมิและความชื้นในอากาศ', icon: '🌡️' },
-    { name: 'PIR (Passive Infrared)', type: 'Digital (0/1)', desc: 'ตรวจการเปลี่ยนแปลงของรังสีอินฟราเรดเพื่อบอกการเคลื่อนไหว ไม่ใช่เครื่องวัดอุณหภูมิ', icon: '🚶' },
-    { name: 'Soil Moisture', type: 'Analog', desc: 'วัดความชื้นในดิน เพื่อดูว่าดินแห้งหรือเปียก', icon: '🌱' }
+    { name: 'LDR', type: 'แสง (Analog)', desc: 'สว่างมาก = ความต้านทานลด', img: '/images/sensor_ldr_1789207658387.jpg' },
+    { name: 'DHT11', type: 'อุณหภูมิ/ความชื้น (Digital)', desc: 'วัดความร้อนและไอน้ำในอากาศ', img: '/images/sensor_dht11_1789207674098.jpg' },
+    { name: 'PIR', type: 'การเคลื่อนไหว (Digital)', desc: 'จับรังสีความร้อนจากสิ่งมีชีวิต', img: '/images/sensor_pir_1789207687278.jpg' },
+    { name: 'Soil Moisture', type: 'ความชื้นดิน (Analog)', desc: 'ดินเปียก = นำไฟฟ้าได้ดี', img: '/images/sensor_soil_1789207703345.jpg' }
   ];
 
   return (
     <div className="flex-center full-screen" style={{ flexDirection: 'column', gap: '2rem' }}>
-      <h1 className="text-glow-blue" style={{ fontSize: '3rem', margin: 0 }}>แคตตาล็อกเซนเซอร์ (Sensor Catalog)</h1>
+      <h1 className="text-glow-blue" style={{ fontSize: '3rem', margin: 0 }}>แคตตาล็อกเซนเซอร์</h1>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', width: '90%', maxWidth: 1000 }}>
         {sensors.map((s, i) => (
-          <div key={i} className="glass-panel" style={{ padding: '2rem', display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
-            <div style={{ fontSize: '4rem', filter: 'drop-shadow(0 0 10px rgba(255,255,255,0.5))' }}>{s.icon}</div>
+          <div key={i} className="glass-panel" style={{ padding: '1.5rem', display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
+            <img src={s.img} alt={s.name} style={{ width: 120, height: 120, objectFit: 'cover', borderRadius: 16, border: '2px solid rgba(0,240,255,0.3)' }} />
             <div>
               <h3 style={{ color: 'var(--neon-green)', margin: '0 0 0.5rem 0', fontSize: '1.5rem' }}>{s.name}</h3>
               <span style={{ background: 'rgba(255,255,255,0.1)', padding: '4px 8px', borderRadius: 8, fontSize: '0.8rem', color: 'var(--neon-blue)' }}>{s.type}</span>
@@ -558,10 +552,10 @@ function HostWrapUp() {
         <h1 className="text-glow-blue" style={{ fontSize: '4rem', margin: '0 0 2rem 0' }}>บทสรุป IoT 🌐</h1>
         
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', textAlign: 'left', fontSize: '1.5rem', color: 'white', lineHeight: 1.6 }}>
-          <p>✅ <b>IoT 3-Layer:</b> Device รับรู้และสั่งงาน, Network ส่งข้อมูล, Service เก็บและแสดงผล</p>
-          <p>✅ <b>Sensor:</b> เปรียบเสมือนอวัยวะรับสัมผัส (ตา หู จมูก ผิวหนัง) ของบอร์ด</p>
-          <p>✅ <b>Signal:</b> Digital ใช้ LOW/HIGH แทนสถานะหรือส่งข้อมูลหลายบิต ส่วน Analog เปลี่ยนค่าต่อเนื่องและใช้ ADC แปลงเป็นตัวเลข</p>
-          <p>✅ <b>Logic:</b> การใช้เงื่อนไข IF ทำให้บอร์ดตัดสินใจและสั่งงานอัตโนมัติได้!</p>
+          <p>✅ <b>3-Layer:</b> Device (รับรู้/ทำ), Network (ส่ง), Service (แสดงผล)</p>
+          <p>✅ <b>Sensor:</b> อวัยวะรับสัมผัส (ตา หู จมูก ผิวหนัง) ของบอร์ด</p>
+          <p>✅ <b>Signal:</b> Digital (0/1) และ Analog (ค่าต่อเนื่อง 0-4095)</p>
+          <p>✅ <b>Logic:</b> เงื่อนไข IF ช่วยให้บอร์ดคิดและสั่งงานอัตโนมัติ!</p>
         </div>
       </div>
     </div>

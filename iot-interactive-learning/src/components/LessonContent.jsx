@@ -1,8 +1,14 @@
 import { lessons, sensorQuizExplanation } from '../content/lessons';
 import './LessonContent.css';
 
+const PHASE_TO_CHAPTER = {
+  1: 1, 2: 2, 3: 3, 4: 3, 5: 4, 6: 4, 7: 5, 8: 5, 
+  9: 6, 10: 6, 11: 6, 12: 6, 13: 7, 14: 8, 15: 9, 16: 10
+};
+
 export default function LessonContent({ phase, quizRevealed = false }) {
-  const lesson = lessons[phase];
+  const chapter = PHASE_TO_CHAPTER[phase] || 1;
+  const lesson = lessons[chapter];
   if (!lesson) return null;
 
   return (
@@ -47,9 +53,10 @@ export default function LessonContent({ phase, quizRevealed = false }) {
 }
 
 export function StudentLessonNotes({ phase, quizRevealed }) {
+  const chapter = PHASE_TO_CHAPTER[phase] || 1;
   return (
     <details className="student-lesson-notes" key={phase}>
-      <summary>📖 อ่านคำอธิบายบทที่ {phase} เพิ่มเติม</summary>
+      <summary>📖 อ่านคำอธิบายบทที่ {chapter} เพิ่มเติม</summary>
       <LessonContent phase={phase} quizRevealed={quizRevealed} />
     </details>
   );
