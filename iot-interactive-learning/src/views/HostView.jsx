@@ -1,108 +1,27 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useRoom } from '../context/RoomContext';
-import { Canvas } from '@react-three/fiber';
-import { Physics, usePlane, useSphere } from '@react-three/cannon';
-import { Text, OrbitControls } from '@react-three/drei';
 import { motion, AnimatePresence } from 'framer-motion';
+import { QRCodeSVG } from 'qrcode.react';
+import LessonContent from '../components/LessonContent';
+import { sensorQuizExplanation } from '../content/lessons';
 
-// ─── Phase 1: Lobby ───────────────────────────────────────────────────────────
-function Floor() {
-  const [ref] = usePlane(() => ({ rotation: [-Math.PI / 2, 0, 0], position: [0, -3, 0] }));
+// ─── Floating Emojis Overlay ──────────────────────────────────────────────────
+function FloatingEmojis({ emojis }) {
   return (
-    <mesh ref={ref} receiveShadow>
-      <planeGeometry args={[100, 100]} />
-      <shadowMaterial opacity={0.3} />
-    </mesh>
-  );
-}
-
-function AvatarBall({ name, position }) {
-  const [ref] = useSphere(() => ({ mass: 1, position, args: [0.5], restitution: 0.8, friction: 0.5 }));
-  const hue = useMemo(() => Math.floor(Math.random() * 360), []);
-  const color = `hsl(${hue}, 80%, 60%)`;
-  return (
-    <group ref={ref}>
-      <mesh castShadow>
-        <sphereGeometry args={[0.5, 32, 32]} />
-        <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.4} />
-      </mesh>
-      <Text position={[0, 0.75, 0]} fontSize={0.28} color="#fff" anchorX="center" anchorY="middle">
-        {name}
-      </Text>
-    </group>
-  );
-}
-
-function LobbyScene() {
-  const { roomState, setPhase } = useRoom();
-
-  return (
-    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-      {/* 3D Canvas */}
-      <div style={{ position: 'absolute', inset: 0 }}>
-        <Canvas shadows camera={{ position: [0, 4, 10], fov: 55 }}>
-          <ambientLight intensity={0.5} />
-          <spotLight position={[8, 10, 8]} angle={0.4} penumbra={1} castShadow intensity={2} color="#00f0ff" />
-          <Physics gravity={[0, -12, 0]}>
-            <Floor />
-            {roomState.students.map((s, i) => (
-              <AvatarBall key={s.id} name={s.name}
-                position={[
-                  (Math.random() - 0.5) * 5,
-                  6 + i * 2.5,
-                  (Math.random() - 0.5) * 3
-                ]}
-              />
-            ))}
-          </Physics>
-          <OrbitControls enableZoom={false} autoRotate autoRotateSpeed={0.5} enablePan={false} />
-        </Canvas>
-      </div>
-
-      {/* Glass PIN card */}
-      <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
-        <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }}
-          className="glass-panel animate-pulse-neon"
-          style={{ padding: '3rem 4rem', textAlign: 'center', minWidth: 360, pointerEvents: 'auto' }}>
-          <p style={{ margin: '0 0 0.5rem', color: 'var(--text-secondary)', fontSize: '1rem' }}>🔐 รหัสเข้าห้อง</p>
-          <h1 className="text-glow-blue" style={{ fontSize: '6rem', letterSpacing: '0.25em', margin: '0 0 1rem' }}>
-            {roomState.pin}
-          </h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '1.1rem', margin: 0 }}>
-            👥 นักเรียนออนไลน์: <strong style={{ color: '#fff' }}>{roomState.students.length} คน</strong>
-          </p>
-          {roomState.students.length > 0 && (
-            <div style={{ marginTop: '1rem', display: 'flex', flexWrap: 'wrap', gap: '0.5rem', justifyContent: 'center' }}>
-              {roomState.students.map(s => (
-                <span key={s.id} style={{ background: 'rgba(0,240,255,0.15)', border: '1px solid rgba(0,240,255,0.3)', borderRadius: 20, padding: '4px 12px', fontSize: '0.85rem', color: 'var(--neon-blue)' }}>
-                  {s.name}
-                </span>
-              ))}
-            </div>
-          )}
-        </motion.div>
-
-        {/* Next Phase button */}
-        {roomState.students.length > 0 && (
-          <motion.button initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}
-            className="neu-button animate-pulse-neon"
-            onClick={() => setPhase(2)}
-            style={{ marginTop: '2rem', padding: '1rem 3rem', fontSize: '1.2rem', color: 'var(--neon-blue)', pointerEvents: 'auto' }}>
-            ▶ เริ่มบทเรียน!
-          </motion.button>
-        )}
-      </div>
-
-      {/* Floating Emojis */}
+    <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 9999 }}>
       <AnimatePresence>
-        {roomState.floatingEmojis.map(e => (
+        {emojis.map(e => (
           <motion.div key={e.id}
-            initial={{ y: 0, opacity: 0, scale: 0.5, x: `${20 + Math.random() * 60}%` }}
-            animate={{ y: -300, opacity: [0, 1, 1, 0], scale: [0.5, 1.8, 1.8, 0.5] }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 2.5 }}
-            style={{ position: 'absolute', bottom: '10%', fontSize: '3rem', pointerEvents: 'none' }}>
-            {e.emoji}
+            initial={{ y: window.innerHeight, x: e.x, opacity: 1, scale: 0.5 }}
+            animate={{ y: -100, x: e.x + (Math.random() * 100 - 50), opacity: 0, scale: 1.5 }}
+            transition={{ duration: 3, ease: 'easeOut' }}
+            style={{ position: 'absolute', fontSize: '3rem' }}>
+            <div style={{ position: 'relative' }}>
+              {e.emoji}
+              <span style={{ position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)', fontSize: '1rem', color: '#fff', background: 'rgba(0,0,0,0.5)', padding: '2px 8px', borderRadius: 10, whiteSpace: 'nowrap' }}>
+                {e.name}
+              </span>
+            </div>
           </motion.div>
         ))}
       </AnimatePresence>
@@ -110,158 +29,590 @@ function LobbyScene() {
   );
 }
 
-// ─── Phase 2: The Senses ──────────────────────────────────────────────────────
-function SenseBox({ position, active, label }) {
-  return (
-    <group position={position}>
-      <mesh castShadow>
-        <boxGeometry args={[1.6, 1.6, 1.6]} />
-        <meshStandardMaterial
-          color={active ? '#00f0ff' : '#1a2540'}
-          emissive={active ? '#00f0ff' : '#000'}
-          emissiveIntensity={active ? 1.2 : 0}
-          transparent opacity={0.85}
-        />
-      </mesh>
-      <Text position={[0, -1.3, 0]} fontSize={0.38} color={active ? '#00f0ff' : '#94a3b8'} anchorX="center">
-        {label}
-      </Text>
-    </group>
-  );
-}
-
-function SensesScene() {
+// ─── Scene 1: Lobby ───────────────────────────────────────────────────────────
+function HostLobby() {
   const { roomState, setPhase } = useRoom();
-  const all = roomState.senses.eyes && roomState.senses.ears && roomState.senses.hands;
-
+  const joinUrl = `${window.location.origin}/client`;
+  
   return (
-    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-      <Canvas shadows camera={{ position: [0, 3, 9], fov: 50 }}>
-        <ambientLight intensity={0.4} />
-        <spotLight position={[5, 10, 5]} angle={0.5} penumbra={1} castShadow intensity={2} color="#00f0ff" />
-        {/* ESP32 board */}
-        <mesh castShadow position={[0, 0, 0]}>
-          <boxGeometry args={[2.2, 0.18, 4.5]} />
-          <meshStandardMaterial color="#1a1a2e" metalness={0.9} roughness={0.15} />
-        </mesh>
-        <Text position={[0, 0.2, 0]} rotation={[-Math.PI / 2, 0, 0]} fontSize={0.32} color="#00f0ff">ESP32</Text>
-        {/* Wires */}
-        {roomState.senses.eyes && <mesh position={[-2.8, 0.6, -1.5]}><cylinderGeometry args={[0.04, 0.04, 4.5, 8]} /><meshStandardMaterial color="#ff4444" emissive="#ff4444" emissiveIntensity={1} /></mesh>}
-        {roomState.senses.ears && <mesh position={[0, 0.6, -2.5]}><cylinderGeometry args={[0.04, 0.04, 4, 8]} /><meshStandardMaterial color="#4444ff" emissive="#4444ff" emissiveIntensity={1} /></mesh>}
-        {roomState.senses.hands && <mesh position={[2.8, 0.6, -1.5]}><cylinderGeometry args={[0.04, 0.04, 4.5, 8]} /><meshStandardMaterial color="#44ff44" emissive="#44ff44" emissiveIntensity={1} /></mesh>}
+    <div className="flex-center full-screen" style={{ flexDirection: 'column' }}>
+      <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="glass-panel"
+        style={{ padding: '3rem', width: '80%', maxWidth: 1000, display: 'flex', gap: '3rem' }}>
+        
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+          <h1 className="text-glow-blue" style={{ fontSize: '3rem', margin: '0 0 1rem 0', textAlign: 'center' }}>Welcome to IoT Lab 🚀</h1>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '1.2rem', marginBottom: '2rem' }}>สแกน QR Code หรือเข้าเว็บเพื่อเข้าห้องเรียน</p>
+          
+          <div style={{ background: '#fff', padding: '1rem', borderRadius: 16, marginBottom: '2rem' }}>
+            <QRCodeSVG value={joinUrl} size={200} />
+          </div>
+          
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', background: 'rgba(0,240,255,0.1)', padding: '1rem 2rem', borderRadius: 20, border: '1px solid rgba(0,240,255,0.3)' }}>
+            <span style={{ color: 'var(--text-secondary)', fontSize: '1.2rem' }}>PIN:</span>
+            <span style={{ color: 'var(--neon-blue)', fontSize: '3rem', fontWeight: 800, letterSpacing: '0.2em' }}>{roomState.pin}</span>
+          </div>
+        </div>
 
-        <SenseBox position={[-3.5, 2, -2]} active={roomState.senses.eyes} label="👁️ ตา (Camera)" />
-        <SenseBox position={[0, 2.5, -3.2]} active={roomState.senses.ears} label="👂 หู (Mic)" />
-        <SenseBox position={[3.5, 2, -2]} active={roomState.senses.hands} label="✋ มือ (Touch)" />
-        <OrbitControls enableZoom={false} enablePan={false} maxPolarAngle={Math.PI / 2 - 0.05} />
-      </Canvas>
-
-      <div style={{ position: 'absolute', top: '5%', width: '100%', textAlign: 'center', pointerEvents: 'none' }}>
-        <h1 className="text-glow-blue" style={{ fontSize: '2.5rem', margin: 0 }}>บอร์ดรับรู้โลกภายนอกได้อย่างไร?</h1>
-        <p style={{ color: 'var(--text-secondary)', margin: '0.5rem 0 0' }}>ให้นักเรียนกดปุ่มอวัยวะบนมือถือ เพื่อจำลองการเชื่อมต่อ</p>
-      </div>
-
-      {all && (
-        <motion.button initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}
-          className="neu-button animate-pulse-neon"
-          onClick={() => setPhase(3)}
-          style={{ position: 'absolute', bottom: '5%', left: '50%', transform: 'translateX(-50%)', padding: '1rem 3rem', fontSize: '1.2rem', color: 'var(--neon-blue)' }}>
-          ▶ ถัดไป: Word Cloud
-        </motion.button>
-      )}
+        <div style={{ flex: 1, borderLeft: '1px solid rgba(255,255,255,0.1)', paddingLeft: '3rem', display: 'flex', flexDirection: 'column' }}>
+          <h2 style={{ color: 'var(--neon-purple)' }}>นักวิจัยที่เข้าร่วมแล้ว: {roomState.students.length} คน</h2>
+          <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexWrap: 'wrap', gap: '1rem', alignContent: 'flex-start', marginTop: '1rem' }}>
+            <AnimatePresence>
+              {roomState.students.length === 0 && (
+                <p style={{ color: 'var(--text-secondary)' }}>รอเพื่อนๆ สักครู่...</p>
+              )}
+              {roomState.students.map((student) => (
+                <motion.div key={student.id} initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                  style={{ background: 'rgba(255,255,255,0.05)', padding: '0.8rem 1.5rem', borderRadius: 20, border: '1px solid rgba(255,255,255,0.1)' }}>
+                  🧑‍🔬 {student.name}
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
+        </div>
+      </motion.div>
     </div>
   );
 }
 
-// ─── Phase 3: Word Cloud ──────────────────────────────────────────────────────
-function WordCloudScene() {
-  const { roomState, setPhase } = useRoom();
+// ─── Scene 2: 3-Layer Architecture (Polling) ──────────────────────────────────
+function HostArchitecture() {
+  const { roomState, setVoteItem } = useRoom();
+  const currentItem = roomState.currentVoteItem;
+  const votes = roomState.architectureVotes[currentItem] || {};
+  const totalVotes = Object.keys(votes).length;
+  
+  const getPercent = (layer) => totalVotes === 0 ? 0 : Math.round((Object.values(votes).filter(v => v === layer).length / totalVotes) * 100);
 
-  const wordCounts = useMemo(() => {
-    const counts = {};
-    roomState.wordSubmissions.forEach(({ word }) => {
-      counts[word] = (counts[word] || 0) + 1;
-    });
-    return Object.entries(counts).sort((a, b) => b[1] - a[1]);
-  }, [roomState.wordSubmissions]);
+  const items = [
+    { id: 'esp32', name: 'บอร์ด ESP32', icon: '🎛️', correct: 'device' },
+    { id: 'wifi', name: 'Wi-Fi Router', icon: '📶', correct: 'network' },
+    { id: 'cloud', name: 'Cloud Server', icon: '☁️', correct: 'service' }
+  ];
+  
+  const activeItemData = items.find(i => i.id === currentItem);
+  const currentIndex = items.findIndex(i => i.id === currentItem);
 
-  const maxCount = wordCounts[0]?.[1] || 1;
+  const handleNextItem = () => {
+    if (currentIndex < items.length - 1) {
+      setVoteItem(items[currentIndex + 1].id);
+    }
+  };
 
   return (
-    <div className="flex-center full-screen" style={{ flexDirection: 'column', position: 'relative' }}>
-      <h2 className="text-glow-blue" style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>
-        🌐 เซนเซอร์คุยกับบอร์ดด้วยภาษาอะไร?
-      </h2>
-      {/* Word Cloud */}
-      <div style={{ flex: 1, display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: '1rem', padding: '2rem', maxWidth: 900 }}>
-        <AnimatePresence>
-          {wordCounts.map(([word, count]) => {
-            const ratio = count / maxCount;
-            const size = 1 + ratio * 3;
-            const gold = ratio > 0.5;
+    <div className="flex-center full-screen" style={{ flexDirection: 'column', gap: '2rem' }}>
+      <h1 className="text-glow-blue" style={{ fontSize: '3rem', margin: 0 }}>โหวต: อุปกรณ์นี้อยู่ชั้นไหน?</h1>
+      
+      <div style={{ display: 'flex', gap: '2rem', width: '90%', maxWidth: 1200 }}>
+        
+        {/* Left: Voting Control */}
+        <div className="glass-panel flex-center" style={{ flex: 1, padding: '2rem', flexDirection: 'column', gap: '1.5rem' }}>
+          <h2 style={{ color: 'var(--text-secondary)', margin: 0 }}>ส่งคำถามให้นักเรียน:</h2>
+          <motion.div key={currentItem} initial={{ scale: 0 }} animate={{ scale: 1 }}
+            style={{ fontSize: '8rem', filter: 'drop-shadow(0 0 20px rgba(0,240,255,0.5))' }}>
+            {activeItemData.icon}
+          </motion.div>
+          <h2 style={{ margin: 0, color: 'var(--neon-blue)', fontSize: '2rem' }}>{activeItemData.name}</h2>
+          
+          <div style={{ marginTop: '1rem', color: 'var(--text-secondary)' }}>
+            โหวตแล้ว: {totalVotes} / {roomState.students.length} คน
+          </div>
+
+          <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+            {currentIndex < items.length - 1 && (
+              <button className="neu-button" onClick={handleNextItem} style={{ padding: '1rem 2rem', color: 'var(--neon-green)' }}>
+                ถัดไป: {items[currentIndex + 1].name} ▶
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Right: The 3 Layers & Results */}
+        <div className="glass-panel" style={{ flex: 2, padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          
+          {/* Layer 3: Service */}
+          <div style={{ border: `2px solid rgba(188,19,254,0.3)`, borderRadius: 16, padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem', background: 'rgba(188,19,254,0.05)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h2 style={{ color: 'var(--neon-purple)', margin: '0 0 0.5rem 0' }}>Layer 3: Service (ชั้นบริการ)</h2>
+                <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: '0.9rem' }}>คลาวด์/แอปพลิเคชัน/แสดงผล</p>
+              </div>
+              <span style={{ fontSize: '2rem', color: 'var(--neon-purple)', fontWeight: 'bold' }}>{getPercent('service')}%</span>
+            </div>
+            <div style={{ width: '100%', height: 12, background: 'rgba(0,0,0,0.5)', borderRadius: 6, overflow: 'hidden' }}>
+              <motion.div animate={{ width: `${getPercent('service')}%` }} style={{ height: '100%', background: 'var(--neon-purple)' }} />
+            </div>
+          </div>
+
+          {/* Layer 2: Network */}
+          <div style={{ border: `2px solid rgba(4,217,255,0.3)`, borderRadius: 16, padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem', background: 'rgba(4,217,255,0.05)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h2 style={{ color: 'var(--neon-green)', margin: '0 0 0.5rem 0' }}>Layer 2: Network (ชั้นเครือข่าย)</h2>
+                <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: '0.9rem' }}>ถนน/Wi-Fi/4G</p>
+              </div>
+              <span style={{ fontSize: '2rem', color: 'var(--neon-green)', fontWeight: 'bold' }}>{getPercent('network')}%</span>
+            </div>
+            <div style={{ width: '100%', height: 12, background: 'rgba(0,0,0,0.5)', borderRadius: 6, overflow: 'hidden' }}>
+              <motion.div animate={{ width: `${getPercent('network')}%` }} style={{ height: '100%', background: 'var(--neon-green)' }} />
+            </div>
+          </div>
+
+          {/* Layer 1: Device */}
+          <div style={{ border: `2px solid rgba(0,240,255,0.3)`, borderRadius: 16, padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem', background: 'rgba(0,240,255,0.05)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h2 style={{ color: 'var(--neon-blue)', margin: '0 0 0.5rem 0' }}>Layer 1: Device (ชั้นอุปกรณ์)</h2>
+                <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: '0.9rem' }}>หน้างาน/เซนเซอร์/ESP32</p>
+              </div>
+              <span style={{ fontSize: '2rem', color: 'var(--neon-blue)', fontWeight: 'bold' }}>{getPercent('device')}%</span>
+            </div>
+            <div style={{ width: '100%', height: 12, background: 'rgba(0,0,0,0.5)', borderRadius: 6, overflow: 'hidden' }}>
+              <motion.div animate={{ width: `${getPercent('device')}%` }} style={{ height: '100%', background: 'var(--neon-blue)' }} />
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
+// ─── Scene 3: The Problem ─────────────────────────────────────────────────────
+function HostProblem() {
+  const { roomState } = useRoom();
+
+  return (
+    <div className="flex-center full-screen" style={{ flexDirection: 'column', gap: '2rem' }}>
+      <h1 className="text-glow-blue" style={{ fontSize: '2.5rem', margin: '0 0 1rem 0', textAlign: 'center' }}>
+        Device Layer: สมองพร้อม แต่ประสาทสัมผัสล่ะ?
+      </h1>
+      
+      <div style={{ display: 'flex', gap: '2rem', width: '95%', maxWidth: 1200, height: '70vh' }}>
+        
+        {/* Left: Problem Statement */}
+        <div className="glass-panel" style={{ flex: 1, padding: '2.5rem', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+          
+          <motion.div animate={{ background: ['rgba(255,0,0,0.1)', 'rgba(255,0,0,0.2)', 'rgba(255,0,0,0.1)'] }} transition={{ repeat: Infinity, duration: 1 }}
+            style={{ padding: '2rem', border: '2px solid #ff4d4d', borderRadius: 16, boxShadow: '0 0 20px rgba(255,0,0,0.2)' }}>
+            <h3 style={{ color: '#ff6b6b', margin: '0 0 1rem 0', fontSize: '1.8rem' }}>⚠️ ปัญหาของ "สมองที่มองไม่เห็น"</h3>
+            <p style={{ color: 'white', fontSize: '1.2rem', margin: 0, lineHeight: 1.6, textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
+              บอร์ด ESP32 ประมวลผลตามโปรแกรมได้ แต่การรู้ว่าห้องร้อนหรือหนาว มืดหรือสว่าง
+              ต้องอาศัย <b>เซนเซอร์ที่เหมาะกับสิ่งที่จะวัด</b> เพื่อส่งข้อมูลจากสภาพแวดล้อมให้บอร์ด
+            </p>
+          </motion.div>
+
+          <div className="flex-center" style={{ flex: 1 }}>
+            <motion.div animate={{ opacity: [1, 0.5, 1] }} transition={{ repeat: Infinity, duration: 1.5 }}
+              style={{ fontSize: '8rem', filter: 'grayscale(100%) brightness(0.5)' }}>
+              🎛️
+            </motion.div>
+          </div>
+
+          <div style={{ background: 'rgba(0,240,255,0.1)', border: '2px solid var(--neon-blue)', borderRadius: 16, padding: '2rem', boxShadow: '0 0 20px rgba(0,240,255,0.2)' }}>
+            <h3 style={{ color: 'var(--neon-blue)', margin: '0 0 1rem 0', fontSize: '1.8rem' }}>💡 ทางแก้: "เซนเซอร์ (Sensor)"</h3>
+            <p style={{ color: 'white', fontSize: '1.2rem', margin: 0, lineHeight: 1.6, textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
+              เราจึงต้องติดตั้ง "อวัยวะรับสัมผัส" (เช่น <span style={{color: 'var(--neon-blue)', fontWeight: 'bold'}}>ตา หู จมูก ผิวหนัง</span>) เพื่อคอยตรวจจับสภาพแวดล้อม
+              แล้วแปลงเป็น "สัญญาณไฟฟ้า" ส่งกลับไปให้สมองประมวลผล
+            </p>
+          </div>
+        </div>
+
+        {/* Right: Gallery -> Word Cloud */}
+        <div className="glass-panel" style={{ flex: 1.5, padding: '2rem', display: 'flex', flexDirection: 'column' }}>
+          <h2 style={{ color: 'var(--neon-purple)', margin: '0 0 1rem 0' }}>ไอเดียจากนักวิจัย 💡</h2>
+          
+          <div style={{ flex: 1, position: 'relative', overflow: 'hidden', display: 'flex', flexWrap: 'wrap', gap: '1rem', alignContent: 'center', justifyContent: 'center' }}>
+            <AnimatePresence>
+              {(!roomState.wordSubmissions || roomState.wordSubmissions.length === 0) && (
+                <p style={{ color: 'var(--text-secondary)', width: '100%', textAlign: 'center' }}>
+                  รอไอเดียจากนักเรียน...
+                </p>
+              )}
+              {roomState.wordSubmissions?.map((item) => (
+                <motion.div key={item.id}
+                  initial={{ scale: 0, y: 50, opacity: 0 }}
+                  animate={{ scale: 1, y: 0, opacity: 1 }}
+                  transition={{ type: 'spring', bounce: 0.5 }}
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(0,240,255,0.2), rgba(188,19,254,0.2))',
+                    border: '1px solid rgba(0,240,255,0.4)',
+                    padding: '1rem 1.5rem',
+                    borderRadius: 30,
+                    boxShadow: '0 4px 15px rgba(0,0,0,0.3)'
+                  }}>
+                  <span style={{ fontSize: '1.5rem', color: '#fff', fontWeight: 'bold', marginRight: '10px' }}>{item.word}</span>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>- {item.name}</span>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
+// ─── Scene 4: Digital Signal ────────────────────────────────────────────────
+function HostDigital() {
+  const { roomState } = useRoom();
+  const presses = roomState.digitalPresses || [];
+  const val = roomState.digitalValue || 0;
+  
+  const [history, setHistory] = useState(Array(30).fill(0));
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setHistory(prev => [...prev.slice(1), val]);
+    }, 200);
+    return () => clearInterval(timer);
+  }, [val]);
+
+  return (
+    <div className="flex-center full-screen" style={{ flexDirection: 'column', gap: '2rem' }}>
+      <h1 className="text-glow-blue" style={{ fontSize: '3rem', margin: 0 }}>สัญญาณภาษาเครื่อง (Digital)</h1>
+      
+      <div style={{ display: 'flex', gap: '2rem', width: '95%', maxWidth: 1200, height: '70vh' }}>
+        
+        {/* Left: Theory */}
+        <div className="glass-panel" style={{ flex: 1, padding: '2.5rem', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+          <div style={{ padding: '2rem', border: '2px solid var(--neon-blue)', borderRadius: 16, background: 'rgba(0,240,255,0.05)' }}>
+            <h3 style={{ color: 'var(--neon-blue)', margin: '0 0 1rem 0', fontSize: '1.8rem' }}>1. สัญญาณ Digital (ดิจิทัล)</h3>
+            <p style={{ color: 'white', fontSize: '1.2rem', margin: 0, lineHeight: 1.6 }}>
+              คอมพิวเตอร์และบอร์ด ESP32 คุยกันด้วยภาษาไฟฟ้าพื้นฐานที่มีแค่ 2 สถานะ คือ:
+              <br/><br/>
+              <b>0 (LOW)</b> = ระดับลอจิกต่ำ<br/>
+              <b>1 (HIGH)</b> = ระดับลอจิกสูง<br/><br/>
+              ในกิจกรรมนี้: กด = 1, ปล่อย = 0 ส่วนวงจรจริงอาจกำหนดกลับกันได้
+            </p>
+          </div>
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '5rem', filter: val ? 'drop-shadow(0 0 30px #ff4d4d)' : 'grayscale(100%)' }}>
+            🚨
+          </div>
+        </div>
+
+        {/* Right: Activity */}
+        <div className="glass-panel" style={{ flex: 1.5, padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <h2 style={{ color: 'var(--neon-green)', margin: '0 0 1rem 0' }}>ทดสอบรับสัญญาณจากนักเรียน</h2>
+          
+          <div style={{ flex: 1, display: 'flex', alignItems: 'flex-end', gap: '4px', borderBottom: '2px solid var(--text-secondary)', paddingBottom: '1rem' }}>
+            {history.map((v, i) => (
+              <motion.div key={i}
+                initial={false}
+                animate={{ height: v ? '80%' : '10%', background: v ? '#ff4d4d' : 'rgba(255,255,255,0.2)' }}
+                style={{ flex: 1, borderRadius: '4px 4px 0 0' }}
+              />
+            ))}
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h2 style={{ fontSize: '3rem', margin: 0, color: val ? '#ff4d4d' : 'var(--text-secondary)' }}>
+              {val ? '1 (HIGH)' : '0 (LOW)'}
+            </h2>
+            <div style={{ textAlign: 'right' }}>
+              <p style={{ margin: 0, color: 'var(--text-secondary)' }}>นักเรียนที่กดส่งสัญญาณ ({presses.length}):</p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+                {presses.map((p, i) => <span key={i} style={{ background: 'rgba(255,77,77,0.2)', padding: '4px 10px', borderRadius: 12, color: '#ffb3b3' }}>{p}</span>)}
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
+// ─── Scene 5: Analog Signal ────────────────────────────────────────────────
+function HostAnalog() {
+  const { roomState } = useRoom();
+  const vals = roomState.analogValues || {};
+  const studentNames = Object.keys(vals);
+  
+  const total = studentNames.reduce((sum, name) => sum + vals[name], 0);
+  const avg = studentNames.length > 0 ? Math.round(total / studentNames.length) : 0;
+  
+  const hue = 200 - (avg / 4095) * 200; // 200 (Blue) to 0 (Red)
+
+  return (
+    <div className="flex-center full-screen" style={{ flexDirection: 'column', gap: '2rem' }}>
+      <h1 className="text-glow-blue" style={{ fontSize: '3rem', margin: 0 }}>สัญญาณค่าต่อเนื่อง (Analog)</h1>
+      
+      <div style={{ display: 'flex', gap: '2rem', width: '95%', maxWidth: 1200, height: '70vh' }}>
+        
+        {/* Left: Theory */}
+        <div className="glass-panel" style={{ flex: 1, padding: '2.5rem', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+          <div style={{ padding: '2rem', border: '2px solid var(--neon-purple)', borderRadius: 16, background: 'rgba(188,19,254,0.05)' }}>
+            <h3 style={{ color: 'var(--neon-purple)', margin: '0 0 1rem 0', fontSize: '1.8rem' }}>2. สัญญาณ Analog (แอนะล็อก)</h3>
+            <p style={{ color: 'white', fontSize: '1.2rem', margin: 0, lineHeight: 1.6 }}>
+              ธรรมชาติไม่ได้มีแค่ เปิด/ปิด แต่มีความต่อเนื่อง เช่น ความสว่าง อุณหภูมิ เสียง
+              <br/><br/>
+              ADC แปลงแรงดัน Analog เป็นค่าดิจิทัล เมื่อใช้ความละเอียด <b>12 บิต</b> จะได้ค่าดิบ <b>0 ถึง 4095</b> ซึ่งยังไม่ใช่หน่วยอุณหภูมิหรือเปอร์เซ็นต์ความชื้น
+            </p>
+          </div>
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '5rem' }}>
+            🌡️
+          </div>
+        </div>
+
+        {/* Right: Activity */}
+        <div className="glass-panel" style={{ flex: 1.5, padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <h2 style={{ color: 'var(--neon-green)', margin: '0 0 1rem 0' }}>ค่าเฉลี่ยของห้อง (Average)</h2>
+          
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '2rem' }}>
+            
+            <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
+              <div style={{ width: '100%', height: 40, background: 'rgba(255,255,255,0.1)', borderRadius: 20, overflow: 'hidden', position: 'relative' }}>
+                <motion.div animate={{ width: `${(avg / 4095) * 100}%`, background: `hsl(${hue}, 100%, 50%)` }} style={{ height: '100%' }} />
+              </div>
+              <span style={{ fontSize: '3rem', fontWeight: 'bold', color: `hsl(${hue}, 100%, 50%)`, width: 120, textAlign: 'right' }}>
+                {avg}
+              </span>
+            </div>
+
+            <div style={{ overflowY: 'auto', maxHeight: 250, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              {studentNames.map(name => (
+                <div key={name} style={{ background: 'rgba(255,255,255,0.05)', padding: '1rem', borderRadius: 12, display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>{name}</span>
+                  <span style={{ color: `hsl(${200 - (vals[name]/4095)*200}, 100%, 50%)`, fontWeight: 'bold' }}>{vals[name]}</span>
+                </div>
+              ))}
+              {studentNames.length === 0 && <p style={{ color: 'var(--text-secondary)' }}>รอรับค่าจากนักเรียน...</p>}
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
+
+// ─── Scene 6: Sensor Catalog ────────────────────────────────────────────────
+function HostCatalog() {
+  const sensors = [
+    { name: 'LDR (Light Dependent Resistor)', type: 'Analog', desc: 'ใช้วัดความสว่างของแสง ยิ่งสว่างความต้านทานยิ่งลด', icon: '☀️' },
+    { name: 'DHT11', type: 'Digital (Data)', desc: 'ใช้วัดอุณหภูมิและความชื้นในอากาศ', icon: '🌡️' },
+    { name: 'PIR (Passive Infrared)', type: 'Digital (0/1)', desc: 'ตรวจการเปลี่ยนแปลงของรังสีอินฟราเรดเพื่อบอกการเคลื่อนไหว ไม่ใช่เครื่องวัดอุณหภูมิ', icon: '🚶' },
+    { name: 'Soil Moisture', type: 'Analog', desc: 'วัดความชื้นในดิน เพื่อดูว่าดินแห้งหรือเปียก', icon: '🌱' }
+  ];
+
+  return (
+    <div className="flex-center full-screen" style={{ flexDirection: 'column', gap: '2rem' }}>
+      <h1 className="text-glow-blue" style={{ fontSize: '3rem', margin: 0 }}>แคตตาล็อกเซนเซอร์ (Sensor Catalog)</h1>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', width: '90%', maxWidth: 1000 }}>
+        {sensors.map((s, i) => (
+          <div key={i} className="glass-panel" style={{ padding: '2rem', display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
+            <div style={{ fontSize: '4rem', filter: 'drop-shadow(0 0 10px rgba(255,255,255,0.5))' }}>{s.icon}</div>
+            <div>
+              <h3 style={{ color: 'var(--neon-green)', margin: '0 0 0.5rem 0', fontSize: '1.5rem' }}>{s.name}</h3>
+              <span style={{ background: 'rgba(255,255,255,0.1)', padding: '4px 8px', borderRadius: 8, fontSize: '0.8rem', color: 'var(--neon-blue)' }}>{s.type}</span>
+              <p style={{ color: 'var(--text-secondary)', marginTop: '0.5rem', lineHeight: 1.5 }}>{s.desc}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Scene 7: Sensor Quiz ──────────────────────────────────────────────────
+function HostQuiz() {
+  const { roomState, revealQuiz } = useRoom();
+  const votes = roomState.quizVotes || {};
+  
+  const options = [
+    { id: 'ldr', label: 'LDR (แสง)', color: '#ffb86c' },
+    { id: 'dht', label: 'DHT11 (อุณหภูมิ)', color: '#ff79c6' },
+    { id: 'pir', label: 'PIR (เคลื่อนไหว)', color: '#8be9fd' },
+    { id: 'soil', label: 'Soil Moisture (ดิน)', color: '#50fa7b' }
+  ];
+
+  const total = Object.keys(votes).length || 1; // prevent div/0
+  const isRevealed = roomState.quizRevealed;
+
+  return (
+    <div className="flex-center full-screen" style={{ flexDirection: 'column', gap: '2rem' }}>
+      <h1 className="text-glow-blue" style={{ fontSize: '2.5rem', margin: 0, textAlign: 'center' }}>
+        "อยากทำระบบเปิดไฟหน้าบ้านอัตโนมัติตอนกลางคืน ต้องใช้เซนเซอร์อะไร?"
+      </h1>
+      
+      <div className="glass-panel" style={{ width: '80%', maxWidth: 800, padding: '3rem', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+        
+        {options.map(opt => {
+          const count = Object.values(votes).filter(v => v === opt.id).length;
+          const pct = Math.round((count / total) * 100) || 0;
+          const isCorrect = opt.id === 'ldr';
+
+          return (
+            <div key={opt.id} style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <span style={{ width: 200, textAlign: 'right', fontWeight: 'bold', color: (isRevealed && isCorrect) ? 'var(--neon-green)' : 'white' }}>
+                {opt.label} {(isRevealed && isCorrect) && '✅'}
+              </span>
+              <div style={{ flex: 1, height: 30, background: 'rgba(255,255,255,0.1)', borderRadius: 15, overflow: 'hidden' }}>
+                <motion.div 
+                  initial={{ width: 0 }}
+                  animate={{ width: `${pct}%` }}
+                  style={{ height: '100%', background: opt.color }}
+                />
+              </div>
+              <span style={{ width: 50 }}>{count} โหวต</span>
+            </div>
+          );
+        })}
+
+        <div style={{ textAlign: 'center', marginTop: '1rem' }}>
+          {isRevealed && <p className="quiz-explanation" aria-live="polite">{sensorQuizExplanation}</p>}
+          <button className="neu-button" onClick={() => revealQuiz(!isRevealed)} style={{ color: isRevealed ? '#ff4d4d' : 'var(--neon-green)', padding: '1rem 2rem', fontSize: '1.2rem' }}>
+            {isRevealed ? 'ซ่อนเฉลย' : 'เฉลยคำตอบ!'}
+          </button>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
+// ─── Scene 8: Logic Building ────────────────────────────────────────────────
+function HostLogic() {
+  const { roomState } = useRoom();
+  const votes = roomState.logicVotes || {};
+  
+  const options = [
+    { id: 'dark', label: 'ถ้า "แสงมืด" (LDR < 500)' },
+    { id: 'dry', label: 'ถ้า "ดินแห้ง" (Soil > 3000)' },
+    { id: 'motion', label: 'ถ้า "มีคนเดินผ่าน" (PIR == 1)' },
+    { id: 'hot', label: 'ถ้า "อากาศร้อน" (Temp > 30)' }
+  ];
+
+  const total = Object.keys(votes).length || 1;
+
+  return (
+    <div className="flex-center full-screen" style={{ flexDirection: 'column', gap: '2rem' }}>
+      <h1 className="text-glow-blue" style={{ fontSize: '3rem', margin: 0 }}>ประกอบร่าง Logic (ตรรกะ)</h1>
+      
+      <div style={{ display: 'flex', gap: '2rem', width: '90%', maxWidth: 1000 }}>
+        
+        {/* Left: Logic Code */}
+        <div className="glass-panel" style={{ flex: 1, padding: '3rem', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+          <div style={{ background: 'rgba(0,0,0,0.3)', padding: '2rem', borderRadius: 16, borderLeft: '8px solid var(--neon-purple)', fontFamily: 'monospace', fontSize: '2rem', color: '#ffb86c', lineHeight: 1.8 }}>
+            IF ( <span style={{ color: 'var(--neon-blue)', borderBottom: '2px dashed var(--neon-blue)' }}>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span> ) {'{'}
+            <br/>&nbsp;&nbsp;<span style={{ color: '#50fa7b' }}>รดน้ำต้นไม้();</span>
+            <br/>{'}'}
+          </div>
+          <p style={{ color: 'var(--text-secondary)', marginTop: '2rem', fontSize: '1.2rem', textAlign: 'center' }}>
+            IF ให้บอร์ดเลือกคำสั่งตามเงื่อนไขที่เราเขียน ตัวอย่างนี้สมมติว่าดินแห้งให้ค่าสูง เกณฑ์ 3000 ต้องปรับจากการทดลองจริง
+          </p>
+        </div>
+
+        {/* Right: Votes */}
+        <div className="glass-panel" style={{ flex: 1, padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <h2 style={{ color: 'var(--neon-green)', margin: '0 0 1rem 0' }}>ผลโหวตเติมคำในช่องว่าง</h2>
+          {options.map(opt => {
+            const count = Object.values(votes).filter(v => v === opt.id).length;
+            const pct = Math.round((count / total) * 100) || 0;
             return (
-              <motion.div key={word} initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} layout
-                style={{
-                  fontSize: `${size}rem`,
-                  color: gold ? '#ffd700' : 'var(--neon-blue)',
-                  textShadow: gold ? '0 0 20px rgba(255,215,0,0.7)' : '0 0 10px rgba(0,240,255,0.5)',
-                  fontFamily: "'Outfit', sans-serif",
-                  fontWeight: 800,
-                  transition: 'all 0.5s',
-                  background: gold ? 'rgba(255,215,0,0.08)' : 'rgba(0,240,255,0.05)',
-                  padding: '0.2em 0.4em',
-                  borderRadius: 8,
-                  border: `1px solid ${gold ? 'rgba(255,215,0,0.3)' : 'rgba(0,240,255,0.2)'}`,
-                }}>
-                {word} {count > 1 && <sup style={{ fontSize: '0.5em' }}>{count}</sup>}
-              </motion.div>
+              <div key={opt.id} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>{opt.label}</span>
+                  <span>{count} โหวต</span>
+                </div>
+                <div style={{ width: '100%', height: 10, background: 'rgba(255,255,255,0.1)', borderRadius: 5, overflow: 'hidden' }}>
+                  <motion.div animate={{ width: `${pct}%` }} style={{ height: '100%', background: 'var(--neon-blue)' }} />
+                </div>
+              </div>
             );
           })}
-        </AnimatePresence>
-        {wordCounts.length === 0 && (
-          <p style={{ color: 'var(--text-secondary)', fontSize: '1.5rem' }}>รอนักเรียนส่งคำตอบ...</p>
-        )}
-      </div>
+        </div>
 
-      {wordCounts.length >= 3 && (
-        <button className="neu-button" onClick={() => setPhase(4)}
-          style={{ margin: '2rem', padding: '1rem 3rem', fontSize: '1.2rem', color: 'var(--neon-blue)' }}>
-          ▶ ถัดไป: Digital Signal
-        </button>
-      )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Scene 9: Summary & Wrap-up ─────────────────────────────────────────────
+function HostWrapUp() {
+  const { roomState } = useRoom();
+  const emojis = roomState.floatingEmojis || [];
+
+  return (
+    <div className="flex-center full-screen" style={{ flexDirection: 'column', gap: '2rem', position: 'relative', overflow: 'hidden' }}>
+      
+      {/* Floating Emojis */}
+      <AnimatePresence>
+        {emojis.map((e) => (
+          <motion.div key={e.id}
+            initial={{ y: 900, x: `${e.x}vw`, opacity: 1, scale: 2 }}
+            animate={{ y: -100, opacity: 0 }}
+            transition={{ duration: 3, ease: 'easeOut' }}
+            style={{ position: 'absolute', fontSize: '4rem', zIndex: 0 }}
+          >
+            {e.emoji}
+          </motion.div>
+        ))}
+      </AnimatePresence>
+
+      <div className="glass-panel" style={{ padding: '4rem', width: '80%', maxWidth: 800, textAlign: 'center', zIndex: 1 }}>
+        <h1 className="text-glow-blue" style={{ fontSize: '4rem', margin: '0 0 2rem 0' }}>บทสรุป IoT 🌐</h1>
+        
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', textAlign: 'left', fontSize: '1.5rem', color: 'white', lineHeight: 1.6 }}>
+          <p>✅ <b>IoT 3-Layer:</b> Device รับรู้และสั่งงาน, Network ส่งข้อมูล, Service เก็บและแสดงผล</p>
+          <p>✅ <b>Sensor:</b> เปรียบเสมือนอวัยวะรับสัมผัส (ตา หู จมูก ผิวหนัง) ของบอร์ด</p>
+          <p>✅ <b>Signal:</b> Digital ใช้ LOW/HIGH แทนสถานะหรือส่งข้อมูลหลายบิต ส่วน Analog เปลี่ยนค่าต่อเนื่องและใช้ ADC แปลงเป็นตัวเลข</p>
+          <p>✅ <b>Logic:</b> การใช้เงื่อนไข IF ทำให้บอร์ดตัดสินใจและสั่งงานอัตโนมัติได้!</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Scene 10: Podium ──────────────────────────────────────────────────────
+function HostPodium() {
+  const { roomState } = useRoom();
+  const students = roomState.students || [];
+
+  return (
+    <div className="flex-center full-screen" style={{ flexDirection: 'column', gap: '2rem' }}>
+      <h1 className="text-glow-blue" style={{ fontSize: '4rem', margin: 0 }}>🏆 ยินดีด้วยเหล่า Maker! 🏆</h1>
+      
+      <div className="glass-panel" style={{ width: '80%', maxWidth: 800, padding: '3rem', textAlign: 'center' }}>
+        <h2 style={{ color: 'var(--neon-green)', margin: '0 0 2rem 0', fontSize: '2rem' }}>นักเรียนที่ผ่านหลักสูตร IoT พื้นฐาน:</h2>
+        
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', justifyContent: 'center' }}>
+          {students.map((s) => (
+            <motion.div key={s.id} 
+              initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring' }}
+              style={{ background: 'linear-gradient(45deg, var(--neon-purple), var(--neon-blue))', padding: '1rem 2rem', borderRadius: 30, fontSize: '1.5rem', fontWeight: 'bold', boxShadow: '0 5px 15px rgba(0,240,255,0.3)' }}
+            >
+              🎓 {s.name}
+            </motion.div>
+          ))}
+          {students.length === 0 && <p style={{ color: 'var(--text-secondary)' }}>ยังไม่มีนักเรียนในห้อง</p>}
+        </div>
+      </div>
     </div>
   );
 }
 
 // ─── Host View Shell ──────────────────────────────────────────────────────────
-const PHASES = ['Lobby', 'The Senses', 'Word Cloud', 'Digital Signal', 'Analog', 'Sensors', 'Wiring', 'Scenario', 'Wrap-up', 'Podium'];
+const PHASES = ['Lobby', 'Architecture', 'The Problem', 'Digital Signal', 'Analog', 'Sensors', 'Sensor Quiz', 'Logic', 'Wrap-up', 'Podium'];
 
 export default function HostView() {
   const { roomState, setPhase, resetRoom } = useRoom();
-
-  const renderScene = () => {
-    switch (roomState.phase) {
-      case 1: return <LobbyScene />;
-      case 2: return <SensesScene />;
-      case 3: return <WordCloudScene />;
-      default:
-        return (
-          <div className="flex-center full-screen" style={{ flexDirection: 'column', gap: '1rem' }}>
-            <h1 style={{ fontSize: '3rem' }}>🚧 กำลังพัฒนา...</h1>
-            <p style={{ color: 'var(--text-secondary)' }}>Phase {roomState.phase} จะพร้อมเร็วๆ นี้</p>
-          </div>
-        );
-    }
-  };
+  const [lessonMode, setLessonMode] = useState(roomState.phase !== 1);
 
   return (
-    <div className="full-screen" style={{ display: 'flex', flexDirection: 'column' }}>
+    <div className="host-learning-shell" style={{ display: 'flex', flexDirection: 'column' }}>
+      <FloatingEmojis emojis={roomState.floatingEmojis} />
+
       {/* Navbar */}
-      <div className="glass-panel" style={{ margin: '12px 16px', padding: '10px 20px', display: 'flex', alignItems: 'center', gap: '12px', zIndex: 100, flexShrink: 0 }}>
+      <div className="glass-panel host-navbar" style={{ margin: '12px 16px', padding: '10px 20px', display: 'flex', alignItems: 'center', gap: '12px', zIndex: 100, flexShrink: 0 }}>
         <h2 className="text-glow-blue" style={{ marginRight: 'auto', fontSize: '1.3rem' }}>🖥️ Host Dashboard</h2>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          {PHASES.slice(0, 6).map((name, i) => (
-            <button key={i} onClick={() => setPhase(i + 1)}
+          {PHASES.slice(0, 10).map((name, i) => (
+            <button key={i} onClick={() => { setPhase(i + 1); setLessonMode(i !== 0); }}
               className="neu-button"
               style={{ padding: '6px 14px', fontSize: '0.8rem', color: roomState.phase === i + 1 ? 'var(--neon-blue)' : 'inherit', boxShadow: roomState.phase === i + 1 ? 'var(--neumorph-inset)' : 'var(--neumorph-shadow)' }}>
               {i + 1}. {name}
@@ -273,14 +624,30 @@ export default function HostView() {
         </button>
       </div>
 
+      <div className="lesson-mode-bar" role="group" aria-label="รูปแบบการสอน">
+        <button className="lesson-mode-button" aria-pressed={lessonMode} onClick={() => setLessonMode(true)}>📖 เนื้อหาบทเรียน</button>
+        <button className="lesson-mode-button" aria-pressed={!lessonMode} onClick={() => setLessonMode(false)}>🎮 กิจกรรมในห้องเรียน</button>
+      </div>
       {/* Main Content */}
-      <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+      <main className="host-learning-main">
+        {lessonMode ? <LessonContent key={roomState.phase} phase={roomState.phase} quizRevealed={roomState.quizRevealed} /> : (
         <AnimatePresence mode="wait">
-          <motion.div key={roomState.phase} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }} style={{ width: '100%', height: '100%' }}>
-            {renderScene()}
+          <motion.div key={roomState.phase} initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}
+            className="host-activity" style={{ width: '100%' }}>
+            {roomState.phase === 1 && <HostLobby />}
+            {roomState.phase === 2 && <HostArchitecture />}
+            {roomState.phase === 3 && <HostProblem />}
+            {roomState.phase === 4 && <HostDigital />}
+            {roomState.phase === 5 && <HostAnalog />}
+            {roomState.phase === 6 && <HostCatalog />}
+            {roomState.phase === 7 && <HostQuiz />}
+            {roomState.phase === 8 && <HostLogic />}
+            {roomState.phase === 9 && <HostWrapUp />}
+            {roomState.phase === 10 && <HostPodium />}
           </motion.div>
         </AnimatePresence>
-      </div>
+        )}
+      </main>
     </div>
   );
 }

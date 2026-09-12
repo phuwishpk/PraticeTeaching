@@ -10,8 +10,16 @@ const DEFAULT_STATE = {
   senses: { eyes: false, ears: false, hands: false },
   digitalValue: 0,
   analogValue: 0,
+  digitalPresses: [],
+  analogValues: {},
   wordSubmissions: [],
   floatingEmojis: [],
+  quizVotes: {},
+  quizRevealed: false,
+  logicVotes: {},
+  architectureVotes: { esp32: {}, wifi: {}, cloud: {} },
+  currentVoteItem: 'esp32',
+  canvasImages: [],
 };
 
 const STORAGE_KEY = 'iot_room_state_v2';
@@ -92,13 +100,78 @@ export function RoomProvider({ children }) {
     }));
   }, [setState]);
 
-  const updateDigital = useCallback((val) => setState({ digitalValue: val }), [setState]);
-  const updateAnalog = useCallback((val) => setState({ analogValue: val }), [setState]);
+  const updateDigital = useCallback((val, name) => {
+    setState((prev) => {
+      let presses = prev.digitalPresses || [];
+      if (val) {
+        if (!presses.includes(name)) presses = [...presses, name];
+      } else {
+        presses = presses.filter(n => n !== name);
+      }
+      return { ...prev, digitalPresses: presses, digitalValue: presses.length > 0 ? 1 : 0 };
+    });
+  }, [setState]);
+
+  const updateAnalog = useCallback((val, name) => {
+    setState((prev) => ({
+      ...prev,
+      analogValues: { ...(prev.analogValues || {}), [name]: val }
+    }));
+  }, [setState]);
+
+  const setVoteItem = useCallback((item) => {
+    setState({ currentVoteItem: item });
+  }, [setState]);
+
+  const submitVote = useCallback((item, layer, name) => {
+    setState((prev) => ({
+      ...prev,
+      architectureVotes: {
+        ...prev.architectureVotes,
+        [item]: { ...prev.architectureVotes[item], [name]: layer }
+      }
+    }));
+  }, [setState]);
+
+  const submitCanvas = useCallback((image, name) => {
+    setState((prev) => ({
+      ...prev,
+      canvasImages: [...prev.canvasImages, { image, name }]
+    }));
+  }, [setState]);
 
   const submitWord = useCallback((word, name) => {
     setState((prev) => ({
       ...prev,
       wordSubmissions: [...prev.wordSubmissions, { word: word.trim().toLowerCase(), name, id: Date.now() }],
+    }));
+  }, [setState]);
+
+  const addFloatingEmoji = useCallback((emoji) => {
+    setState((prev) => ({
+      ...prev,
+      floatingEmojis: [
+        ...(prev.floatingEmojis || []),
+        { id: Date.now() + Math.random(), emoji, x: Math.random() * 100 }
+      ].slice(-50) // limit to 50
+    }));
+  }, [setState]);
+
+  const voteQuiz = useCallback((option, name) => {
+    setState((prev) => ({
+      ...prev,
+      quizVotes: { ...(prev.quizVotes || {}), [name]: option }
+    }));
+  }, [setState]);
+
+  const revealQuiz = useCallback((reveal) => {
+    setState({ quizRevealed: reveal });
+  }, [setState]);
+
+  const voteLogic = useCallback((option, name) => {
+    setState((prev) => ({
+      ...prev,
+      logicVotes: { ...(prev.logicVotes || {}), [name]: option }
     }));
   }, [setState]);
 
@@ -116,7 +189,14 @@ export function RoomProvider({ children }) {
       activateSense,
       updateDigital,
       updateAnalog,
+      setVoteItem,
+      submitVote,
+      submitCanvas,
       submitWord,
+      addFloatingEmoji,
+      voteQuiz,
+      revealQuiz,
+      voteLogic,
       resetRoom,
     }}>
       {children}
