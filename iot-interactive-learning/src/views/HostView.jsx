@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useRoom } from '../context/RoomContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
-import LessonContent from '../components/LessonContent';
+import { LessonSlideshow } from '../components/LessonContent';
 import { sensorQuizExplanation } from '../content/lessons';
 
 // ─── Floating Emojis Overlay ──────────────────────────────────────────────────
@@ -31,20 +31,20 @@ function FloatingEmojis({ emojis }) {
 
 // ─── Scene 1: Lobby ───────────────────────────────────────────────────────────
 function HostLobby() {
-  const { roomState, setPhase } = useRoom();
-  const joinUrl = `${window.location.origin}/client`;
+  const { roomState, setPhase, joinUrl } = useRoom();
+  const qrUrl = `${joinUrl}?pin=${roomState.pin}`;
   
   return (
     <div className="flex-center full-screen" style={{ flexDirection: 'column' }}>
       <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="glass-panel"
-        style={{ padding: '3rem', width: '80%', maxWidth: 1000, display: 'flex', gap: '3rem' }}>
+        style={{ padding: '3rem', width: '80%', maxWidth: 1000, display: 'flex', flexWrap: 'wrap', gap: '3rem', justifyContent: 'center' }}>
         
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
           <h1 className="text-glow-blue" style={{ fontSize: '3rem', margin: '0 0 1rem 0', textAlign: 'center' }}>Welcome to IoT Lab 🚀</h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '1.2rem', marginBottom: '2rem' }}>สแกน QR Code หรือเข้าเว็บเพื่อเข้าห้องเรียน</p>
           
           <div style={{ background: '#fff', padding: '1rem', borderRadius: 16, marginBottom: '2rem' }}>
-            <QRCodeSVG value={joinUrl} size={200} />
+            <QRCodeSVG value={qrUrl} size={200} />
           </div>
           
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', background: 'rgba(0,240,255,0.1)', padding: '1rem 2rem', borderRadius: 20, border: '1px solid rgba(0,240,255,0.3)' }}>
@@ -78,7 +78,7 @@ function HostLobby() {
 function HostArchitecture() {
   const { roomState, setVoteItem } = useRoom();
   const currentItem = roomState.currentVoteItem;
-  const votes = roomState.architectureVotes[currentItem] || {};
+  const votes = roomState.architectureVotes?.[currentItem] || {};
   const totalVotes = Object.keys(votes).length;
   
   const getPercent = (layer) => totalVotes === 0 ? 0 : Math.round((Object.values(votes).filter(v => v === layer).length / totalVotes) * 100);
@@ -102,7 +102,7 @@ function HostArchitecture() {
     <div className="flex-center full-screen" style={{ flexDirection: 'column', gap: '2rem' }}>
       <h1 className="text-glow-blue" style={{ fontSize: '3rem', margin: 0 }}>โหวต: อุปกรณ์นี้อยู่ชั้นไหน?</h1>
       
-      <div style={{ display: 'flex', gap: '2rem', width: '90%', maxWidth: 1200 }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2rem', width: '90%', maxWidth: 1200, justifyContent: 'center' }}>
         
         {/* Left: Voting Control */}
         <div className="glass-panel flex-center" style={{ flex: 1, padding: '2rem', flexDirection: 'column', gap: '1.5rem' }}>
@@ -188,7 +188,7 @@ function HostProblem() {
         Device Layer: สมองพร้อม แต่ประสาทสัมผัสล่ะ?
       </h1>
       
-      <div style={{ display: 'flex', gap: '2rem', width: '95%', maxWidth: 1200, height: '70vh' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2rem', width: '95%', maxWidth: 1200, minHeight: '60vh', justifyContent: 'center' }}>
         
         {/* Left: Problem Statement */}
         <div className="glass-panel" style={{ flex: 1, padding: '2.5rem', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
@@ -268,7 +268,7 @@ function HostDigital() {
     <div className="flex-center full-screen" style={{ flexDirection: 'column', gap: '2rem' }}>
       <h1 className="text-glow-blue" style={{ fontSize: '3rem', margin: 0 }}>สัญญาณภาษาเครื่อง (Digital)</h1>
       
-      <div style={{ display: 'flex', gap: '2rem', width: '95%', maxWidth: 1200, height: '70vh' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2rem', width: '95%', maxWidth: 1200, minHeight: '60vh', justifyContent: 'center' }}>
         
         {/* Left: Theory */}
         <div className="glass-panel" style={{ flex: 1, padding: '2.5rem', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
@@ -333,7 +333,7 @@ function HostAnalog() {
     <div className="flex-center full-screen" style={{ flexDirection: 'column', gap: '2rem' }}>
       <h1 className="text-glow-blue" style={{ fontSize: '3rem', margin: 0 }}>สัญญาณค่าต่อเนื่อง (Analog)</h1>
       
-      <div style={{ display: 'flex', gap: '2rem', width: '95%', maxWidth: 1200, height: '70vh' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2rem', width: '95%', maxWidth: 1200, minHeight: '60vh', justifyContent: 'center' }}>
         
         {/* Left: Theory */}
         <div className="glass-panel" style={{ flex: 1, padding: '2.5rem', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
@@ -396,7 +396,7 @@ function HostCatalog() {
   return (
     <div className="flex-center full-screen" style={{ flexDirection: 'column', gap: '2rem' }}>
       <h1 className="text-glow-blue" style={{ fontSize: '3rem', margin: 0 }}>แคตตาล็อกเซนเซอร์</h1>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', width: '90%', maxWidth: 1000 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem', width: '90%', maxWidth: 1000 }}>
         {sensors.map((s, i) => (
           <div key={i} className="glass-panel" style={{ padding: '1.5rem', display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
             <img src={s.img} alt={s.name} style={{ width: 120, height: 120, objectFit: 'cover', borderRadius: 16, border: '2px solid rgba(0,240,255,0.3)' }} />
@@ -487,7 +487,7 @@ function HostLogic() {
     <div className="flex-center full-screen" style={{ flexDirection: 'column', gap: '2rem' }}>
       <h1 className="text-glow-blue" style={{ fontSize: '3rem', margin: 0 }}>ประกอบร่าง Logic (ตรรกะ)</h1>
       
-      <div style={{ display: 'flex', gap: '2rem', width: '90%', maxWidth: 1000 }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2rem', width: '90%', maxWidth: 1000, justifyContent: 'center' }}>
         
         {/* Left: Logic Code */}
         <div className="glass-panel" style={{ flex: 1, padding: '3rem', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
@@ -566,23 +566,50 @@ function HostWrapUp() {
 function HostPodium() {
   const { roomState } = useRoom();
   const students = roomState.students || [];
+  const scores = roomState.scores || {};
+
+  const sortedStudents = [...students].sort((a, b) => (scores[b.name] || 0) - (scores[a.name] || 0));
 
   return (
     <div className="flex-center full-screen" style={{ flexDirection: 'column', gap: '2rem' }}>
-      <h1 className="text-glow-blue" style={{ fontSize: '4rem', margin: 0 }}>🏆 ยินดีด้วยเหล่า Maker! 🏆</h1>
+      <h1 className="text-glow-blue" style={{ fontSize: '4rem', margin: 0 }}>🏆 สรุปคะแนน (Leaderboard) 🏆</h1>
       
-      <div className="glass-panel" style={{ width: '80%', maxWidth: 800, padding: '3rem', textAlign: 'center' }}>
-        <h2 style={{ color: 'var(--neon-green)', margin: '0 0 2rem 0', fontSize: '2rem' }}>นักเรียนที่ผ่านหลักสูตร IoT พื้นฐาน:</h2>
+      <div className="glass-panel" style={{ width: '90%', maxWidth: 800, padding: '3rem', textAlign: 'center' }}>
+        <h2 style={{ color: 'var(--neon-green)', margin: '0 0 2rem 0', fontSize: '2rem' }}>อันดับของเหล่า Maker!</h2>
         
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', justifyContent: 'center' }}>
-          {students.map((s) => (
-            <motion.div key={s.id} 
-              initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring' }}
-              style={{ background: 'linear-gradient(45deg, var(--neon-purple), var(--neon-blue))', padding: '1rem 2rem', borderRadius: 30, fontSize: '1.5rem', fontWeight: 'bold', boxShadow: '0 5px 15px rgba(0,240,255,0.3)' }}
-            >
-              🎓 {s.name}
-            </motion.div>
-          ))}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'center' }}>
+          {sortedStudents.map((s, index) => {
+            const score = scores[s.name] || 0;
+            let medal = '';
+            if (index === 0) medal = '🥇';
+            else if (index === 1) medal = '🥈';
+            else if (index === 2) medal = '🥉';
+
+            return (
+              <motion.div key={s.id} 
+                initial={{ scale: 0, opacity: 0, x: -50 }} 
+                animate={{ scale: 1, opacity: 1, x: 0 }} 
+                transition={{ type: 'spring', delay: index * 0.1 }}
+                style={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between',
+                  width: '100%',
+                  maxWidth: 500,
+                  background: index === 0 ? 'linear-gradient(45deg, #ffd700, #ff8c00)' : 'rgba(255,255,255,0.1)', 
+                  border: index === 0 ? 'none' : '1px solid rgba(255,255,255,0.2)',
+                  padding: '1rem 2rem', 
+                  borderRadius: 20, 
+                  fontSize: '1.5rem', 
+                  fontWeight: 'bold', 
+                  color: index === 0 ? 'black' : 'white',
+                  boxShadow: index === 0 ? '0 5px 15px rgba(255,215,0,0.5)' : 'none' 
+                }}
+              >
+                <span>{medal} {index + 1}. {s.name}</span>
+                <span>{score} pts</span>
+              </motion.div>
+            )
+          })}
           {students.length === 0 && <p style={{ color: 'var(--text-secondary)' }}>ยังไม่มีนักเรียนในห้อง</p>}
         </div>
       </div>
@@ -593,54 +620,99 @@ function HostPodium() {
 // ─── Host View Shell ──────────────────────────────────────────────────────────
 const PHASES = ['Lobby', 'Architecture', 'The Problem', 'Digital Signal', 'Analog', 'Sensors', 'Sensor Quiz', 'Logic', 'Wrap-up', 'Podium'];
 
-export default function HostView() {
-  const { roomState, setPhase, resetRoom } = useRoom();
-  const [lessonMode, setLessonMode] = useState(roomState.phase !== 1);
+// Controlled slideshow for teacher — slide syncs with roomState.presentation
+function HostLessonSlideshow({ phase, quizRevealed }) {
+  const { roomState, setPresentation } = useRoom();
+  const currentSlide = roomState.presentation?.slide ?? 0;
+
+  const handleSlideChange = (idx) => {
+    setPresentation({ mode: 'lesson', slide: idx });
+  };
 
   return (
-    <div className="host-learning-shell" style={{ display: 'flex', flexDirection: 'column' }}>
+    <LessonSlideshow
+      key={phase}
+      phase={phase}
+      quizRevealed={quizRevealed}
+      controlledSlide={currentSlide}
+      onSlideChange={handleSlideChange}
+    />
+  );
+}
+
+export default function HostView() {
+  const { roomState, setPhase, resetRoom, setPresentation } = useRoom();
+  const lessonMode = roomState.presentation?.mode === 'lesson';
+
+  const handleTabChange = (mode) => {
+    setPresentation({ mode });
+  };
+
+  return (
+    <div className="host-learning-shell" style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
       <FloatingEmojis emojis={roomState.floatingEmojis} />
 
       {/* Navbar */}
-      <div className="glass-panel host-navbar" style={{ margin: '12px 16px', padding: '10px 20px', display: 'flex', alignItems: 'center', gap: '12px', zIndex: 100, flexShrink: 0 }}>
-        <h2 className="text-glow-blue" style={{ marginRight: 'auto', fontSize: '1.3rem' }}>🖥️ Host Dashboard</h2>
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+      <div className="glass-panel host-navbar" style={{ margin: '10px 14px 0', padding: '10px 18px', display: 'flex', alignItems: 'center', gap: '10px', zIndex: 100, flexShrink: 0 }}>
+        <h2 className="text-glow-blue" style={{ marginRight: 'auto', fontSize: '1.2rem' }}>🖥️ Host Dashboard</h2>
+        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
           {PHASES.slice(0, 10).map((name, i) => (
-            <button key={i} onClick={() => { setPhase(i + 1); setLessonMode(i !== 0); }}
+            <button key={i} onClick={() => setPhase(i + 1)}
               className="neu-button"
-              style={{ padding: '6px 14px', fontSize: '0.8rem', color: roomState.phase === i + 1 ? 'var(--neon-blue)' : 'inherit', boxShadow: roomState.phase === i + 1 ? 'var(--neumorph-inset)' : 'var(--neumorph-shadow)' }}>
+              style={{ padding: '5px 12px', fontSize: '0.75rem', color: roomState.phase === i + 1 ? 'var(--neon-blue)' : 'inherit', boxShadow: roomState.phase === i + 1 ? 'var(--neumorph-inset)' : 'var(--neumorph-shadow)' }}>
               {i + 1}. {name}
             </button>
           ))}
         </div>
-        <button onClick={resetRoom} style={{ background: 'transparent', border: '1px solid rgba(255,0,100,0.4)', color: '#ff6b6b', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', fontSize: '0.8rem' }}>
+        <button onClick={resetRoom} style={{ background: 'transparent', border: '1px solid rgba(255,0,100,0.4)', color: '#ff6b6b', borderRadius: 8, padding: '5px 10px', cursor: 'pointer', fontSize: '0.75rem' }}>
           🔄 Reset
         </button>
       </div>
 
-      <div className="lesson-mode-bar" role="group" aria-label="รูปแบบการสอน">
-        <button className="lesson-mode-button" aria-pressed={lessonMode} onClick={() => setLessonMode(true)}>📖 เนื้อหาบทเรียน</button>
-        <button className="lesson-mode-button" aria-pressed={!lessonMode} onClick={() => setLessonMode(false)}>🎮 กิจกรรมในห้องเรียน</button>
+      {/* Mode tab bar */}
+      <div className="lesson-mode-bar" role="group" aria-label="รูปแบบการสอน" style={{ flexShrink: 0 }}>
+        <button
+          id="host-tab-lesson"
+          className="lesson-mode-button"
+          aria-pressed={lessonMode}
+          onClick={() => handleTabChange('lesson')}
+        >
+          📖 เนื้อหา — นักเรียนเห็นหน้าเดียวกัน
+        </button>
+        <button
+          id="host-tab-activity"
+          className="lesson-mode-button"
+          aria-pressed={!lessonMode}
+          onClick={() => handleTabChange('activity')}
+        >
+          🎮 กิจกรรมในห้องเรียน
+        </button>
       </div>
-      {/* Main Content */}
-      <main className="host-learning-main">
-        {lessonMode ? <LessonContent key={roomState.phase} phase={roomState.phase} quizRevealed={roomState.quizRevealed} /> : (
+
+      {/* Main Content — fills remaining height */}
+      <main style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
         <AnimatePresence mode="wait">
-          <motion.div key={roomState.phase} initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}
-            className="host-activity" style={{ width: '100%' }}>
-            {roomState.phase === 1 && <HostLobby />}
-            {roomState.phase === 2 && <HostArchitecture />}
-            {roomState.phase === 3 && <HostProblem />}
-            {roomState.phase === 4 && <HostDigital />}
-            {roomState.phase === 5 && <HostAnalog />}
-            {roomState.phase === 6 && <HostCatalog />}
-            {roomState.phase === 7 && <HostQuiz />}
-            {roomState.phase === 8 && <HostLogic />}
-            {roomState.phase === 9 && <HostWrapUp />}
-            {roomState.phase === 10 && <HostPodium />}
-          </motion.div>
+          {lessonMode ? (
+            <motion.div key="lesson" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}
+              style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+              <HostLessonSlideshow phase={roomState.phase} quizRevealed={roomState.quizRevealed} />
+            </motion.div>
+          ) : (
+            <motion.div key="activity" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }}
+              className="host-activity" style={{ flex: 1, overflow: 'auto' }}>
+              {roomState.phase === 1 && <HostLobby />}
+              {roomState.phase === 2 && <HostArchitecture />}
+              {roomState.phase === 3 && <HostProblem />}
+              {roomState.phase === 4 && <HostDigital />}
+              {roomState.phase === 5 && <HostAnalog />}
+              {roomState.phase === 6 && <HostCatalog />}
+              {roomState.phase === 7 && <HostQuiz />}
+              {roomState.phase === 8 && <HostLogic />}
+              {roomState.phase === 9 && <HostWrapUp />}
+              {roomState.phase === 10 && <HostPodium />}
+            </motion.div>
+          )}
         </AnimatePresence>
-        )}
       </main>
     </div>
   );
