@@ -54,11 +54,8 @@ export function RoomProvider({ children }) {
   const setPhase = useCallback(phase => dispatch('phase', { phase }), [dispatch]);
   const setPresentation = useCallback(patch => dispatch('presentation', { phase: roomState.phase, ...patch }), [dispatch, roomState.phase]);
   const joinRoom = useCallback((name, pin) => dispatch('join', { name, pin }), [dispatch]);
-  const updateDigital = useCallback((value, name) => dispatch('digital', { value, name }), [dispatch]);
-  const updateAnalog = useCallback((value, name) => dispatch('analog', { value, name }), [dispatch]);
   const setVoteItem = useCallback(item => dispatch('voteItem', { item }), [dispatch]);
   const submitVote = useCallback((item, layer, name) => dispatch('architectureVote', { item, layer, name }), [dispatch]);
-  const submitWord = useCallback((word, name) => dispatch('word', { word, name }), [dispatch]);
   const sendFloatingEmoji = useCallback((emoji, name) => dispatch('emoji', { emoji, name }), [dispatch]);
   const addFloatingEmoji = useCallback(emoji => dispatch('emoji', { emoji }), [dispatch]);
   const voteQuiz = useCallback((option, name) => dispatch('quizVote', { option, name }), [dispatch]);
@@ -67,10 +64,15 @@ export function RoomProvider({ children }) {
   const activateSense = useCallback(sense => dispatch('sense', { sense }), [dispatch]);
   const resetRoom = useCallback(() => dispatch('reset'), [dispatch]);
 
+  const voteProblem = useCallback((option, name) => dispatch('problemVote', { option, name }), [dispatch]);
+  const voteDigital = useCallback((option, name) => dispatch('digitalVote', { option, name }), [dispatch]);
+  const voteAnalog = useCallback((option, name) => dispatch('analogVote', { option, name }), [dispatch]);
+
   return (
     <RoomContext.Provider value={{ roomState, connected, error, joinUrl, setPhase, setPresentation, joinRoom,
-      updateDigital, updateAnalog, setVoteItem, submitVote, submitWord, sendFloatingEmoji,
-      addFloatingEmoji, voteQuiz, revealQuiz, voteLogic, activateSense, resetRoom }}>
+      setVoteItem, submitVote, sendFloatingEmoji,
+      addFloatingEmoji, voteQuiz, revealQuiz, voteLogic, activateSense, resetRoom,
+      voteProblem, voteDigital, voteAnalog }}>
       {children}
     </RoomContext.Provider>
   );

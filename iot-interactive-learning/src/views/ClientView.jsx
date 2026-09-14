@@ -3,6 +3,7 @@ import { useRoom } from '../context/RoomContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { StudentLessonNotes, LessonSlideshow } from '../components/LessonContent';
 import { sensorQuizExplanation } from '../content/lessons';
+import CountdownTimer from '../components/CountdownTimer';
 
 // ─── Shared Mini Progress Bar ─────────────────────────────────────────────────
 function MiniBar({ value, max, color = 'var(--neon-blue)', label, count }) {
@@ -163,12 +164,25 @@ function ClientLobby() {
 function ClientArchitecture() {
   const { roomState, submitVote } = useRoom();
   const myName = sessionStorage.getItem('student_name');
+  const [isTimeUp, setIsTimeUp] = useState(false);
   
   const currentItem = roomState.currentVoteItem;
   const allVotes = roomState.architectureVotes?.[currentItem] || {};
   const myVote = allVotes[myName];
   const totalVotes = Object.keys(allVotes).length;
   const totalStudents = roomState.students.length;
+
+  const correctMap = { esp32: 'device', wifi: 'network', cloud: 'service' };
+  const correctAnswer = correctMap[currentItem];
+  const isAllAnswered = totalStudents > 0 && totalVotes >= totalStudents;
+  const showResults = isTimeUp || isAllAnswered;
+
+  // Track timer expiry
+  useEffect(() => {
+    setIsTimeUp(false);
+    const timer = setTimeout(() => setIsTimeUp(true), 30000 - (Date.now() - roomState.questionStartTime));
+    return () => clearTimeout(timer);
+  }, [roomState.questionStartTime]);
 
   const layers = [
     { id: 'service', label: 'Layer 3: Service', color: 'var(--neon-purple)', emoji: '☁️' },
@@ -188,14 +202,15 @@ function ClientArchitecture() {
       
       {/* อุปกรณ์ที่กำลังโหวต */}
       <div className="glass-panel" style={{ padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <CountdownTimer startTime={roomState.questionStartTime} duration={30} size={50} />
         <motion.div key={currentItem} initial={{ scale: 0 }} animate={{ scale: 1 }} style={{ fontSize: '3rem' }}>
           {activeItem.icon}
         </motion.div>
         <div>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>อุปกรณ์ที่กำลังโหวต</div>
           <div style={{ fontWeight: 'bold', color: 'var(--neon-blue)', fontSize: '1.1rem' }}>{activeItem.name}</div>
-          <div style={{ fontSize: '0.75rem', color: totalVotes >= totalStudents ? 'var(--neon-green)' : 'var(--text-secondary)' }}>
-            โหวตแล้ว {totalVotes} / {totalStudents} คน
+          <div style={{ fontSize: '0.75rem', color: isTimeUp ? (totalVotes >= totalStudents ? 'var(--neon-green)' : 'var(--text-secondary)') : 'var(--neon-blue)' }}>
+            {isTimeUp ? `โหวตแล้ว ${totalVotes} / ${totalStudents} คน` : 'กำลังเปิดรับคำตอบ... ⏳'}
           </div>
         </div>
       </div>
@@ -206,107 +221,165 @@ function ClientArchitecture() {
           const count = Object.values(allVotes).filter(v => v === layer.id).length;
           const pct = totalVotes === 0 ? 0 : Math.round((count / totalVotes) * 100);
           const isMyVote = myVote === layer.id;
+          const isCorrectAnswer = layer.id === correctAnswer;
           return (
             <motion.button key={layer.id}
               whileTap={{ scale: 0.97 }}
-              onClick={() => !myVote && submitVote(currentItem, layer.id, myName)}
-              disabled={!!myVote}
+              onClick={() => !myVote && !isTimeUp && submitVote(currentItem, layer.id, myName)}
+              disabled={!!myVote || isTimeUp}
               style={{
-                background: isMyVote ? `${layer.color}22` : 'rgba(255,255,255,0.04)',
-                border: `2px solid ${isMyVote ? layer.color : 'rgba(255,255,255,0.1)'}`,
-                borderRadius: 14, padding: '1rem', cursor: myVote ? 'default' : 'pointer',
+                background: showResults && isCorrectAnswer ? 'rgba(80,250,123,0.15)'
+                  : isMyVote ? `${layer.color}22` : 'rgba(255,255,255,0.04)',
+                border: `2px solid ${showResults && isCorrectAnswer ? '#50fa7b' : isMyVote ? layer.color : 'rgba(255,255,255,0.1)'}`,
+                borderRadius: 14, padding: '1rem', cursor: myVote || isTimeUp ? 'default' : 'pointer',
                 position: 'relative', overflow: 'hidden', textAlign: 'left'
               }}
             >
-              {/* live progress bar behind button */}
-              <motion.div animate={{ width: `${pct}%` }}
-                style={{ position: 'absolute', inset: 0, background: `${layer.color}18`, borderRadius: 12, width: '0%' }}
-              />
+              {/* progress bar — only show after results revealed */}
+              {showResults && (
+                <motion.div initial={{ width: '0%' }} animate={{ width: `${pct}%` }}
+                  style={{ position: 'absolute', inset: 0, background: `${layer.color}18`, borderRadius: 12 }}
+                />
+              )}
               <div style={{ position: 'relative', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                   <span style={{ fontSize: '1.5rem' }}>{layer.emoji}</span>
-                  <span style={{ color: isMyVote ? layer.color : 'white', fontWeight: isMyVote ? 'bold' : 'normal', fontSize: '1rem' }}>
-                    {layer.label} {isMyVote && '✅'}
+                  <span style={{ color: showResults && isCorrectAnswer ? '#50fa7b' : isMyVote ? layer.color : 'white', fontWeight: isMyVote || (showResults && isCorrectAnswer) ? 'bold' : 'normal', fontSize: '1rem' }}>
+                    {layer.label} {isMyVote && '✅'} {showResults && isCorrectAnswer && '🎯'}
                   </span>
                 </div>
-                <span style={{ color: layer.color, fontWeight: 'bold', fontSize: '1.1rem' }}>
-                  {totalVotes > 0 ? `${pct}%` : ''}
-                </span>
+                {showResults && totalVotes > 0 && (
+                  <span style={{ color: layer.color, fontWeight: 'bold', fontSize: '1.1rem' }}>
+                    {pct}%
+                  </span>
+                )}
               </div>
             </motion.button>
           );
         })}
       </div>
 
-      {myVote && (
+      {myVote && !showResults && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-          style={{ textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.9rem', padding: '0.5rem' }}>
-          ✅ คุณโหวตแล้ว! รอผลจากเพื่อน {totalVotes}/{totalStudents} คน
+          style={{ textAlign: 'center', color: 'var(--neon-blue)', fontSize: '0.9rem', padding: '0.5rem' }}>
+          ⏳ บันทึกคำตอบแล้ว — รอสรุปผลเมื่อหมดเวลา
+        </motion.div>
+      )}
+      {showResults && myVote && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+          style={{ textAlign: 'center', color: myVote === correctAnswer ? 'var(--neon-green)' : '#ff6b6b', fontSize: '0.9rem', padding: '0.5rem' }}>
+          {myVote === correctAnswer ? '🎉 ถูกต้อง!' : '❌ ไม่ถูก — คำตอบที่ถูกคือ ' + layers.find(l => l.id === correctAnswer)?.label}
+        </motion.div>
+      )}
+      {showResults && !myVote && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+          style={{ textAlign: 'center', color: '#ff6b6b', fontSize: '0.9rem' }}>
+          ⏰ หมดเวลา! คำตอบที่ถูกคือ {layers.find(l => l.id === correctAnswer)?.label}
         </motion.div>
       )}
     </div>
   );
 }
 
-// ─── Scene 3: The Problem (Word Cloud) ─────────────────────────────────────────
+// ─── Scene 3: The Problem ─────────────────────────────────────────
 function ClientProblem() {
-  const { roomState, submitWord } = useRoom();
-  const [word, setWord] = useState('');
+  const { roomState, voteProblem } = useRoom();
   const myName = sessionStorage.getItem('student_name');
+  const [isTimeUp, setIsTimeUp] = useState(false);
+  
+  const allVotes = roomState.problemVotes || {};
+  const myVote = allVotes[myName];
+  const totalVotes = Object.keys(allVotes).length;
+  const totalStudents = roomState.students.length;
 
-  const hasSubmitted = roomState.wordSubmissions?.some(w => w.name === myName);
-  const allWords = roomState.wordSubmissions || [];
+  const correctAnswer = 'sensor';
+  const isAllAnswered = totalStudents > 0 && totalVotes >= totalStudents;
+  const showResults = isTimeUp || isAllAnswered;
+
+  useEffect(() => {
+    setIsTimeUp(false);
+    const timer = setTimeout(() => setIsTimeUp(true), 30000 - (Date.now() - roomState.questionStartTime));
+    return () => clearTimeout(timer);
+  }, [roomState.questionStartTime]);
+
+  const options = [
+    { id: 'wifi', label: 'Wi-Fi Router (ตัวส่งเน็ต)', color: '#ffb86c' },
+    { id: 'sensor', label: 'Sensor (เซนเซอร์)', color: '#50fa7b' },
+    { id: 'motor', label: 'Motor (มอเตอร์)', color: '#ff79c6' },
+    { id: 'usb', label: 'USB Cable (สายเชื่อมต่อ)', color: '#8be9fd' }
+  ];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1.5rem', maxWidth: 440, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
       
-      <div style={{ background: 'rgba(0,240,255,0.08)', border: '2px solid rgba(0,240,255,0.3)', borderRadius: 14, padding: '1.25rem' }}>
-        <h2 className="text-glow-blue" style={{ fontSize: '1.1rem', textAlign: 'center', margin: '0 0 0.5rem 0' }}>❓ ระดมสมองช่วยบอร์ด ESP32!</h2>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', margin: 0, textAlign: 'center', lineHeight: 1.5 }}>
-          อุปกรณ์อะไรเป็น <span style={{ color: 'var(--neon-purple)', fontWeight: 'bold' }}>ตา หู จมูก ผิวหนัง</span> ให้บอร์ด?
-        </p>
-      </div>
-
-      {!hasSubmitted ? (
-        <form onSubmit={e => { e.preventDefault(); if (word.trim()) { submitWord(word, myName); setWord(''); } }}
-          style={{ display: 'flex', gap: '0.75rem' }}>
-          <input type="text" placeholder="เช่น เซนเซอร์แสง, กล้อง..." value={word}
-            onChange={e => setWord(e.target.value)} className="neu-input"
-            style={{ flex: 1, fontSize: '1rem', textAlign: 'center' }} maxLength={30} required />
-          <motion.button whileTap={{ scale: 0.95 }} type="submit" className="neu-button"
-            style={{ color: 'var(--neon-green)', padding: '0.75rem 1.25rem', fontSize: '1rem' }}>
-            ส่ง 🚀
-          </motion.button>
-        </form>
-      ) : (
-        <div style={{ textAlign: 'center', color: 'var(--neon-green)', fontSize: '0.9rem', padding: '0.5rem' }}>
-          ✅ ส่งไอเดียแล้ว!
-        </div>
-      )}
-
-      {/* ไอเดียของทุกคน */}
-      {allWords.length > 0 && (
-        <div className="glass-panel" style={{ padding: '1rem' }}>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', margin: '0 0 0.75rem 0' }}>
-            💡 ไอเดียจากทั้งห้อง ({allWords.length} ไอเดีย)
-          </p>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-            <AnimatePresence>
-              {allWords.map(item => (
-                <motion.span key={item.id}
-                  initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-                  style={{
-                    background: item.name === myName ? 'rgba(0,240,255,0.2)' : 'rgba(255,255,255,0.07)',
-                    border: `1px solid ${item.name === myName ? 'var(--neon-blue)' : 'rgba(255,255,255,0.12)'}`,
-                    borderRadius: 20, padding: '4px 12px', fontSize: '0.85rem',
-                    color: item.name === myName ? 'var(--neon-blue)' : 'var(--text-primary)'
-                  }}>
-                  {item.word} <span style={{ opacity: 0.5, fontSize: '0.7rem' }}>({item.name})</span>
-                </motion.span>
-              ))}
-            </AnimatePresence>
+      <div className="glass-panel" style={{ padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <CountdownTimer startTime={roomState.questionStartTime} duration={30} size={50} />
+        <div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>คำถาม</div>
+          <div style={{ fontWeight: 'bold', color: 'var(--neon-blue)', fontSize: '1rem' }}>อุปกรณ์ใดคือ "ตา หู จมูก"?</div>
+          <div style={{ fontSize: '0.75rem', color: isTimeUp ? (totalVotes >= totalStudents ? 'var(--neon-green)' : 'var(--text-secondary)') : 'var(--neon-blue)' }}>
+            {isTimeUp ? `โหวตแล้ว ${totalVotes} / ${totalStudents} คน` : 'กำลังเปิดรับคำตอบ... ⏳'}
           </div>
         </div>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        {options.map(opt => {
+          const count = Object.values(allVotes).filter(v => v === opt.id).length;
+          const pct = totalVotes === 0 ? 0 : Math.round((count / totalVotes) * 100);
+          const isMyVote = myVote === opt.id;
+          const isCorrectAnswer = opt.id === correctAnswer;
+          
+          return (
+            <motion.button key={opt.id}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => !myVote && !isTimeUp && voteProblem(opt.id, myName)}
+              disabled={!!myVote || isTimeUp}
+              style={{
+                background: showResults && isCorrectAnswer ? 'rgba(80,250,123,0.15)'
+                  : isMyVote ? `${opt.color}22` : 'rgba(255,255,255,0.04)',
+                border: `2px solid ${showResults && isCorrectAnswer ? '#50fa7b' : isMyVote ? opt.color : 'rgba(255,255,255,0.1)'}`,
+                borderRadius: 14, padding: '1rem', cursor: myVote || isTimeUp ? 'default' : 'pointer',
+                position: 'relative', overflow: 'hidden', textAlign: 'left'
+              }}
+            >
+              {showResults && (
+                <motion.div initial={{ width: '0%' }} animate={{ width: `${pct}%` }}
+                  style={{ position: 'absolute', inset: 0, background: `${opt.color}18`, borderRadius: 12 }}
+                />
+              )}
+              <div style={{ position: 'relative', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ color: showResults && isCorrectAnswer ? '#50fa7b' : isMyVote ? opt.color : 'white', fontWeight: isMyVote || (showResults && isCorrectAnswer) ? 'bold' : 'normal', fontSize: '1rem' }}>
+                  {opt.label} {isMyVote && '✅'} {showResults && isCorrectAnswer && '🎯'}
+                </span>
+                {showResults && totalVotes > 0 && (
+                  <span style={{ color: opt.color, fontWeight: 'bold', fontSize: '1.1rem' }}>
+                    {pct}%
+                  </span>
+                )}
+              </div>
+            </motion.button>
+          );
+        })}
+      </div>
+
+      {myVote && !showResults && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+          style={{ textAlign: 'center', color: 'var(--neon-blue)', fontSize: '0.9rem', padding: '0.5rem' }}>
+          ⏳ บันทึกคำตอบแล้ว — รอสรุปผลเมื่อหมดเวลา
+        </motion.div>
+      )}
+      {showResults && myVote && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+          style={{ textAlign: 'center', color: myVote === correctAnswer ? 'var(--neon-green)' : '#ff6b6b', fontSize: '0.9rem', padding: '0.5rem' }}>
+          {myVote === correctAnswer ? '🎉 ถูกต้อง!' : '❌ ไม่ถูก — คำตอบที่ถูกคือ ' + options.find(o => o.id === correctAnswer)?.label}
+        </motion.div>
+      )}
+      {showResults && !myVote && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+          style={{ textAlign: 'center', color: '#ff6b6b', fontSize: '0.9rem' }}>
+          ⏰ หมดเวลา! คำตอบที่ถูกคือ {options.find(o => o.id === correctAnswer)?.label}
+        </motion.div>
       )}
     </div>
   );
@@ -314,136 +387,207 @@ function ClientProblem() {
 
 // ─── Scene 4: Digital Signal ────────────────────────────────────────────────
 function ClientDigital() {
-  const { roomState, updateDigital } = useRoom();
+  const { roomState, voteDigital } = useRoom();
   const myName = sessionStorage.getItem('student_name');
-  const [pressing, setPressing] = useState(false);
-
-  const presses = roomState.digitalPresses || [];
-  const val = roomState.digitalValue || 0;
+  const [isTimeUp, setIsTimeUp] = useState(false);
+  
+  const allVotes = roomState.digitalVotes || {};
+  const myVote = allVotes[myName];
+  const totalVotes = Object.keys(allVotes).length;
   const totalStudents = roomState.students.length;
 
-  const handleDown = () => { setPressing(true); updateDigital(1, myName); };
-  const handleUp = () => { setPressing(false); updateDigital(0, myName); };
+  const correctAnswer = '2_states';
+  const isAllAnswered = totalStudents > 0 && totalVotes >= totalStudents;
+  const showResults = isTimeUp || isAllAnswered;
+
+  useEffect(() => {
+    setIsTimeUp(false);
+    const timer = setTimeout(() => setIsTimeUp(true), 30000 - (Date.now() - roomState.questionStartTime));
+    return () => clearTimeout(timer);
+  }, [roomState.questionStartTime]);
+
+  const options = [
+    { id: '2_states', label: '2 สถานะ (เช่น 0 กับ 1, ปิดกับเปิด)', color: '#ff4d4d' },
+    { id: '10_states', label: '10 สถานะ (เช่น 0 ถึง 9)', color: '#8be9fd' },
+    { id: 'infinite', label: 'นับไม่ถ้วน (ค่าต่อเนื่อง)', color: '#ffb86c' },
+    { id: 'none', label: 'ไม่มีสถานะที่แน่นอน', color: '#ff79c6' }
+  ];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1.5rem', maxWidth: 420, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1.5rem', maxWidth: 440, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
       
-      <div className="glass-panel" style={{ padding: '1.25rem', textAlign: 'center' }}>
-        <h2 className="text-glow-blue" style={{ fontSize: '1.1rem', margin: '0 0 0.25rem 0' }}>ทดสอบสัญญาณ Digital (0 / 1)</h2>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', margin: 0 }}>
-          กดปุ่มค้างไว้เพื่อส่งสัญญาณ <b>HIGH (1)</b>
-        </p>
-      </div>
-
-      {/* สัญญาณรวมของห้อง */}
-      <div className="glass-panel" style={{ padding: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>สัญญาณรวมของห้อง</span>
-          <span style={{ fontSize: '1.5rem', fontWeight: 'bold', color: val ? '#ff4d4d' : 'var(--text-secondary)' }}>
-            {val ? '1 (HIGH)' : '0 (LOW)'}
-          </span>
-        </div>
-        <div style={{ textAlign: 'right' }}>
-          <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>กดค้างอยู่</span>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', justifyContent: 'flex-end', marginTop: 4, maxWidth: 180 }}>
-            {roomState.students.map(s => (
-              <span key={s.id} style={{
-                padding: '2px 8px', borderRadius: 10, fontSize: '0.7rem',
-                background: presses.includes(s.name) ? 'rgba(255,77,77,0.25)' : 'rgba(255,255,255,0.05)',
-                border: `1px solid ${presses.includes(s.name) ? '#ff4d4d' : 'rgba(255,255,255,0.1)'}`,
-                color: presses.includes(s.name) ? '#ff8888' : 'var(--text-secondary)'
-              }}>
-                {s.name} {presses.includes(s.name) ? '●' : '○'}
-              </span>
-            ))}
+      <div className="glass-panel" style={{ padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <CountdownTimer startTime={roomState.questionStartTime} duration={30} size={50} />
+        <div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>คำถาม</div>
+          <div style={{ fontWeight: 'bold', color: 'var(--neon-blue)', fontSize: '1rem' }}>สัญญาณ Digital มีกี่สถานะ?</div>
+          <div style={{ fontSize: '0.75rem', color: isTimeUp ? (totalVotes >= totalStudents ? 'var(--neon-green)' : 'var(--text-secondary)') : 'var(--neon-blue)' }}>
+            {isTimeUp ? `โหวตแล้ว ${totalVotes} / ${totalStudents} คน` : 'กำลังเปิดรับคำตอบ... ⏳'}
           </div>
         </div>
       </div>
 
-      {/* ปุ่มกด */}
-      <div style={{ display: 'flex', justifyContent: 'center', paddingTop: '0.5rem' }}>
-        <motion.button
-          onPointerDown={handleDown}
-          onPointerUp={handleUp}
-          onPointerLeave={handleUp}
-          animate={{ scale: pressing ? 0.9 : 1, boxShadow: pressing ? '0 5px 15px rgba(255,0,0,0.9)' : '0 10px 30px rgba(255,0,0,0.4)' }}
-          style={{
-            width: 180, height: 180, borderRadius: '50%',
-            background: pressing
-              ? 'radial-gradient(circle, #ff8080 0%, #cc0000 100%)'
-              : 'radial-gradient(circle, #ff4d4d 0%, #aa0000 100%)',
-            color: 'white', fontSize: '1.5rem', fontWeight: 'bold',
-            border: '4px solid #ffb3b3', cursor: 'pointer', WebkitUserSelect: 'none',
-            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4
-          }}
-        >
-          <span>{pressing ? '⚡ HIGH' : 'กดค้าง!'}</span>
-          <span style={{ fontSize: '0.8rem', opacity: 0.8 }}>{pressing ? '1' : '0'}</span>
-        </motion.button>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        {options.map(opt => {
+          const count = Object.values(allVotes).filter(v => v === opt.id).length;
+          const pct = totalVotes === 0 ? 0 : Math.round((count / totalVotes) * 100);
+          const isMyVote = myVote === opt.id;
+          const isCorrectAnswer = opt.id === correctAnswer;
+          
+          return (
+            <motion.button key={opt.id}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => !myVote && !isTimeUp && voteDigital(opt.id, myName)}
+              disabled={!!myVote || isTimeUp}
+              style={{
+                background: showResults && isCorrectAnswer ? 'rgba(80,250,123,0.15)'
+                  : isMyVote ? `${opt.color}22` : 'rgba(255,255,255,0.04)',
+                border: `2px solid ${showResults && isCorrectAnswer ? '#50fa7b' : isMyVote ? opt.color : 'rgba(255,255,255,0.1)'}`,
+                borderRadius: 14, padding: '1rem', cursor: myVote || isTimeUp ? 'default' : 'pointer',
+                position: 'relative', overflow: 'hidden', textAlign: 'left'
+              }}
+            >
+              {showResults && (
+                <motion.div initial={{ width: '0%' }} animate={{ width: `${pct}%` }}
+                  style={{ position: 'absolute', inset: 0, background: `${opt.color}18`, borderRadius: 12 }}
+                />
+              )}
+              <div style={{ position: 'relative', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ color: showResults && isCorrectAnswer ? '#50fa7b' : isMyVote ? opt.color : 'white', fontWeight: isMyVote || (showResults && isCorrectAnswer) ? 'bold' : 'normal', fontSize: '1rem' }}>
+                  {opt.label} {isMyVote && '✅'} {showResults && isCorrectAnswer && '🎯'}
+                </span>
+                {showResults && totalVotes > 0 && (
+                  <span style={{ color: opt.color, fontWeight: 'bold', fontSize: '1.1rem' }}>
+                    {pct}%
+                  </span>
+                )}
+              </div>
+            </motion.button>
+          );
+        })}
       </div>
+
+      {myVote && !showResults && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+          style={{ textAlign: 'center', color: 'var(--neon-blue)', fontSize: '0.9rem', padding: '0.5rem' }}>
+          ⏳ บันทึกคำตอบแล้ว — รอสรุปผลเมื่อหมดเวลา
+        </motion.div>
+      )}
+      {showResults && myVote && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+          style={{ textAlign: 'center', color: myVote === correctAnswer ? 'var(--neon-green)' : '#ff6b6b', fontSize: '0.9rem', padding: '0.5rem' }}>
+          {myVote === correctAnswer ? '🎉 ถูกต้อง!' : '❌ ไม่ถูก — คำตอบที่ถูกคือ ' + options.find(o => o.id === correctAnswer)?.label}
+        </motion.div>
+      )}
+      {showResults && !myVote && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+          style={{ textAlign: 'center', color: '#ff6b6b', fontSize: '0.9rem' }}>
+          ⏰ หมดเวลา! คำตอบที่ถูกคือ {options.find(o => o.id === correctAnswer)?.label}
+        </motion.div>
+      )}
     </div>
   );
 }
 
 // ─── Scene 5: Analog Signal ────────────────────────────────────────────────
 function ClientAnalog() {
-  const { roomState, updateAnalog } = useRoom();
+  const { roomState, voteAnalog } = useRoom();
   const myName = sessionStorage.getItem('student_name');
-  const val = roomState.analogValues?.[myName] ?? 0;
+  const [isTimeUp, setIsTimeUp] = useState(false);
+  
+  const allVotes = roomState.analogVotes || {};
+  const myVote = allVotes[myName];
+  const totalVotes = Object.keys(allVotes).length;
+  const totalStudents = roomState.students.length;
 
-  const allVals = roomState.analogValues || {};
-  const others = Object.entries(allVals).filter(([n]) => n !== myName);
-  const total = Object.values(allVals).reduce((s, v) => s + v, 0);
-  const avg = Object.keys(allVals).length > 0 ? Math.round(total / Object.keys(allVals).length) : 0;
+  const correctAnswer = 'continuous';
+  const isAllAnswered = totalStudents > 0 && totalVotes >= totalStudents;
+  const showResults = isTimeUp || isAllAnswered;
 
-  const hue = (v) => 200 - (v / 4095) * 200;
+  useEffect(() => {
+    setIsTimeUp(false);
+    const timer = setTimeout(() => setIsTimeUp(true), 30000 - (Date.now() - roomState.questionStartTime));
+    return () => clearTimeout(timer);
+  }, [roomState.questionStartTime]);
+
+  const options = [
+    { id: 'binary', label: 'มีแค่สถานะเปิดกับปิด (0 กับ 1)', color: '#ffb86c' },
+    { id: 'continuous', label: 'มีค่าต่อเนื่อง เช่น 0 ถึง 4095', color: '#bd93f9' },
+    { id: 'faster', label: 'ส่งข้อมูลได้เร็วกว่ามาก', color: '#ff79c6' },
+    { id: 'less_wires', label: 'ใช้สายไฟน้อยกว่า', color: '#8be9fd' }
+  ];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1.5rem', maxWidth: 420, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1.5rem', maxWidth: 440, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
       
-      <div className="glass-panel" style={{ padding: '1.25rem', textAlign: 'center' }}>
-        <h2 className="text-glow-blue" style={{ fontSize: '1.1rem', margin: '0 0 0.25rem 0' }}>ทดสอบสัญญาณ Analog</h2>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', margin: 0 }}>เลื่อนจำลองค่า ADC 12 บิต (0 – 4095)</p>
-      </div>
-
-      {/* Slider ของตัวเอง */}
-      <div className="glass-panel" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>ค่าของฉัน</span>
-          <span style={{ fontSize: '2rem', fontWeight: 'bold', color: `hsl(${hue(val)}, 100%, 55%)` }}>{val}</span>
-        </div>
-        <input type="range" min="0" max="4095" value={val}
-          onChange={e => updateAnalog(parseInt(e.target.value), myName)}
-          style={{ width: '100%', height: 36, accentColor: `hsl(${hue(val)}, 100%, 55%)` }} />
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
-          <span>0 (มืด/เย็น)</span><span>4095 (สว่าง/ร้อน)</span>
+      <div className="glass-panel" style={{ padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <CountdownTimer startTime={roomState.questionStartTime} duration={30} size={50} />
+        <div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>คำถาม</div>
+          <div style={{ fontWeight: 'bold', color: 'var(--neon-blue)', fontSize: '1rem' }}>สัญญาณ Analog แตกต่างจาก Digital อย่างไร?</div>
+          <div style={{ fontSize: '0.75rem', color: isTimeUp ? (totalVotes >= totalStudents ? 'var(--neon-green)' : 'var(--text-secondary)') : 'var(--neon-blue)' }}>
+            {isTimeUp ? `โหวตแล้ว ${totalVotes} / ${totalStudents} คน` : 'กำลังเปิดรับคำตอบ... ⏳'}
+          </div>
         </div>
       </div>
 
-      {/* ค่าเฉลี่ยห้อง + เพื่อน */}
-      {Object.keys(allVals).length > 0 && (
-        <div className="glass-panel" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>🏠 ค่าเฉลี่ยของห้อง</span>
-            <span style={{ fontWeight: 'bold', fontSize: '1.3rem', color: `hsl(${hue(avg)}, 100%, 55%)` }}>{avg}</span>
-          </div>
-          <div style={{ height: 10, background: 'rgba(255,255,255,0.08)', borderRadius: 5, overflow: 'hidden' }}>
-            <motion.div animate={{ width: `${(avg / 4095) * 100}%`, background: `hsl(${hue(avg)}, 100%, 55%)` }} style={{ height: '100%' }} />
-          </div>
-          {others.length > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginTop: '0.25rem' }}>
-              {others.map(([n, v]) => (
-                <div key={n} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem' }}>
-                  <span style={{ width: 60, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{n}</span>
-                  <div style={{ flex: 1, height: 6, background: 'rgba(255,255,255,0.07)', borderRadius: 3, overflow: 'hidden' }}>
-                    <motion.div animate={{ width: `${(v / 4095) * 100}%` }} style={{ height: '100%', background: `hsl(${hue(v)}, 100%, 55%)`, borderRadius: 3 }} />
-                  </div>
-                  <span style={{ width: 36, textAlign: 'right', color: `hsl(${hue(v)}, 100%, 55%)` }}>{v}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        {options.map(opt => {
+          const count = Object.values(allVotes).filter(v => v === opt.id).length;
+          const pct = totalVotes === 0 ? 0 : Math.round((count / totalVotes) * 100);
+          const isMyVote = myVote === opt.id;
+          const isCorrectAnswer = opt.id === correctAnswer;
+          
+          return (
+            <motion.button key={opt.id}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => !myVote && !isTimeUp && voteAnalog(opt.id, myName)}
+              disabled={!!myVote || isTimeUp}
+              style={{
+                background: showResults && isCorrectAnswer ? 'rgba(80,250,123,0.15)'
+                  : isMyVote ? `${opt.color}22` : 'rgba(255,255,255,0.04)',
+                border: `2px solid ${showResults && isCorrectAnswer ? '#50fa7b' : isMyVote ? opt.color : 'rgba(255,255,255,0.1)'}`,
+                borderRadius: 14, padding: '1rem', cursor: myVote || isTimeUp ? 'default' : 'pointer',
+                position: 'relative', overflow: 'hidden', textAlign: 'left'
+              }}
+            >
+              {showResults && (
+                <motion.div initial={{ width: '0%' }} animate={{ width: `${pct}%` }}
+                  style={{ position: 'absolute', inset: 0, background: `${opt.color}18`, borderRadius: 12 }}
+                />
+              )}
+              <div style={{ position: 'relative', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ color: showResults && isCorrectAnswer ? '#50fa7b' : isMyVote ? opt.color : 'white', fontWeight: isMyVote || (showResults && isCorrectAnswer) ? 'bold' : 'normal', fontSize: '1rem' }}>
+                  {opt.label} {isMyVote && '✅'} {showResults && isCorrectAnswer && '🎯'}
+                </span>
+                {showResults && totalVotes > 0 && (
+                  <span style={{ color: opt.color, fontWeight: 'bold', fontSize: '1.1rem' }}>
+                    {pct}%
+                  </span>
+                )}
+              </div>
+            </motion.button>
+          );
+        })}
+      </div>
+
+      {myVote && !showResults && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+          style={{ textAlign: 'center', color: 'var(--neon-blue)', fontSize: '0.9rem', padding: '0.5rem' }}>
+          ⏳ บันทึกคำตอบแล้ว — รอสรุปผลเมื่อหมดเวลา
+        </motion.div>
+      )}
+      {showResults && myVote && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+          style={{ textAlign: 'center', color: myVote === correctAnswer ? 'var(--neon-green)' : '#ff6b6b', fontSize: '0.9rem', padding: '0.5rem' }}>
+          {myVote === correctAnswer ? '🎉 ถูกต้อง!' : '❌ ไม่ถูก — คำตอบที่ถูกคือ ' + options.find(o => o.id === correctAnswer)?.label}
+        </motion.div>
+      )}
+      {showResults && !myVote && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+          style={{ textAlign: 'center', color: '#ff6b6b', fontSize: '0.9rem' }}>
+          ⏰ หมดเวลา! คำตอบที่ถูกคือ {options.find(o => o.id === correctAnswer)?.label}
+        </motion.div>
       )}
     </div>
   );
@@ -472,6 +616,7 @@ function ClientQuiz() {
   const allVotes = roomState.quizVotes || {};
   const totalVoted = Object.keys(allVotes).length;
   const totalStudents = roomState.students.length;
+  const [isTimeUp, setIsTimeUp] = useState(false);
 
   const options = [
     { id: 'ldr',  label: 'เซนเซอร์แสง (LDR)',        emoji: '☀️', color: '#ffb86c' },
@@ -480,12 +625,25 @@ function ClientQuiz() {
     { id: 'soil', label: 'ความชื้นดิน',               emoji: '🌱', color: '#50fa7b' },
   ];
   const isRevealed = roomState.quizRevealed;
+  const isAllAnswered = totalStudents > 0 && totalVoted >= totalStudents;
+  const showResults = isTimeUp || isRevealed || isAllAnswered;
+
+  useEffect(() => {
+    setIsTimeUp(false);
+    const remaining = 30000 - (Date.now() - roomState.questionStartTime);
+    if (remaining <= 0) { setIsTimeUp(true); return; }
+    const timer = setTimeout(() => setIsTimeUp(true), remaining);
+    return () => clearTimeout(timer);
+  }, [roomState.questionStartTime]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1.5rem', maxWidth: 440, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
       
-      <div style={{ textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
-        โจทย์อยู่บนหน้าจอครู! เลือกเซนเซอร์ที่เหมาะสมที่สุด
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem' }}>
+        <CountdownTimer startTime={roomState.questionStartTime} duration={30} size={45} />
+        <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
+          โจทย์อยู่บนหน้าจอครู! เลือกเซนเซอร์ที่เหมาะสมที่สุด
+        </span>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
@@ -493,28 +651,28 @@ function ClientQuiz() {
           const count = Object.values(allVotes).filter(v => v === opt.id).length;
           const pct = totalVoted === 0 ? 0 : Math.round((count / totalVoted) * 100);
           const isMyVote = myVote === opt.id;
-          const isCorrect = isRevealed && opt.id === 'ldr';
+          const isCorrect = opt.id === 'ldr';
           return (
             <motion.button key={opt.id} whileTap={{ scale: 0.96 }}
-              onClick={() => !myVote && !isRevealed && voteQuiz(opt.id, myName)}
+              onClick={() => !myVote && !isRevealed && !isTimeUp && voteQuiz(opt.id, myName)}
               style={{
                 position: 'relative', overflow: 'hidden',
-                background: isCorrect ? 'rgba(80,250,123,0.15)' : isMyVote ? `${opt.color}22` : 'rgba(255,255,255,0.04)',
-                border: `2px solid ${isCorrect ? '#50fa7b' : isMyVote ? opt.color : 'rgba(255,255,255,0.1)'}`,
-                borderRadius: 14, padding: '0.9rem 0.75rem', cursor: myVote || isRevealed ? 'default' : 'pointer',
+                background: showResults && isCorrect ? 'rgba(80,250,123,0.15)' : isMyVote ? `${opt.color}22` : 'rgba(255,255,255,0.04)',
+                border: `2px solid ${showResults && isCorrect ? '#50fa7b' : isMyVote ? opt.color : 'rgba(255,255,255,0.1)'}`,
+                borderRadius: 14, padding: '0.9rem 0.75rem', cursor: myVote || isRevealed || isTimeUp ? 'default' : 'pointer',
                 display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem'
               }}
             >
-              {/* live bar background */}
-              {totalVoted > 0 && (
-                <motion.div animate={{ height: `${pct}%` }}
-                  style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: `${opt.color}18`, height: '0%' }} />
+              {/* bar background — only after reveal */}
+              {showResults && totalVoted > 0 && (
+                <motion.div initial={{ height: '0%' }} animate={{ height: `${pct}%` }}
+                  style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: `${opt.color}18` }} />
               )}
               <span style={{ position: 'relative', fontSize: '2rem' }}>{opt.emoji}</span>
-              <span style={{ position: 'relative', fontSize: '0.78rem', textAlign: 'center', color: isMyVote ? opt.color : 'var(--text-primary)' }}>
-                {opt.label} {isMyVote && '✅'} {isCorrect && '🎯'}
+              <span style={{ position: 'relative', fontSize: '0.78rem', textAlign: 'center', color: showResults && isCorrect ? '#50fa7b' : isMyVote ? opt.color : 'var(--text-primary)', fontWeight: showResults && isCorrect ? 'bold' : 'normal' }}>
+                {opt.label} {isMyVote && '✅'} {showResults && isCorrect && '🎯'}
               </span>
-              {totalVoted > 0 && (
+              {showResults && totalVoted > 0 && (
                 <span style={{ position: 'relative', fontSize: '0.75rem', color: opt.color, fontWeight: 'bold' }}>
                   {count} คน ({pct}%)
                 </span>
@@ -524,9 +682,29 @@ function ClientQuiz() {
         })}
       </div>
 
-      <div style={{ textAlign: 'center', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-        โหวตแล้ว {totalVoted} / {totalStudents} คน
+      <div style={{ textAlign: 'center', fontSize: '0.78rem', color: showResults ? 'var(--text-secondary)' : 'var(--neon-blue)' }}>
+        {showResults ? `โหวตแล้ว ${totalVoted} / ${totalStudents} คน` : 'กำลังเปิดรับคำตอบ... ⏳'}
       </div>
+
+      {myVote && !showResults && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+          style={{ textAlign: 'center', color: 'var(--neon-blue)', fontSize: '0.9rem', padding: '0.25rem' }}>
+          ⏳ บันทึกคำตอบแล้ว — รอสรุปผลเมื่อหมดเวลา
+        </motion.div>
+      )}
+
+      {showResults && myVote && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+          style={{ textAlign: 'center', color: myVote === 'ldr' ? 'var(--neon-green)' : '#ff6b6b', fontSize: '0.9rem', padding: '0.25rem' }}>
+          {myVote === 'ldr' ? '🎉 ถูกต้อง!' : '❌ ไม่ถูก — คำตอบที่ถูกคือ เซนเซอร์แสง (LDR)'}
+        </motion.div>
+      )}
+      {showResults && !myVote && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+          style={{ textAlign: 'center', color: '#ff6b6b', fontSize: '0.9rem' }}>
+          ⏰ หมดเวลา! คำตอบที่ถูกคือ เซนเซอร์แสง (LDR)
+        </motion.div>
+      )}
 
       {isRevealed && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
@@ -546,6 +724,19 @@ function ClientLogic() {
   const allVotes = roomState.logicVotes || {};
   const totalVoted = Object.keys(allVotes).length;
   const totalStudents = roomState.students.length;
+  const [isTimeUp, setIsTimeUp] = useState(false);
+
+  const correctId = 'dry';
+  const isAllAnswered = totalStudents > 0 && totalVoted >= totalStudents;
+  const showResults = isTimeUp || isAllAnswered;
+
+  useEffect(() => {
+    setIsTimeUp(false);
+    const remaining = 30000 - (Date.now() - roomState.questionStartTime);
+    if (remaining <= 0) { setIsTimeUp(true); return; }
+    const timer = setTimeout(() => setIsTimeUp(true), remaining);
+    return () => clearTimeout(timer);
+  }, [roomState.questionStartTime]);
 
   const conditions = [
     { id: 'dark',   label: 'ถ้า "แสงมืด" (LDR < 500)',        color: '#8be9fd' },
@@ -557,13 +748,16 @@ function ClientLogic() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1.5rem', maxWidth: 440, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
       
-      {/* Code preview */}
-      <div style={{ background: 'rgba(0,0,0,0.35)', padding: '1rem', borderRadius: 10, borderLeft: '4px solid var(--neon-purple)', fontFamily: 'monospace', fontSize: '0.95rem', color: '#ffb86c', lineHeight: 1.8 }}>
+      {/* Timer + Code preview */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+        <CountdownTimer startTime={roomState.questionStartTime} duration={30} size={50} />
+        <div style={{ flex: 1, background: 'rgba(0,0,0,0.35)', padding: '1rem', borderRadius: 10, borderLeft: '4px solid var(--neon-purple)', fontFamily: 'monospace', fontSize: '0.95rem', color: '#ffb86c', lineHeight: 1.8 }}>
         IF ( <span style={{ color: 'var(--neon-blue)', borderBottom: myVote ? `2px solid var(--neon-blue)` : '2px dashed rgba(0,240,255,0.4)' }}>
           {myVote ? conditions.find(c => c.id === myVote)?.label : '\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0'}
         </span> ) {'{'}
         <br />&nbsp;&nbsp;<span style={{ color: '#50fa7b' }}>รดน้ำต้นไม้();</span>
         <br />{'}'}
+        </div>
       </div>
 
       {/* ตัวเลือก */}
@@ -572,24 +766,28 @@ function ClientLogic() {
           const count = Object.values(allVotes).filter(v => v === c.id).length;
           const pct = totalVoted === 0 ? 0 : Math.round((count / totalVoted) * 100);
           const isMyVote = myVote === c.id;
+          const isCorrectAnswer = c.id === correctId;
           return (
             <motion.button key={c.id} whileTap={{ scale: 0.98 }}
-              onClick={() => !myVote && voteLogic(c.id, myName)}
+              onClick={() => !myVote && !isTimeUp && voteLogic(c.id, myName)}
               style={{
                 position: 'relative', overflow: 'hidden',
-                background: isMyVote ? `${c.color}18` : 'rgba(255,255,255,0.04)',
-                border: `2px solid ${isMyVote ? c.color : 'rgba(255,255,255,0.1)'}`,
-                borderRadius: 10, padding: '0.85rem 1rem', cursor: myVote ? 'default' : 'pointer',
+                background: showResults && isCorrectAnswer ? 'rgba(80,250,123,0.15)'
+                  : isMyVote ? `${c.color}18` : 'rgba(255,255,255,0.04)',
+                border: `2px solid ${showResults && isCorrectAnswer ? '#50fa7b' : isMyVote ? c.color : 'rgba(255,255,255,0.1)'}`,
+                borderRadius: 10, padding: '0.85rem 1rem', cursor: myVote || isTimeUp ? 'default' : 'pointer',
                 textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center'
               }}
             >
-              {/* live bar */}
-              <motion.div animate={{ width: `${pct}%` }}
-                style={{ position: 'absolute', inset: 0, background: `${c.color}14`, width: '0%' }} />
-              <span style={{ position: 'relative', color: isMyVote ? c.color : 'white', fontSize: '0.9rem', fontWeight: isMyVote ? 'bold' : 'normal' }}>
-                {isMyVote && '✅ '}{c.label}
+              {/* bar — only after reveal */}
+              {showResults && (
+                <motion.div initial={{ width: '0%' }} animate={{ width: `${pct}%` }}
+                  style={{ position: 'absolute', inset: 0, background: `${c.color}14` }} />
+              )}
+              <span style={{ position: 'relative', color: showResults && isCorrectAnswer ? '#50fa7b' : isMyVote ? c.color : 'white', fontSize: '0.9rem', fontWeight: isMyVote || (showResults && isCorrectAnswer) ? 'bold' : 'normal' }}>
+                {isMyVote && '✅ '}{c.label} {showResults && isCorrectAnswer && '🎯'}
               </span>
-              {totalVoted > 0 && (
+              {showResults && totalVoted > 0 && (
                 <span style={{ position: 'relative', color: c.color, fontSize: '0.8rem', fontWeight: 'bold', whiteSpace: 'nowrap', marginLeft: '0.5rem' }}>
                   {count} ({pct}%)
                 </span>
@@ -599,31 +797,74 @@ function ClientLogic() {
         })}
       </div>
 
-      <div style={{ textAlign: 'center', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-        ตอบแล้ว {totalVoted} / {totalStudents} คน
+      <div style={{ textAlign: 'center', fontSize: '0.78rem', color: showResults ? 'var(--text-secondary)' : 'var(--neon-blue)' }}>
+        {showResults ? `ตอบแล้ว ${totalVoted} / ${totalStudents} คน` : 'กำลังเปิดรับคำตอบ... ⏳'}
       </div>
+
+      {myVote && !showResults && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+          style={{ textAlign: 'center', color: 'var(--neon-blue)', fontSize: '0.9rem', padding: '0.5rem' }}>
+          ⏳ บันทึกคำตอบแล้ว — รอสรุปผลเมื่อหมดเวลา
+        </motion.div>
+      )}
+
+      {showResults && myVote && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+          style={{ textAlign: 'center', color: myVote === correctId ? 'var(--neon-green)' : '#ff6b6b', fontSize: '0.9rem' }}>
+          {myVote === correctId ? '🎉 ถูกต้อง!' : '❌ ไม่ถูก — คำตอบที่ถูกคือ ถ้า "ดินแห้ง" (Soil > 3000)'}
+        </motion.div>
+      )}
+      {showResults && !myVote && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+          style={{ textAlign: 'center', color: '#ff6b6b', fontSize: '0.9rem' }}>
+          {'⏰ หมดเวลา! คำตอบที่ถูกคือ ถ้า "ดินแห้ง" (Soil > 3000)'}
+        </motion.div>
+      )}
     </div>
   );
 }
 
 // ─── Scene 9 & 10: Conclusion & Podium ──────────────────────────────────────
 function ClientWrapUp() {
-  const { addFloatingEmoji } = useRoom();
+  const { roomState, addFloatingEmoji } = useRoom();
+  const myName = sessionStorage.getItem('student_name');
+  const scores = roomState.scores || {};
+  const students = roomState.students || [];
+  const sortedStudents = [...students].sort((a, b) => (scores[b.name] || 0) - (scores[a.name] || 0));
+  const myRank = sortedStudents.findIndex(s => s.name === myName) + 1;
+  const myScore = scores[myName] || 0;
+  const medals = ['', '🥇', '🥈', '🥉'];
   
   return (
-    <div className="flex-center full-screen" style={{ flexDirection: 'column', gap: '2rem', padding: '2rem' }}>
-      <div className="glass-panel" style={{ padding: '2rem', width: '100%', maxWidth: 400, textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+    <div className="flex-center full-screen" style={{ flexDirection: 'column', gap: '1.5rem', padding: '1.5rem' }}>
+      <div className="glass-panel" style={{ padding: '2rem', width: '100%', maxWidth: 400, textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         <h2 className="text-glow-blue" style={{ fontSize: '1.8rem', margin: 0 }}>ยินดีด้วย! 🎉</h2>
-        <p style={{ color: 'var(--text-primary)', fontSize: '1.1rem', lineHeight: 1.6, margin: 0 }}>
-          คุณได้ฝึกพื้นฐานของ IoT ในบทเรียนนี้แล้ว<br/>ตั้งแต่ Device, Sensor, สัญญาณ ไปจนถึง Logic! ลองอ่านสรุปด้านล่าง แล้วอธิบายระบบด้วยคำของตัวเอง
-        </p>
         
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginTop: '1rem' }}>
+        {/* My rank */}
+        <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', bounce: 0.5 }}
+          style={{ background: myRank <= 3 ? 'linear-gradient(135deg, rgba(255,215,0,0.2), rgba(255,140,0,0.2))' : 'rgba(255,255,255,0.05)', border: myRank <= 3 ? '2px solid rgba(255,215,0,0.5)' : '1px solid rgba(255,255,255,0.1)', borderRadius: 16, padding: '1.5rem' }}>
+          <div style={{ fontSize: '3rem' }}>{medals[myRank] || '🏅'}</div>
+          <div style={{ color: 'var(--neon-blue)', fontSize: '2rem', fontWeight: 800 }}>{myScore} pts</div>
+          <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>อันดับที่ {myRank} จาก {students.length} คน</div>
+        </motion.div>
+
+        {/* Top 3 mini leaderboard */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+          {sortedStudents.slice(0, 5).map((s, i) => (
+            <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.5rem 1rem', borderRadius: 10, background: s.name === myName ? 'rgba(0,240,255,0.15)' : 'rgba(255,255,255,0.04)', border: s.name === myName ? '1px solid var(--neon-blue)' : 'none' }}>
+              <span style={{ color: s.name === myName ? 'var(--neon-blue)' : 'var(--text-secondary)', fontSize: '0.85rem' }}>
+                {medals[i + 1] || `${i + 1}.`} {s.name}
+              </span>
+              <span style={{ color: 'var(--neon-blue)', fontWeight: 'bold', fontSize: '0.85rem' }}>{scores[s.name] || 0}</span>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginTop: '0.5rem' }}>
           <motion.button whileTap={{ scale: 0.8 }} onClick={() => addFloatingEmoji('🎉')} style={{ fontSize: '3rem', background: 'none', border: 'none', cursor: 'pointer' }}>🎉</motion.button>
           <motion.button whileTap={{ scale: 0.8 }} onClick={() => addFloatingEmoji('👏')} style={{ fontSize: '3rem', background: 'none', border: 'none', cursor: 'pointer' }}>👏</motion.button>
           <motion.button whileTap={{ scale: 0.8 }} onClick={() => addFloatingEmoji('❤️')} style={{ fontSize: '3rem', background: 'none', border: 'none', cursor: 'pointer' }}>❤️</motion.button>
         </div>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>กดส่งสติ๊กเกอร์ไปที่หน้าจอครูเลย!</p>
       </div>
     </div>
   );

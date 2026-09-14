@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
 import { LessonSlideshow } from '../components/LessonContent';
 import { sensorQuizExplanation } from '../content/lessons';
+import CountdownTimer from '../components/CountdownTimer';
 
 // ─── Floating Emojis Overlay ──────────────────────────────────────────────────
 function FloatingEmojis({ emojis }) {
@@ -80,8 +81,20 @@ function HostArchitecture() {
   const currentItem = roomState.currentVoteItem;
   const votes = roomState.architectureVotes?.[currentItem] || {};
   const totalVotes = Object.keys(votes).length;
+  const [isTimeUp, setIsTimeUp] = useState(false);
   
+  useEffect(() => {
+    setIsTimeUp(false);
+    const remaining = 30000 - (Date.now() - roomState.questionStartTime);
+    if (remaining <= 0) { setIsTimeUp(true); return; }
+    const timer = setTimeout(() => setIsTimeUp(true), remaining);
+    return () => clearTimeout(timer);
+  }, [roomState.questionStartTime, currentItem]);
+
   const getPercent = (layer) => totalVotes === 0 ? 0 : Math.round((Object.values(votes).filter(v => v === layer).length / totalVotes) * 100);
+  const totalStudents = roomState.students.length;
+  const isAllAnswered = totalStudents > 0 && totalVotes >= totalStudents;
+  const showResults = isTimeUp || isAllAnswered;
 
   const items = [
     { id: 'esp32', name: 'บอร์ด ESP32', icon: '🎛️', correct: 'device' },
@@ -100,7 +113,10 @@ function HostArchitecture() {
 
   return (
     <div className="flex-center full-screen" style={{ flexDirection: 'column', gap: '2rem' }}>
-      <h1 className="text-glow-blue" style={{ fontSize: '3rem', margin: 0 }}>โหวต: อุปกรณ์นี้อยู่ชั้นไหน?</h1>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+        <CountdownTimer startTime={roomState.questionStartTime} duration={30} size={70} />
+        <h1 className="text-glow-blue" style={{ fontSize: '3rem', margin: 0 }}>โหวต: อุปกรณ์นี้อยู่ชั้นไหน?</h1>
+      </div>
       
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2rem', width: '90%', maxWidth: 1200, justifyContent: 'center' }}>
         
@@ -113,8 +129,8 @@ function HostArchitecture() {
           </motion.div>
           <h2 style={{ margin: 0, color: 'var(--neon-blue)', fontSize: '2rem' }}>{activeItemData.name}</h2>
           
-          <div style={{ marginTop: '1rem', color: 'var(--text-secondary)' }}>
-            โหวตแล้ว: {totalVotes} / {roomState.students.length} คน
+          <div style={{ marginTop: '1rem', color: showResults ? 'var(--text-secondary)' : 'var(--neon-blue)' }}>
+            {showResults ? `โหวตแล้ว: ${totalVotes} / ${totalStudents} คน` : 'กำลังเปิดรับคำตอบ... ⏳'}
           </div>
 
           <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
@@ -136,11 +152,13 @@ function HostArchitecture() {
                 <h2 style={{ color: 'var(--neon-purple)', margin: '0 0 0.5rem 0' }}>Layer 3: Service (ชั้นบริการ)</h2>
                 <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: '0.9rem' }}>คลาวด์/แอปพลิเคชัน/แสดงผล</p>
               </div>
-              <span style={{ fontSize: '2rem', color: 'var(--neon-purple)', fontWeight: 'bold' }}>{getPercent('service')}%</span>
+              {showResults && <span style={{ fontSize: '2rem', color: 'var(--neon-purple)', fontWeight: 'bold' }}>{getPercent('service')}%</span>}
             </div>
-            <div style={{ width: '100%', height: 12, background: 'rgba(0,0,0,0.5)', borderRadius: 6, overflow: 'hidden' }}>
-              <motion.div animate={{ width: `${getPercent('service')}%` }} style={{ height: '100%', background: 'var(--neon-purple)' }} />
-            </div>
+            {showResults && (
+              <div style={{ width: '100%', height: 12, background: 'rgba(0,0,0,0.5)', borderRadius: 6, overflow: 'hidden' }}>
+                <motion.div initial={{ width: 0 }} animate={{ width: `${getPercent('service')}%` }} style={{ height: '100%', background: 'var(--neon-purple)' }} />
+              </div>
+            )}
           </div>
 
           {/* Layer 2: Network */}
@@ -150,11 +168,13 @@ function HostArchitecture() {
                 <h2 style={{ color: 'var(--neon-green)', margin: '0 0 0.5rem 0' }}>Layer 2: Network (ชั้นเครือข่าย)</h2>
                 <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: '0.9rem' }}>ถนน/Wi-Fi/4G</p>
               </div>
-              <span style={{ fontSize: '2rem', color: 'var(--neon-green)', fontWeight: 'bold' }}>{getPercent('network')}%</span>
+              {showResults && <span style={{ fontSize: '2rem', color: 'var(--neon-green)', fontWeight: 'bold' }}>{getPercent('network')}%</span>}
             </div>
-            <div style={{ width: '100%', height: 12, background: 'rgba(0,0,0,0.5)', borderRadius: 6, overflow: 'hidden' }}>
-              <motion.div animate={{ width: `${getPercent('network')}%` }} style={{ height: '100%', background: 'var(--neon-green)' }} />
-            </div>
+            {showResults && (
+              <div style={{ width: '100%', height: 12, background: 'rgba(0,0,0,0.5)', borderRadius: 6, overflow: 'hidden' }}>
+                <motion.div initial={{ width: 0 }} animate={{ width: `${getPercent('network')}%` }} style={{ height: '100%', background: 'var(--neon-green)' }} />
+              </div>
+            )}
           </div>
 
           {/* Layer 1: Device */}
@@ -164,11 +184,13 @@ function HostArchitecture() {
                 <h2 style={{ color: 'var(--neon-blue)', margin: '0 0 0.5rem 0' }}>Layer 1: Device (ชั้นอุปกรณ์)</h2>
                 <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: '0.9rem' }}>หน้างาน/เซนเซอร์/ESP32</p>
               </div>
-              <span style={{ fontSize: '2rem', color: 'var(--neon-blue)', fontWeight: 'bold' }}>{getPercent('device')}%</span>
+              {showResults && <span style={{ fontSize: '2rem', color: 'var(--neon-blue)', fontWeight: 'bold' }}>{getPercent('device')}%</span>}
             </div>
-            <div style={{ width: '100%', height: 12, background: 'rgba(0,0,0,0.5)', borderRadius: 6, overflow: 'hidden' }}>
-              <motion.div animate={{ width: `${getPercent('device')}%` }} style={{ height: '100%', background: 'var(--neon-blue)' }} />
-            </div>
+            {showResults && (
+              <div style={{ width: '100%', height: 12, background: 'rgba(0,0,0,0.5)', borderRadius: 6, overflow: 'hidden' }}>
+                <motion.div initial={{ width: 0 }} animate={{ width: `${getPercent('device')}%` }} style={{ height: '100%', background: 'var(--neon-blue)' }} />
+              </div>
+            )}
           </div>
 
         </div>
@@ -181,66 +203,87 @@ function HostArchitecture() {
 // ─── Scene 3: The Problem ─────────────────────────────────────────────────────
 function HostProblem() {
   const { roomState } = useRoom();
+  const votes = roomState.problemVotes || {};
+  const totalVotes = Object.keys(votes).length;
+  const [isTimeUp, setIsTimeUp] = useState(false);
+  
+  useEffect(() => {
+    setIsTimeUp(false);
+    const remaining = 30000 - (Date.now() - roomState.questionStartTime);
+    if (remaining <= 0) { setIsTimeUp(true); return; }
+    const timer = setTimeout(() => setIsTimeUp(true), remaining);
+    return () => clearTimeout(timer);
+  }, [roomState.questionStartTime]);
+
+  const totalStudents = roomState.students.length;
+  const isAllAnswered = totalStudents > 0 && totalVotes >= totalStudents;
+  const showResults = isTimeUp || isAllAnswered;
+
+  const options = [
+    { id: 'wifi', label: 'Wi-Fi Router (ตัวส่งเน็ต)' },
+    { id: 'sensor', label: 'Sensor (เซนเซอร์)' },
+    { id: 'motor', label: 'Motor (มอเตอร์)' },
+    { id: 'usb', label: 'USB Cable (สายเชื่อมต่อ)' }
+  ];
 
   return (
     <div className="flex-center full-screen" style={{ flexDirection: 'column', gap: '2rem' }}>
-      <h1 className="text-glow-blue" style={{ fontSize: '2.5rem', margin: '0 0 1rem 0', textAlign: 'center' }}>
-        Device Layer: สมองพร้อม แต่ประสาทสัมผัสล่ะ?
-      </h1>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+        <CountdownTimer startTime={roomState.questionStartTime} duration={30} size={70} />
+        <h1 className="text-glow-blue" style={{ fontSize: '2.5rem', margin: 0 }}>
+          ปัญหาของบอร์ด ESP32: สมองพร้อม แต่ประสาทสัมผัสล่ะ?
+        </h1>
+      </div>
       
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2rem', width: '95%', maxWidth: 1200, minHeight: '60vh', justifyContent: 'center' }}>
         
         {/* Left: Problem Statement */}
         <div className="glass-panel" style={{ flex: 1, padding: '2.5rem', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-          
           <motion.div animate={{ background: ['rgba(255,0,0,0.1)', 'rgba(255,0,0,0.2)', 'rgba(255,0,0,0.1)'] }} transition={{ repeat: Infinity, duration: 1 }}
             style={{ padding: '2rem', border: '2px solid #ff4d4d', borderRadius: 16, boxShadow: '0 0 20px rgba(255,0,0,0.2)' }}>
-            <h3 style={{ color: '#ff6b6b', margin: '0 0 1rem 0', fontSize: '1.8rem' }}>⚠️ สมองที่มองไม่เห็น</h3>
+            <h3 style={{ color: '#ff6b6b', margin: '0 0 1rem 0', fontSize: '1.8rem' }}>⚠️ สมองที่ตาบอด</h3>
             <p style={{ color: 'white', fontSize: '1.2rem', margin: 0, lineHeight: 1.6, textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
-              ESP32 ประมวลผลได้ แต่มัน <b>ตาบอด หูหนวก</b> ไม่รู้ว่าห้องร้อนหรือหนาว มืดหรือสว่าง
+              ESP32 ประมวลผลได้ แต่มันไม่รู้ว่าห้องร้อนหรือหนาว มืดหรือสว่าง
             </p>
           </motion.div>
 
           <div className="flex-center" style={{ flex: 1 }}>
             <img src="/images/esp32_board_1789207904514.jpg" alt="ESP32" style={{ width: '80%', maxHeight: 200, objectFit: 'cover', borderRadius: 16, border: '2px solid rgba(255,255,255,0.2)' }} />
           </div>
-
-          <div style={{ background: 'rgba(0,240,255,0.1)', border: '2px solid var(--neon-blue)', borderRadius: 16, padding: '2rem', boxShadow: '0 0 20px rgba(0,240,255,0.2)' }}>
-            <h3 style={{ color: 'var(--neon-blue)', margin: '0 0 1rem 0', fontSize: '1.8rem' }}>💡 เซนเซอร์ (Sensor)</h3>
-            <p style={{ color: 'white', fontSize: '1.2rem', margin: 0, lineHeight: 1.6, textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
-              อวัยวะรับสัมผัส (ตา หู จมูก ผิวหนัง) ที่แปลงสภาพแวดล้อมเป็น <b>สัญญาณไฟฟ้า</b> ให้สมอง
-            </p>
-          </div>
+          
+          <h2 style={{ textAlign: 'center', color: 'var(--neon-blue)' }}>คำถาม: อุปกรณ์ใดทำหน้าที่เปรียบเสมือน "ตา หู จมูก" ให้กับบอร์ด?</h2>
         </div>
 
-        {/* Right: Gallery -> Word Cloud */}
+        {/* Right: Quiz Results */}
         <div className="glass-panel" style={{ flex: 1.5, padding: '2rem', display: 'flex', flexDirection: 'column' }}>
-          <h2 style={{ color: 'var(--neon-purple)', margin: '0 0 1rem 0' }}>ไอเดียจากนักวิจัย 💡</h2>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+            <h2 style={{ color: 'var(--neon-purple)', margin: 0 }}>ผลโหวต</h2>
+            <div style={{ color: showResults ? 'var(--text-secondary)' : 'var(--neon-blue)' }}>
+              {showResults ? `โหวตแล้ว ${totalVotes} / ${totalStudents} คน` : 'กำลังเปิดรับคำตอบ... ⏳'}
+            </div>
+          </div>
           
-          <div style={{ flex: 1, position: 'relative', overflow: 'hidden', display: 'flex', flexWrap: 'wrap', gap: '1rem', alignContent: 'center', justifyContent: 'center' }}>
-            <AnimatePresence>
-              {(!roomState.wordSubmissions || roomState.wordSubmissions.length === 0) && (
-                <p style={{ color: 'var(--text-secondary)', width: '100%', textAlign: 'center' }}>
-                  รอไอเดียจากนักเรียน...
-                </p>
-              )}
-              {roomState.wordSubmissions?.map((item) => (
-                <motion.div key={item.id}
-                  initial={{ scale: 0, y: 50, opacity: 0 }}
-                  animate={{ scale: 1, y: 0, opacity: 1 }}
-                  transition={{ type: 'spring', bounce: 0.5 }}
-                  style={{
-                    background: 'linear-gradient(135deg, rgba(0,240,255,0.2), rgba(188,19,254,0.2))',
-                    border: '1px solid rgba(0,240,255,0.4)',
-                    padding: '1rem 1.5rem',
-                    borderRadius: 30,
-                    boxShadow: '0 4px 15px rgba(0,0,0,0.3)'
-                  }}>
-                  <span style={{ fontSize: '1.5rem', color: '#fff', fontWeight: 'bold', marginRight: '10px' }}>{item.word}</span>
-                  <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>- {item.name}</span>
-                </motion.div>
-              ))}
-            </AnimatePresence>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1rem', justifyContent: 'center' }}>
+            {options.map(opt => {
+              const count = Object.values(votes).filter(v => v === opt.id).length;
+              const pct = totalVotes === 0 ? 0 : Math.round((count / totalVotes) * 100);
+              const isCorrect = opt.id === 'sensor';
+              return (
+                <div key={opt.id} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: '1.2rem', color: showResults && isCorrect ? 'var(--neon-green)' : 'white' }}>
+                      {opt.label} {showResults && isCorrect && '🎯'}
+                    </span>
+                    {showResults && <span style={{ fontSize: '1.2rem' }}>{count} โหวต ({pct}%)</span>}
+                  </div>
+                  {showResults && (
+                    <div style={{ width: '100%', height: 16, background: 'rgba(255,255,255,0.1)', borderRadius: 8, overflow: 'hidden' }}>
+                      <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} style={{ height: '100%', background: isCorrect ? 'var(--neon-green)' : 'var(--neon-blue)' }} />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
 
@@ -249,24 +292,37 @@ function HostProblem() {
   );
 }
 
-// ─── Scene 4: Digital Signal ────────────────────────────────────────────────
 function HostDigital() {
   const { roomState } = useRoom();
-  const presses = roomState.digitalPresses || [];
-  const val = roomState.digitalValue || 0;
+  const votes = roomState.digitalVotes || {};
+  const totalVotes = Object.keys(votes).length;
+  const [isTimeUp, setIsTimeUp] = useState(false);
   
-  const [history, setHistory] = useState(Array(30).fill(0));
-
   useEffect(() => {
-    const timer = setInterval(() => {
-      setHistory(prev => [...prev.slice(1), val]);
-    }, 200);
-    return () => clearInterval(timer);
-  }, [val]);
+    setIsTimeUp(false);
+    const remaining = 30000 - (Date.now() - roomState.questionStartTime);
+    if (remaining <= 0) { setIsTimeUp(true); return; }
+    const timer = setTimeout(() => setIsTimeUp(true), remaining);
+    return () => clearTimeout(timer);
+  }, [roomState.questionStartTime]);
+
+  const totalStudents = roomState.students.length;
+  const isAllAnswered = totalStudents > 0 && totalVotes >= totalStudents;
+  const showResults = isTimeUp || isAllAnswered;
+
+  const options = [
+    { id: '2_states', label: '2 สถานะ (เช่น 0 กับ 1, ปิดกับเปิด)' },
+    { id: '10_states', label: '10 สถานะ (เช่น 0 ถึง 9)' },
+    { id: 'infinite', label: 'นับไม่ถ้วน (ค่าต่อเนื่อง)' },
+    { id: 'none', label: 'ไม่มีสถานะที่แน่นอน' }
+  ];
 
   return (
     <div className="flex-center full-screen" style={{ flexDirection: 'column', gap: '2rem' }}>
-      <h1 className="text-glow-blue" style={{ fontSize: '3rem', margin: 0 }}>สัญญาณภาษาเครื่อง (Digital)</h1>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+        <CountdownTimer startTime={roomState.questionStartTime} duration={30} size={70} />
+        <h1 className="text-glow-blue" style={{ fontSize: '3rem', margin: 0 }}>สัญญาณภาษาเครื่อง (Digital)</h1>
+      </div>
       
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2rem', width: '95%', maxWidth: 1200, minHeight: '60vh', justifyContent: 'center' }}>
         
@@ -275,41 +331,42 @@ function HostDigital() {
           <div style={{ padding: '2rem', border: '2px solid var(--neon-blue)', borderRadius: 16, background: 'rgba(0,240,255,0.05)' }}>
             <h3 style={{ color: 'var(--neon-blue)', margin: '0 0 1rem 0', fontSize: '1.8rem' }}>1. สัญญาณ Digital</h3>
             <p style={{ color: 'white', fontSize: '1.2rem', margin: 0, lineHeight: 1.6 }}>
-              ภาษาไฟฟ้าที่มีแค่ 2 สถานะ:
-              <br/><br/>
-              <b>0 (LOW)</b> = ปิด (ไม่มีไฟ)<br/>
-              <b>1 (HIGH)</b> = เปิด (มีไฟ)
+              ภาษาไฟฟ้าที่เป็นพื้นฐานที่สุดของคอมพิวเตอร์และเซนเซอร์ทั่วไป
             </p>
           </div>
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '5rem', filter: val ? 'drop-shadow(0 0 30px #ff4d4d)' : 'grayscale(100%)' }}>
-            🚨
-          </div>
+          <h2 style={{ textAlign: 'center', color: 'var(--neon-blue)' }}>คำถาม: สัญญาณ Digital มีกี่สถานะ?</h2>
         </div>
 
         {/* Right: Activity */}
-        <div className="glass-panel" style={{ flex: 1.5, padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <h2 style={{ color: 'var(--neon-green)', margin: '0 0 1rem 0' }}>ทดสอบรับสัญญาณจากนักเรียน</h2>
-          
-          <div style={{ flex: 1, display: 'flex', alignItems: 'flex-end', gap: '4px', borderBottom: '2px solid var(--text-secondary)', paddingBottom: '1rem' }}>
-            {history.map((v, i) => (
-              <motion.div key={i}
-                initial={false}
-                animate={{ height: v ? '80%' : '10%', background: v ? '#ff4d4d' : 'rgba(255,255,255,0.2)' }}
-                style={{ flex: 1, borderRadius: '4px 4px 0 0' }}
-              />
-            ))}
-          </div>
-
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h2 style={{ fontSize: '3rem', margin: 0, color: val ? '#ff4d4d' : 'var(--text-secondary)' }}>
-              {val ? '1 (HIGH)' : '0 (LOW)'}
-            </h2>
-            <div style={{ textAlign: 'right' }}>
-              <p style={{ margin: 0, color: 'var(--text-secondary)' }}>นักเรียนที่กดส่งสัญญาณ ({presses.length}):</p>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
-                {presses.map((p, i) => <span key={i} style={{ background: 'rgba(255,77,77,0.2)', padding: '4px 10px', borderRadius: 12, color: '#ffb3b3' }}>{p}</span>)}
-              </div>
+        <div className="glass-panel" style={{ flex: 1.5, padding: '2rem', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+            <h2 style={{ color: 'var(--neon-green)', margin: 0 }}>ผลโหวต</h2>
+            <div style={{ color: showResults ? 'var(--text-secondary)' : 'var(--neon-blue)' }}>
+              {showResults ? `โหวตแล้ว ${totalVotes} / ${totalStudents} คน` : 'กำลังเปิดรับคำตอบ... ⏳'}
             </div>
+          </div>
+          
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1rem', justifyContent: 'center' }}>
+            {options.map(opt => {
+              const count = Object.values(votes).filter(v => v === opt.id).length;
+              const pct = totalVotes === 0 ? 0 : Math.round((count / totalVotes) * 100);
+              const isCorrect = opt.id === '2_states';
+              return (
+                <div key={opt.id} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: '1.2rem', color: showResults && isCorrect ? 'var(--neon-green)' : 'white' }}>
+                      {opt.label} {showResults && isCorrect && '🎯'}
+                    </span>
+                    {showResults && <span style={{ fontSize: '1.2rem' }}>{count} โหวต ({pct}%)</span>}
+                  </div>
+                  {showResults && (
+                    <div style={{ width: '100%', height: 16, background: 'rgba(255,255,255,0.1)', borderRadius: 8, overflow: 'hidden' }}>
+                      <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} style={{ height: '100%', background: isCorrect ? 'var(--neon-green)' : 'var(--neon-blue)' }} />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
 
@@ -318,20 +375,37 @@ function HostDigital() {
   );
 }
 
-// ─── Scene 5: Analog Signal ────────────────────────────────────────────────
 function HostAnalog() {
   const { roomState } = useRoom();
-  const vals = roomState.analogValues || {};
-  const studentNames = Object.keys(vals);
+  const votes = roomState.analogVotes || {};
+  const totalVotes = Object.keys(votes).length;
+  const [isTimeUp, setIsTimeUp] = useState(false);
   
-  const total = studentNames.reduce((sum, name) => sum + vals[name], 0);
-  const avg = studentNames.length > 0 ? Math.round(total / studentNames.length) : 0;
-  
-  const hue = 200 - (avg / 4095) * 200; // 200 (Blue) to 0 (Red)
+  useEffect(() => {
+    setIsTimeUp(false);
+    const remaining = 30000 - (Date.now() - roomState.questionStartTime);
+    if (remaining <= 0) { setIsTimeUp(true); return; }
+    const timer = setTimeout(() => setIsTimeUp(true), remaining);
+    return () => clearTimeout(timer);
+  }, [roomState.questionStartTime]);
+
+  const totalStudents = roomState.students.length;
+  const isAllAnswered = totalStudents > 0 && totalVotes >= totalStudents;
+  const showResults = isTimeUp || isAllAnswered;
+
+  const options = [
+    { id: 'binary', label: 'มีแค่สถานะเปิดกับปิด (0 กับ 1)' },
+    { id: 'continuous', label: 'มีค่าต่อเนื่อง เช่น 0 ถึง 4095' },
+    { id: 'faster', label: 'ส่งข้อมูลได้เร็วกว่ามาก' },
+    { id: 'less_wires', label: 'ใช้สายไฟน้อยกว่า' }
+  ];
 
   return (
     <div className="flex-center full-screen" style={{ flexDirection: 'column', gap: '2rem' }}>
-      <h1 className="text-glow-blue" style={{ fontSize: '3rem', margin: 0 }}>สัญญาณค่าต่อเนื่อง (Analog)</h1>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+        <CountdownTimer startTime={roomState.questionStartTime} duration={30} size={70} />
+        <h1 className="text-glow-blue" style={{ fontSize: '3rem', margin: 0 }}>สัญญาณค่าต่อเนื่อง (Analog)</h1>
+      </div>
       
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2rem', width: '95%', maxWidth: 1200, minHeight: '60vh', justifyContent: 'center' }}>
         
@@ -340,41 +414,42 @@ function HostAnalog() {
           <div style={{ padding: '2rem', border: '2px solid var(--neon-purple)', borderRadius: 16, background: 'rgba(188,19,254,0.05)' }}>
             <h3 style={{ color: 'var(--neon-purple)', margin: '0 0 1rem 0', fontSize: '1.8rem' }}>2. สัญญาณ Analog</h3>
             <p style={{ color: 'white', fontSize: '1.2rem', margin: 0, lineHeight: 1.6 }}>
-              ค่าที่มีความต่อเนื่อง เช่น ความสว่าง หรือ อุณหภูมิ
-              <br/><br/>
-              ESP32 อ่านค่าเป็นตัวเลขได้ <b>0 - 4095</b>
+              สัญญาณแบบนี้เหมาะกับสิ่งที่เปลี่ยนแปลงตลอดเวลา เช่น ความสว่าง หรือ อุณหภูมิ
             </p>
           </div>
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '5rem' }}>
-            🌡️
-          </div>
+          <h2 style={{ textAlign: 'center', color: 'var(--neon-purple)' }}>คำถาม: สัญญาณ Analog แตกต่างจาก Digital อย่างไร?</h2>
         </div>
 
         {/* Right: Activity */}
-        <div className="glass-panel" style={{ flex: 1.5, padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <h2 style={{ color: 'var(--neon-green)', margin: '0 0 1rem 0' }}>ค่าเฉลี่ยของห้อง (Average)</h2>
+        <div className="glass-panel" style={{ flex: 1.5, padding: '2rem', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+            <h2 style={{ color: 'var(--neon-green)', margin: 0 }}>ผลโหวต</h2>
+            <div style={{ color: showResults ? 'var(--text-secondary)' : 'var(--neon-blue)' }}>
+              {showResults ? `โหวตแล้ว ${totalVotes} / ${totalStudents} คน` : 'กำลังเปิดรับคำตอบ... ⏳'}
+            </div>
+          </div>
           
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '2rem' }}>
-            
-            <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
-              <div style={{ width: '100%', height: 40, background: 'rgba(255,255,255,0.1)', borderRadius: 20, overflow: 'hidden', position: 'relative' }}>
-                <motion.div animate={{ width: `${(avg / 4095) * 100}%`, background: `hsl(${hue}, 100%, 50%)` }} style={{ height: '100%' }} />
-              </div>
-              <span style={{ fontSize: '3rem', fontWeight: 'bold', color: `hsl(${hue}, 100%, 50%)`, width: 120, textAlign: 'right' }}>
-                {avg}
-              </span>
-            </div>
-
-            <div style={{ overflowY: 'auto', maxHeight: 250, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-              {studentNames.map(name => (
-                <div key={name} style={{ background: 'rgba(255,255,255,0.05)', padding: '1rem', borderRadius: 12, display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: 'var(--text-secondary)' }}>{name}</span>
-                  <span style={{ color: `hsl(${200 - (vals[name]/4095)*200}, 100%, 50%)`, fontWeight: 'bold' }}>{vals[name]}</span>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1rem', justifyContent: 'center' }}>
+            {options.map(opt => {
+              const count = Object.values(votes).filter(v => v === opt.id).length;
+              const pct = totalVotes === 0 ? 0 : Math.round((count / totalVotes) * 100);
+              const isCorrect = opt.id === 'continuous';
+              return (
+                <div key={opt.id} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: '1.2rem', color: showResults && isCorrect ? 'var(--neon-green)' : 'white' }}>
+                      {opt.label} {showResults && isCorrect && '🎯'}
+                    </span>
+                    {showResults && <span style={{ fontSize: '1.2rem' }}>{count} โหวต ({pct}%)</span>}
+                  </div>
+                  {showResults && (
+                    <div style={{ width: '100%', height: 16, background: 'rgba(255,255,255,0.1)', borderRadius: 8, overflow: 'hidden' }}>
+                      <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} style={{ height: '100%', background: isCorrect ? 'var(--neon-green)' : 'var(--neon-blue)' }} />
+                    </div>
+                  )}
                 </div>
-              ))}
-              {studentNames.length === 0 && <p style={{ color: 'var(--text-secondary)' }}>รอรับค่าจากนักเรียน...</p>}
-            </div>
-
+              );
+            })}
           </div>
         </div>
 
@@ -416,6 +491,15 @@ function HostCatalog() {
 function HostQuiz() {
   const { roomState, revealQuiz } = useRoom();
   const votes = roomState.quizVotes || {};
+  const [isTimeUp, setIsTimeUp] = useState(false);
+  
+  useEffect(() => {
+    setIsTimeUp(false);
+    const remaining = 30000 - (Date.now() - roomState.questionStartTime);
+    if (remaining <= 0) { setIsTimeUp(true); return; }
+    const timer = setTimeout(() => setIsTimeUp(true), remaining);
+    return () => clearTimeout(timer);
+  }, [roomState.questionStartTime]);
   
   const options = [
     { id: 'ldr', label: 'LDR (แสง)', color: '#ffb86c' },
@@ -425,15 +509,23 @@ function HostQuiz() {
   ];
 
   const total = Object.keys(votes).length || 1; // prevent div/0
-  const isRevealed = roomState.quizRevealed;
+  const totalStudents = roomState.students.length;
+  const isAllAnswered = totalStudents > 0 && Object.keys(votes).length >= totalStudents;
+  const isRevealed = roomState.quizRevealed || isTimeUp || isAllAnswered;
 
   return (
     <div className="flex-center full-screen" style={{ flexDirection: 'column', gap: '2rem' }}>
-      <h1 className="text-glow-blue" style={{ fontSize: '2.5rem', margin: 0, textAlign: 'center' }}>
-        "อยากทำระบบเปิดไฟหน้าบ้านอัตโนมัติตอนกลางคืน ต้องใช้เซนเซอร์อะไร?"
-      </h1>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', justifyContent: 'center' }}>
+        <CountdownTimer startTime={roomState.questionStartTime} duration={30} size={70} />
+        <h1 className="text-glow-blue" style={{ fontSize: '2.5rem', margin: 0, textAlign: 'center' }}>
+          "อยากทำระบบเปิดไฟหน้าบ้านอัตโนมัติตอนกลางคืน ต้องใช้เซนเซอร์อะไร?"
+        </h1>
+      </div>
       
       <div className="glass-panel" style={{ width: '80%', maxWidth: 800, padding: '3rem', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+        <div style={{ color: isRevealed ? 'var(--text-secondary)' : 'var(--neon-blue)', textAlign: 'center' }}>
+          {isRevealed ? `โหวตแล้ว ${Object.keys(votes).length} / ${totalStudents} คน` : 'กำลังเปิดรับคำตอบ... ⏳'}
+        </div>
         
         {options.map(opt => {
           const count = Object.values(votes).filter(v => v === opt.id).length;
@@ -445,23 +537,27 @@ function HostQuiz() {
               <span style={{ width: 200, textAlign: 'right', fontWeight: 'bold', color: (isRevealed && isCorrect) ? 'var(--neon-green)' : 'white' }}>
                 {opt.label} {(isRevealed && isCorrect) && '✅'}
               </span>
-              <div style={{ flex: 1, height: 30, background: 'rgba(255,255,255,0.1)', borderRadius: 15, overflow: 'hidden' }}>
-                <motion.div 
-                  initial={{ width: 0 }}
-                  animate={{ width: `${pct}%` }}
-                  style={{ height: '100%', background: opt.color }}
-                />
-              </div>
-              <span style={{ width: 50 }}>{count} โหวต</span>
+              {isRevealed && (
+                <div style={{ flex: 1, height: 30, background: 'rgba(255,255,255,0.1)', borderRadius: 15, overflow: 'hidden' }}>
+                  <motion.div 
+                    initial={{ width: 0 }}
+                    animate={{ width: `${pct}%` }}
+                    style={{ height: '100%', background: opt.color }}
+                  />
+                </div>
+              )}
+              {isRevealed && <span style={{ width: 100 }}>{count} โหวต</span>}
             </div>
           );
         })}
 
         <div style={{ textAlign: 'center', marginTop: '1rem' }}>
           {isRevealed && <p className="quiz-explanation" aria-live="polite">{sensorQuizExplanation}</p>}
-          <button className="neu-button" onClick={() => revealQuiz(!isRevealed)} style={{ color: isRevealed ? '#ff4d4d' : 'var(--neon-green)', padding: '1rem 2rem', fontSize: '1.2rem' }}>
-            {isRevealed ? 'ซ่อนเฉลย' : 'เฉลยคำตอบ!'}
-          </button>
+          {!isTimeUp && !isAllAnswered && (
+            <button className="neu-button" onClick={() => revealQuiz(!roomState.quizRevealed)} style={{ color: roomState.quizRevealed ? '#ff4d4d' : 'var(--neon-green)', padding: '1rem 2rem', fontSize: '1.2rem' }}>
+              {roomState.quizRevealed ? 'ซ่อนเฉลย' : 'เฉลยคำตอบทันที!'}
+            </button>
+          )}
         </div>
 
       </div>
@@ -473,6 +569,15 @@ function HostQuiz() {
 function HostLogic() {
   const { roomState } = useRoom();
   const votes = roomState.logicVotes || {};
+  const [isTimeUp, setIsTimeUp] = useState(false);
+  
+  useEffect(() => {
+    setIsTimeUp(false);
+    const remaining = 30000 - (Date.now() - roomState.questionStartTime);
+    if (remaining <= 0) { setIsTimeUp(true); return; }
+    const timer = setTimeout(() => setIsTimeUp(true), remaining);
+    return () => clearTimeout(timer);
+  }, [roomState.questionStartTime]);
   
   const options = [
     { id: 'dark', label: 'ถ้า "แสงมืด" (LDR < 500)' },
@@ -482,10 +587,16 @@ function HostLogic() {
   ];
 
   const total = Object.keys(votes).length || 1;
+  const totalStudents = roomState.students.length;
+  const isAllAnswered = totalStudents > 0 && Object.keys(votes).length >= totalStudents;
+  const showResults = isTimeUp || isAllAnswered;
 
   return (
     <div className="flex-center full-screen" style={{ flexDirection: 'column', gap: '2rem' }}>
-      <h1 className="text-glow-blue" style={{ fontSize: '3rem', margin: 0 }}>ประกอบร่าง Logic (ตรรกะ)</h1>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', justifyContent: 'center' }}>
+        <CountdownTimer startTime={roomState.questionStartTime} duration={30} size={70} />
+        <h1 className="text-glow-blue" style={{ fontSize: '3rem', margin: 0 }}>ประกอบร่าง Logic (ตรรกะ)</h1>
+      </div>
       
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2rem', width: '90%', maxWidth: 1000, justifyContent: 'center' }}>
         
@@ -503,22 +614,36 @@ function HostLogic() {
 
         {/* Right: Votes */}
         <div className="glass-panel" style={{ flex: 1, padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <h2 style={{ color: 'var(--neon-green)', margin: '0 0 1rem 0' }}>ผลโหวตเติมคำในช่องว่าง</h2>
-          {options.map(opt => {
-            const count = Object.values(votes).filter(v => v === opt.id).length;
-            const pct = Math.round((count / total) * 100) || 0;
-            return (
-              <div key={opt.id} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span>{opt.label}</span>
-                  <span>{count} โหวต</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h2 style={{ color: 'var(--neon-green)', margin: '0 0 1rem 0' }}>ผลโหวตเติมคำในช่องว่าง</h2>
+            <div style={{ color: showResults ? 'var(--text-secondary)' : 'var(--neon-blue)' }}>
+              {showResults ? `โหวตแล้ว ${Object.keys(votes).length} / ${totalStudents} คน` : 'กำลังเปิดรับคำตอบ... ⏳'}
+            </div>
+          </div>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            {options.map(opt => {
+              const count = Object.values(votes).filter(v => v === opt.id).length;
+              const pct = Math.round((count / total) * 100) || 0;
+              const isCorrect = opt.id === 'dry';
+              
+              return (
+                <div key={opt.id} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: showResults && isCorrect ? 'var(--neon-green)' : 'white' }}>
+                      {opt.label} {showResults && isCorrect && '🎯'}
+                    </span>
+                    {showResults && <span>{count} โหวต</span>}
+                  </div>
+                  {showResults && (
+                    <div style={{ width: '100%', height: 10, background: 'rgba(255,255,255,0.1)', borderRadius: 5, overflow: 'hidden' }}>
+                      <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} style={{ height: '100%', background: isCorrect ? 'var(--neon-green)' : 'var(--neon-blue)' }} />
+                    </div>
+                  )}
                 </div>
-                <div style={{ width: '100%', height: 10, background: 'rgba(255,255,255,0.1)', borderRadius: 5, overflow: 'hidden' }}>
-                  <motion.div animate={{ width: `${pct}%` }} style={{ height: '100%', background: 'var(--neon-blue)' }} />
-                </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
 
       </div>
@@ -563,56 +688,146 @@ function HostWrapUp() {
 }
 
 // ─── Scene 10: Podium ──────────────────────────────────────────────────────
+// ─── Confetti Particles ──────────────────────────────────────────────────────
+function Confetti() {
+  const particles = useMemo(() => Array.from({ length: 50 }, (_, i) => ({
+    id: i,
+    x: Math.random() * 100,
+    delay: Math.random() * 2,
+    duration: 2 + Math.random() * 2,
+    color: ['#ffd700', '#ff4d4d', '#50fa7b', '#8be9fd', '#ff79c6', '#ffb86c'][Math.floor(Math.random() * 6)],
+    size: 6 + Math.random() * 8,
+    rotation: Math.random() * 360,
+  })), []);
+  return (
+    <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden', zIndex: 0 }}>
+      {particles.map(p => (
+        <motion.div key={p.id}
+          initial={{ y: -20, x: `${p.x}%`, opacity: 1, rotate: 0 }}
+          animate={{ y: '110vh', opacity: [1, 1, 0], rotate: p.rotation + 720 }}
+          transition={{ duration: p.duration, delay: p.delay, ease: 'easeIn', repeat: Infinity, repeatDelay: Math.random() * 3 }}
+          style={{ position: 'absolute', width: p.size, height: p.size * 0.6, background: p.color, borderRadius: 2 }}
+        />
+      ))}
+    </div>
+  );
+}
+
 function HostPodium() {
   const { roomState } = useRoom();
   const students = roomState.students || [];
   const scores = roomState.scores || {};
+  const [revealStep, setRevealStep] = useState(0);
 
   const sortedStudents = [...students].sort((a, b) => (scores[b.name] || 0) - (scores[a.name] || 0));
+  const top3 = sortedStudents.slice(0, 3);
+  const rest = sortedStudents.slice(3);
+
+  // Dramatic reveal: 3rd → 2nd → 1st
+  useEffect(() => {
+    if (students.length === 0) return;
+    const timers = [
+      setTimeout(() => setRevealStep(1), 500),   // reveal 3rd
+      setTimeout(() => setRevealStep(2), 1800),  // reveal 2nd
+      setTimeout(() => setRevealStep(3), 3200),  // reveal 1st + confetti
+    ];
+    return () => timers.forEach(clearTimeout);
+  }, [students.length]);
+
+  const podiumConfig = [
+    // [displayOrder, podiumIndex, height, gradient, delay]
+    { place: 2, height: 140, gradient: 'linear-gradient(180deg, #c0c0c0 0%, #808080 100%)', medal: '🥈', shadow: 'rgba(192,192,192,0.4)', revealAt: 2 },
+    { place: 1, height: 200, gradient: 'linear-gradient(180deg, #ffd700 0%, #ff8c00 100%)', medal: '🥇', shadow: 'rgba(255,215,0,0.5)', revealAt: 3 },
+    { place: 3, height: 100, gradient: 'linear-gradient(180deg, #cd7f32 0%, #8b4513 100%)', medal: '🥉', shadow: 'rgba(205,127,50,0.4)', revealAt: 1 },
+  ];
 
   return (
-    <div className="flex-center full-screen" style={{ flexDirection: 'column', gap: '2rem' }}>
-      <h1 className="text-glow-blue" style={{ fontSize: '4rem', margin: 0 }}>🏆 สรุปคะแนน (Leaderboard) 🏆</h1>
+    <div className="flex-center full-screen" style={{ flexDirection: 'column', gap: '1.5rem', position: 'relative', overflow: 'hidden' }}>
+      {revealStep >= 3 && <Confetti />}
       
-      <div className="glass-panel" style={{ width: '90%', maxWidth: 800, padding: '3rem', textAlign: 'center' }}>
-        <h2 style={{ color: 'var(--neon-green)', margin: '0 0 2rem 0', fontSize: '2rem' }}>อันดับของเหล่า Maker!</h2>
-        
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'center' }}>
-          {sortedStudents.map((s, index) => {
-            const score = scores[s.name] || 0;
-            let medal = '';
-            if (index === 0) medal = '🥇';
-            else if (index === 1) medal = '🥈';
-            else if (index === 2) medal = '🥉';
+      <motion.h1 className="text-glow-blue" style={{ fontSize: '3.5rem', margin: 0, zIndex: 1 }}
+        initial={{ y: -50, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>
+        🏆 Hall of Fame 🏆
+      </motion.h1>
 
-            return (
-              <motion.div key={s.id} 
-                initial={{ scale: 0, opacity: 0, x: -50 }} 
-                animate={{ scale: 1, opacity: 1, x: 0 }} 
-                transition={{ type: 'spring', delay: index * 0.1 }}
-                style={{ 
-                  display: 'flex', 
-                  justifyContent: 'space-between',
-                  width: '100%',
-                  maxWidth: 500,
-                  background: index === 0 ? 'linear-gradient(45deg, #ffd700, #ff8c00)' : 'rgba(255,255,255,0.1)', 
-                  border: index === 0 ? 'none' : '1px solid rgba(255,255,255,0.2)',
-                  padding: '1rem 2rem', 
-                  borderRadius: 20, 
-                  fontSize: '1.5rem', 
-                  fontWeight: 'bold', 
-                  color: index === 0 ? 'black' : 'white',
-                  boxShadow: index === 0 ? '0 5px 15px rgba(255,215,0,0.5)' : 'none' 
-                }}
-              >
-                <span>{medal} {index + 1}. {s.name}</span>
-                <span>{score} pts</span>
-              </motion.div>
-            )
-          })}
-          {students.length === 0 && <p style={{ color: 'var(--text-secondary)' }}>ยังไม่มีนักเรียนในห้อง</p>}
-        </div>
-      </div>
+      {students.length === 0 ? (
+        <p style={{ color: 'var(--text-secondary)', zIndex: 1 }}>ยังไม่มีนักเรียนในห้อง</p>
+      ) : (
+        <>
+          {/* Podium */}
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: '1rem', zIndex: 1, marginTop: '1rem' }}>
+            {podiumConfig.map((cfg, i) => {
+              const student = top3[cfg.place - 1];
+              const isRevealed = revealStep >= cfg.revealAt;
+              const score = student ? (scores[student.name] || 0) : 0;
+
+              return (
+                <div key={cfg.place} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', width: cfg.place === 1 ? 200 : 160 }}>
+                  {/* Student info */}
+                  <AnimatePresence>
+                    {isRevealed && student && (
+                      <motion.div
+                        initial={{ scale: 0, y: 30, opacity: 0 }}
+                        animate={{ scale: 1, y: 0, opacity: 1 }}
+                        transition={{ type: 'spring', bounce: 0.5, duration: 0.8 }}
+                        style={{ textAlign: 'center' }}
+                      >
+                        <div style={{ fontSize: cfg.place === 1 ? '4rem' : '3rem' }}>{cfg.medal}</div>
+                        <div style={{ color: 'white', fontWeight: 'bold', fontSize: cfg.place === 1 ? '1.5rem' : '1.2rem' }}>
+                          {student.name}
+                        </div>
+                        <div style={{ color: 'var(--neon-blue)', fontWeight: 800, fontSize: cfg.place === 1 ? '1.8rem' : '1.3rem' }}>
+                          {score} pts
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* Podium block */}
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={isRevealed ? { height: cfg.height, opacity: 1 } : {}}
+                    transition={{ type: 'spring', bounce: 0.3, duration: 1 }}
+                    style={{
+                      width: '100%',
+                      background: cfg.gradient,
+                      borderRadius: '12px 12px 0 0',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      boxShadow: `0 -5px 25px ${cfg.shadow}`,
+                      position: 'relative',
+                    }}
+                  >
+                    <span style={{ fontSize: '3rem', fontWeight: 900, color: 'rgba(255,255,255,0.3)' }}>
+                      {cfg.place}
+                    </span>
+                  </motion.div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Rest of students */}
+          {rest.length > 0 && revealStep >= 3 && (
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}
+              className="glass-panel" style={{ width: '90%', maxWidth: 600, padding: '1.5rem', zIndex: 1 }}>
+              <h3 style={{ color: 'var(--text-secondary)', margin: '0 0 1rem 0', textAlign: 'center', fontSize: '1rem' }}>อันดับที่ 4+</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                {rest.map((s, i) => (
+                  <motion.div key={s.id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.5 + i * 0.1 }}
+                    style={{ display: 'flex', justifyContent: 'space-between', padding: '0.6rem 1.2rem', background: 'rgba(255,255,255,0.05)', borderRadius: 12 }}
+                  >
+                    <span style={{ color: 'var(--text-secondary)' }}>{i + 4}. {s.name}</span>
+                    <span style={{ color: 'var(--neon-blue)', fontWeight: 'bold' }}>{scores[s.name] || 0} pts</span>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </>
+      )}
     </div>
   );
 }

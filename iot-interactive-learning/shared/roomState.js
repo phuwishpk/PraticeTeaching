@@ -8,8 +8,8 @@ export function createRoomState() {
   return {
     pin: String(Math.floor(1000 + Math.random() * 9000)), phase: 1, presentation: initialPresentation('activity'),
     students: [], senses: { eyes: false, ears: false, hands: false },
-    digitalValue: 0, analogValue: 0, digitalPresses: [], analogValues: {},
-    wordSubmissions: [], floatingEmojis: [], quizVotes: {}, quizRevealed: false,
+    problemVotes: {}, digitalVotes: {}, analogVotes: {},
+    floatingEmojis: [], quizVotes: {}, quizRevealed: false,
     logicVotes: {}, architectureVotes: { esp32: {}, wifi: {}, cloud: {} },
     currentVoteItem: 'esp32', canvasImages: [],
     scores: {}, questionStartTime: Date.now(),
@@ -39,7 +39,7 @@ export function applyRoomAction(state, action) {
   switch (type) {
     case 'phase': {
       requireValue(Number.isInteger(p.phase) && !!lessons[p.phase]);
-      return { ...state, phase: p.phase, presentation: initialPresentation(p.phase === 1 ? 'activity' : 'lesson'), digitalPresses: [], digitalValue: 0, questionStartTime: Date.now() };
+      return { ...state, phase: p.phase, presentation: initialPresentation(p.phase === 1 ? 'activity' : 'lesson'), questionStartTime: Date.now() };
     }
     case 'presentation': {
       if (p.phase !== state.phase) return state;
@@ -64,7 +64,7 @@ export function applyRoomAction(state, action) {
         if (key in p) { requireValue(typeof p[key] === 'boolean'); patch[key] = p[key]; }
       }
       
-      const newState = { ...state, presentation: { ...state.presentation, ...patch }, ...(p.mode ? { digitalPresses: [], digitalValue: 0 } : {}) };
+      const newState = { ...state, presentation: { ...state.presentation, ...patch } };
       if (p.mode === 'activity') newState.questionStartTime = Date.now();
       return newState;
     }
@@ -74,17 +74,32 @@ export function applyRoomAction(state, action) {
       requireValue(!state.students.some(student => student.name === name), 'ชื่อนี้มีผู้ใช้แล้ว กรุณาเพิ่มชื่อหรือเลขที่');
       return { ...state, students: [...state.students, { id: p.id, name }] };
     }
-    case 'digital': {
+    case 'problemVote': {
       const name = validName(p.name);
-      if (state.phase !== 4 || state.presentation.mode !== 'activity') return state;
-      const presses = state.digitalPresses.filter(n => n !== name);
-      if (p.value) presses.push(name);
-      return { ...state, digitalPresses: presses, digitalValue: presses.length > 0 ? 1 : 0 };
+      requireValue(['sensor', 'motor', 'wifi', 'usb'].includes(p.option));
+      let newScores = { ...state.scores };
+      if (p.option === 'sensor' && !state.problemVotes[name]) {
+        newScores[name] = (newScores[name] || 0) + calculateScore(state.questionStartTime);
+      }
+      return { ...state, problemVotes: { ...state.problemVotes, [name]: p.option }, scores: newScores };
     }
-    case 'analog': {
+    case 'digitalVote': {
       const name = validName(p.name);
-      requireValue(Number.isFinite(p.value) && p.value >= 0 && p.value <= 4095);
-      return { ...state, analogValues: { ...state.analogValues, [name]: Math.round(p.value) } };
+      requireValue(['2_states', '10_states', 'infinite', 'none'].includes(p.option));
+      let newScores = { ...state.scores };
+      if (p.option === '2_states' && !state.digitalVotes[name]) {
+        newScores[name] = (newScores[name] || 0) + calculateScore(state.questionStartTime);
+      }
+      return { ...state, digitalVotes: { ...state.digitalVotes, [name]: p.option }, scores: newScores };
+    }
+    case 'analogVote': {
+      const name = validName(p.name);
+      requireValue(['continuous', 'binary', 'faster', 'less_wires'].includes(p.option));
+      let newScores = { ...state.scores };
+      if (p.option === 'continuous' && !state.analogVotes[name]) {
+        newScores[name] = (newScores[name] || 0) + calculateScore(state.questionStartTime);
+      }
+      return { ...state, analogVotes: { ...state.analogVotes, [name]: p.option }, scores: newScores };
     }
     case 'voteItem':
       requireValue(['esp32', 'wifi', 'cloud'].includes(p.item));
@@ -102,11 +117,7 @@ export function applyRoomAction(state, action) {
       
       return { ...state, architectureVotes: { ...state.architectureVotes, [p.item]: { ...state.architectureVotes[p.item], [name]: p.layer } }, scores: newScores };
     }
-    case 'word': {
-      const name = validName(p.name);
-      requireValue(typeof p.word === 'string' && p.word.trim().length > 0 && p.word.length <= 30);
-      return { ...state, wordSubmissions: [...state.wordSubmissions.filter(w => w.name !== name), { word: p.word.trim(), name, id: p.id }] };
-    }
+
     case 'emoji':
       requireValue(['👍', '💡', '❤️', '🔥', '🎉', '👏'].includes(p.emoji));
       return { ...state, floatingEmojis: [...state.floatingEmojis, { id: p.id, emoji: p.emoji, name: p.name || '', x: p.x }].slice(-30) };
