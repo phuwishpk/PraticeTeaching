@@ -27,7 +27,9 @@ function ClientLobby() {
     const params = new URLSearchParams(window.location.search);
     return params.get('pin') || '';
   });
+  const [pinVerified, setPinVerified] = useState(false);
   const [name, setName] = useState('');
+  const [pinError, setPinError] = useState('');
   const myName = sessionStorage.getItem('student_name') || '';
 
   if (myName) {
@@ -71,12 +73,24 @@ function ClientLobby() {
     );
   }
 
-  const handleJoin = async (e) => {
+  // ── Step 1: ใส่ PIN ─────────────────────────────────────────────────────────
+  const handlePinCheck = (e) => {
     e.preventDefault();
-    if (pin.trim() !== roomState.pin) {
-      alert('❌ รหัส PIN ไม่ถูกต้อง!');
+    if (pin.trim().length !== 4) {
+      setPinError('กรุณากรอก PIN 4 หลัก');
       return;
     }
+    if (pin.trim() !== roomState.pin) {
+      setPinError('❌ รหัส PIN ไม่ถูกต้อง!');
+      return;
+    }
+    setPinError('');
+    setPinVerified(true);
+  };
+
+  // ── Step 2: กรอกชื่อแล้วเข้าร่วม ───────────────────────────────────────────
+  const handleJoin = async (e) => {
+    e.preventDefault();
     if (!name.trim()) {
       alert('❌ กรุณากรอกชื่อของคุณ');
       return;
@@ -88,6 +102,40 @@ function ClientLobby() {
     }
   };
 
+  // ── Step 1 UI: ใส่ PIN ──────────────────────────────────────────────────────
+  if (!pinVerified) {
+    return (
+      <div className="flex-center full-screen" style={{ background: 'radial-gradient(circle at 30% 50%, #0d1a3a 0%, #0a0f1a 100%)' }}>
+        <motion.div initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
+          className="glass-panel"
+          style={{ padding: '3rem 2.5rem', width: '90%', maxWidth: 420, display: 'flex', flexDirection: 'column', gap: '1.5rem', alignItems: 'center' }}>
+          <div style={{ fontSize: '4rem' }}>🔐</div>
+          <h2 className="text-glow-blue" style={{ fontSize: '2rem', textAlign: 'center', margin: 0 }}>ใส่รหัสเข้าห้องเรียน</h2>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', textAlign: 'center', margin: 0 }}>
+            กรอก PIN 4 หลักจากหน้าจอคุณครู
+          </p>
+          <form onSubmit={handlePinCheck} style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem', width: '100%' }}>
+            <input type="text" inputMode="numeric" placeholder="● ● ● ●" className="neu-input"
+              value={pin} onChange={e => { setPin(e.target.value); setPinError(''); }} maxLength={4}
+              autoFocus
+              style={{ textAlign: 'center', fontSize: '2rem', letterSpacing: '0.4em' }} />
+            {pinError && (
+              <motion.p initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }}
+                style={{ color: '#ff6b6b', textAlign: 'center', margin: 0, fontSize: '0.9rem' }}>
+                {pinError}
+              </motion.p>
+            )}
+            <motion.button type="submit" whileTap={{ scale: 0.95 }} className="neu-button"
+              style={{ marginTop: '0.5rem', padding: '1rem', fontSize: '1.2rem', color: 'var(--neon-blue)', width: '100%' }}>
+              🔓 ยืนยัน PIN
+            </motion.button>
+          </form>
+        </motion.div>
+      </div>
+    );
+  }
+
+  // ── Step 2 UI: กรอกชื่อ ─────────────────────────────────────────────────────
   return (
     <div className="flex-center full-screen" style={{ background: 'radial-gradient(circle at 30% 50%, #0d1a3a 0%, #0a0f1a 100%)' }}>
       <motion.div initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
@@ -95,12 +143,11 @@ function ClientLobby() {
         style={{ padding: '3rem 2.5rem', width: '90%', maxWidth: 420, display: 'flex', flexDirection: 'column', gap: '1.5rem', alignItems: 'center' }}>
         <div style={{ fontSize: '4rem' }}>🚀</div>
         <h2 className="text-glow-blue" style={{ fontSize: '2rem', textAlign: 'center', margin: 0 }}>Welcome to IoT Lab</h2>
+        <p style={{ color: 'var(--neon-green)', fontSize: '0.9rem', margin: 0 }}>✅ PIN ถูกต้อง!</p>
         <form onSubmit={handleJoin} style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem', width: '100%' }}>
-          <input type="text" inputMode="numeric" placeholder="รหัส PIN (เช่น 8492)" className="neu-input"
-            value={pin} onChange={e => setPin(e.target.value)} maxLength={4}
-            style={{ textAlign: 'center', fontSize: '1.5rem', letterSpacing: '0.2em' }} />
           <input type="text" placeholder="ชื่อเล่นนักวิจัย" className="neu-input"
             value={name} onChange={e => setName(e.target.value)} maxLength={20}
+            autoFocus
             style={{ textAlign: 'center', fontSize: '1.2rem' }} />
           <motion.button type="submit" whileTap={{ scale: 0.95 }} className="neu-button"
             style={{ marginTop: '0.5rem', padding: '1rem', fontSize: '1.2rem', color: 'var(--neon-blue)', width: '100%' }}>
