@@ -1,0 +1,97 @@
+.signal-lab { padding: clamp(18px, 3vw, 28px); border-radius: 20px; display: grid; gap: 20px; overflow-wrap: anywhere; min-width: 0; }
+.digital-lab { border: 1px solid #397e93; background: linear-gradient(145deg, #112f3c, #101b2d); --signal-accent: #78e7fa; }
+.analog-lab { border: 1px solid #947344; background: linear-gradient(145deg, #33281c, #1d2029); --signal-accent: #ffd08a; }
+.signal-heading { display: flex; align-items: center; gap: 14px; }
+.signal-heading > svg { color: var(--signal-accent); width: 32px; height: 32px; flex-shrink: 0; }
+.signal-heading span { color: var(--signal-accent); font-size: .77rem; letter-spacing: .07em; }
+.signal-heading h3 { color: #f0f5fa; font: inherit; font-weight: 650; font-size: clamp(1.1rem, 2.3vw, 1.45rem); line-height: 1.7; margin-top: 5px; }
+.signal-lab p { margin: 0; color: #d0dae4; line-height: 1.85; }
+.signal-lab .signal-note { color: #aec0d0; font-size: .87rem; }
+.signal-lab .signal-emphasis { padding: 16px 18px; border-left: 3px solid var(--signal-accent); background: #ffffff07; color: #ffe4b8; border-radius: 0 12px 12px 0; }
+.signal-chart { display: block; width: 100%; min-width: 0; height: auto; background: #07131b99; border-radius: 14px; padding: 8px; }
+.signal-chart text, .signal-comparison svg text { font-family: inherit; font-size: 16px; fill: #b7c6d4; }
+.signal-grid { fill: none; stroke: #8293a533; stroke-dasharray: 5 6; }
+.signal-axis { fill: none; stroke: #8293a566; }
+.signal-line { fill: none; stroke-width: 4; stroke-linejoin: round; stroke-linecap: round; }
+.digital-line { stroke: #6de4fa; }
+.analog-line { stroke: #ffca79; }
+.adc-line { stroke: #d3b1ff; stroke-width: 3; }
+.signal-chart .signal-bit-label { fill: #87a7bb; font-size: 21px; }
+.digital-controls { display: flex; flex-wrap: wrap; gap: 18px; justify-content: space-between; align-items: center; }
+.signal-button-group { display: flex; flex-wrap: wrap; gap: 10px; }
+.signal-button-group button, .signal-toggle { border: 1px solid #4f7c8e; padding: 13px 18px; border-radius: 10px; background: #102638; color: #b9f0fa; font: inherit; cursor: pointer; min-height: 46px; }
+.signal-button-group button:hover, .signal-toggle:hover { background: #234657; }
+.analog-lab .signal-button-group button { border-color: #826746; background: #31271d; color: #ffdfa8; }
+.analog-lab .signal-button-group button[aria-pressed="true"] { background: #53422b; border-color: #ffdfa8; box-shadow: inset 0 -2px #ffdfa8; }
+.signal-lab button:focus-visible, .signal-lab input:focus-visible { outline: 3px solid var(--signal-accent); outline-offset: 4px; }
+.logic-readout { display: flex; align-items: center; gap: 14px; border-radius: 10px; background: #0a1824; border: 1px solid #3e7184; padding: 12px 20px; }
+.logic-readout span { font-size: .85rem; color: #a6c3d3; }
+.logic-readout strong { color: #91edff; font-family: monospace; font-size: 2.4rem; line-height: 1; }
+.signal-insight { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
+.binary-token { border: 1px solid #588092; background: #0a2231; border-radius: 8px; padding: 10px 18px; font-size: 1.7rem; font-family: monospace; color: #86e8fb; }
+.signal-insight p { margin-left: auto; font-size: .9rem; }
+.polarity-grid, .calibration-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.polarity-grid > div { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 24px 14px; background: #0c1f30; border: 1px solid #3d6984; border-radius: 14px; gap: 14px; }
+.polarity-grid strong { color: #7ce6fb; font-size: 4rem; font-family: monospace; line-height: 1; }
+.polarity-grid p { font-size: .86rem; }
+.bit-calculator { display: flex; gap: 18px; align-items: stretch; }
+.bit-buttons { flex: 1; display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.bit-buttons button { display: grid; gap: 10px; justify-items: center; cursor: pointer; background: #0c1f30; color: #8ba9bd; padding: 16px 8px; border: 1px solid #446075; border-radius: 12px; font: inherit; }
+.bit-buttons button[aria-pressed="true"] { background: #174153; border-color: #8be9fd; color: #b9f5ff; }
+.bit-buttons strong { font-size: 2rem; font-family: monospace; }
+.bit-buttons small, .decimal-result small { font-size: .8rem; }
+.decimal-result { display: flex; flex-direction: column; justify-content: center; gap: 8px; align-items: center; padding: 14px 20px; background: #22334d; border: 1px solid #829fbd; border-radius: 12px; }
+.decimal-result strong { font-family: monospace; font-size: 2rem; color: #ddf5ff; }
+.analog-console { display: grid; grid-template-columns: 110px 1fr auto; gap: 24px; align-items: center; }
+.light-orb { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 12px 0; }
+.light-orb svg { color: #ffd58d; opacity: calc(.25 + var(--light-level) * .75); filter: drop-shadow(0 0 calc(var(--light-level) * 18px) #ffbf50); }
+.light-orb span { color: #c8b596; font-size: .8rem; text-align: center; }
+.analog-slider { display: grid; gap: 16px; }
+.analog-slider label { font-weight: 600; color: #ffe0b0; line-height: 1.7; }
+.analog-slider input { width: 100%; margin: 0; accent-color: #ffcf82; height: 32px; cursor: pointer; }
+.range-labels { display: flex; justify-content: space-between; color: #d4bea0; font-size: .8rem; }
+.voltage-readout { display: grid; gap: 8px; text-align: center; min-width: 110px; }
+.voltage-readout small { color: #dac29b; }
+.voltage-readout strong { font-family: monospace; font-size: 1.9rem; color: #ffe6b7; white-space: nowrap; }
+.voltage-readout strong span { font-size: 1rem; }
+.analog-spectrum { display: flex; gap: 14px; align-items: center; color: #d4bea0; font-size: .85rem; }
+.analog-spectrum > div { flex: 1; height: 20px; border-radius: 20px; background: linear-gradient(90deg, #33271a, #a77437, #ffd17f, #fff0c8); border: 1px solid #9b7746; }
+.adc-stages { display: flex; align-items: center; gap: 12px; }
+.adc-stages > div { flex: 1; min-width: 0; align-self: stretch; display: flex; flex-direction: column; text-align: center; justify-content: center; gap: 10px; padding: 18px 10px; border: 1px solid #7b6445; border-radius: 12px; background: #251e17; }
+.adc-stages > svg { color: #ad9b84; flex-shrink: 0; }
+.adc-stages .adc-chip { background: #2e243d; border-color: #8669aa; }
+.adc-stages > div:last-child { background: #132b36; border-color: #47798c; }
+.adc-stages strong { color: #fff0d6; font-family: monospace; font-size: 1.65rem; }
+.adc-stages small, .adc-stages span { font-size: .82rem; color: #d0c0ad; line-height: 1.6; }
+.raw-reading { display: grid; justify-items: center; text-align: center; gap: 12px; padding: 24px; border: 1px solid #8a70aa; border-radius: 16px; background: #29223a; }
+.raw-reading strong { color: #d6baff; font-size: 3.5rem; font-family: monospace; line-height: 1.2; }
+.raw-reading span { color: #d1bddb; line-height: 1.8; }
+.calibration-cards > div { padding: 20px; border-radius: 14px; background: #ffffff05; border: 1px solid #695c49; }
+.calibration-cards svg { color: #ffd58d; margin-bottom: 12px; }
+.calibration-cards h4 { color: #f2dfc1; line-height: 1.7; margin-bottom: 8px; }
+.calibration-cards p { font-size: .9rem; }
+.signal-comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.signal-comparison > div { padding: 22px; border-radius: 16px; min-width: 0; }
+.comparison-digital { background: #102b39; border: 1px solid #437d94; }
+.comparison-analog { background: #30271b; border: 1px solid #8e724a; }
+.signal-comparison > div > span { font-size: .77rem; letter-spacing: .1em; color: #9bdcf1; }
+.signal-comparison .comparison-analog > span { color: #f6cd8f; }
+.signal-comparison h3 { font-size: 1.1rem; line-height: 1.7; margin: 10px 0; color: #ecf3f9; }
+.signal-comparison svg { display: block; width: 100%; margin: 20px 0; }
+.signal-comparison p { line-height: 1.85; color: #c3d1db; margin: 0 0 14px; font-size: .94rem; }
+.signal-comparison b { color: #e5f1f8; font-size: .88rem; line-height: 1.85; }
+.signal-comparison .comparison-footnote { grid-column: 1 / -1; margin: 0; padding: 16px; border: 1px solid #435064; border-radius: 12px; color: #bacbd9; font-size: .87rem; }
+@media (max-width: 600px) {
+  .analog-console { grid-template-columns: 70px 1fr; gap: 16px; }
+  .voltage-readout { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; }
+  .signal-comparison, .polarity-grid, .calibration-cards { grid-template-columns: 1fr; }
+  .adc-stages { flex-direction: column; }
+  .adc-stages > svg { transform: rotate(90deg); }
+  .adc-stages > div { width: 100%; padding: 16px; }
+  .bit-calculator { flex-direction: column; }
+  .decimal-result { flex-direction: row; justify-content: space-between; }
+  .signal-insight p { width: 100%; }
+  .signal-button-group button { flex: 1; padding: 12px; }
+  .signal-chart { padding: 4px; }
+  .signal-chart text { font-size: 18px; }
+}

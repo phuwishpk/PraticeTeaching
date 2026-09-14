@@ -50,7 +50,7 @@ export function applyRoomAction(state, action) {
       }
       if ('slide' in p) {
         const lesson = lessons[state.phase];
-        const maxSlide = lesson ? lesson.sections.length + 1 : 0; // intro=0, sections, summary=last
+        const maxSlide = lesson ? lesson.sections.length + 2 : 0; // intro=0, sections, example, recap=last
         requireValue(Number.isInteger(p.slide) && p.slide >= 0 && p.slide <= maxSlide);
         Object.assign(patch, { slide: p.slide, expanded: false, answerRevealed: false });
       }

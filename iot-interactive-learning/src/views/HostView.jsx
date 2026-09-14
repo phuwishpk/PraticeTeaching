@@ -1,3 +1,4 @@
+import { SensorCatalog } from '../components/LessonGraphics';
 import React, { useEffect, useState, useMemo } from 'react';
 import { useRoom } from '../context/RoomContext';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -395,7 +396,7 @@ function HostAnalog() {
 
   const options = [
     { id: 'binary', label: 'มีแค่สถานะเปิดกับปิด (0 กับ 1)' },
-    { id: 'continuous', label: 'มีค่าต่อเนื่อง เช่น 0 ถึง 4095' },
+    { id: 'continuous', label: 'มีค่าต่อเนื่อง เช่น แรงดันที่ค่อย ๆ เปลี่ยน' },
     { id: 'faster', label: 'ส่งข้อมูลได้เร็วกว่ามาก' },
     { id: 'less_wires', label: 'ใช้สายไฟน้อยกว่า' }
   ];
@@ -461,30 +462,7 @@ function HostAnalog() {
 
 // ─── Scene 6: Sensor Catalog ────────────────────────────────────────────────
 function HostCatalog() {
-  const sensors = [
-    { name: 'LDR', type: 'แสง (Analog)', desc: 'สว่างมาก = ความต้านทานลด', img: '/images/sensor_ldr_1789207658387.jpg' },
-    { name: 'DHT11', type: 'อุณหภูมิ/ความชื้น (Digital)', desc: 'วัดความร้อนและไอน้ำในอากาศ', img: '/images/sensor_dht11_1789207674098.jpg' },
-    { name: 'PIR', type: 'การเคลื่อนไหว (Digital)', desc: 'จับรังสีความร้อนจากสิ่งมีชีวิต', img: '/images/sensor_pir_1789207687278.jpg' },
-    { name: 'Soil Moisture', type: 'ความชื้นดิน (Analog)', desc: 'ดินเปียก = นำไฟฟ้าได้ดี', img: '/images/sensor_soil_1789207703345.jpg' }
-  ];
-
-  return (
-    <div className="flex-center full-screen" style={{ flexDirection: 'column', gap: '2rem' }}>
-      <h1 className="text-glow-blue" style={{ fontSize: '3rem', margin: 0 }}>แคตตาล็อกเซนเซอร์</h1>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem', width: '90%', maxWidth: 1000 }}>
-        {sensors.map((s, i) => (
-          <div key={i} className="glass-panel" style={{ padding: '1.5rem', display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
-            <img src={s.img} alt={s.name} style={{ width: 120, height: 120, objectFit: 'cover', borderRadius: 16, border: '2px solid rgba(0,240,255,0.3)' }} />
-            <div>
-              <h3 style={{ color: 'var(--neon-green)', margin: '0 0 0.5rem 0', fontSize: '1.5rem' }}>{s.name}</h3>
-              <span style={{ background: 'rgba(255,255,255,0.1)', padding: '4px 8px', borderRadius: 8, fontSize: '0.8rem', color: 'var(--neon-blue)' }}>{s.type}</span>
-              <p style={{ color: 'var(--text-secondary)', marginTop: '0.5rem', lineHeight: 1.5 }}>{s.desc}</p>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+  return <SensorCatalog />;
 }
 
 // ─── Scene 7: Sensor Quiz ──────────────────────────────────────────────────

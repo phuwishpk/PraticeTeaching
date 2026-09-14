@@ -1,3 +1,4 @@
+import { SensorCatalog } from '../components/LessonGraphics';
 import React, { useState, useRef, useEffect } from 'react';
 import { useRoom } from '../context/RoomContext';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -512,7 +513,7 @@ function ClientAnalog() {
 
   const options = [
     { id: 'binary', label: 'มีแค่สถานะเปิดกับปิด (0 กับ 1)', color: '#ffb86c' },
-    { id: 'continuous', label: 'มีค่าต่อเนื่อง เช่น 0 ถึง 4095', color: '#bd93f9' },
+    { id: 'continuous', label: 'มีค่าต่อเนื่อง เช่น แรงดันที่ค่อย ๆ เปลี่ยน', color: '#bd93f9' },
     { id: 'faster', label: 'ส่งข้อมูลได้เร็วกว่ามาก', color: '#ff79c6' },
     { id: 'less_wires', label: 'ใช้สายไฟน้อยกว่า', color: '#8be9fd' }
   ];
@@ -595,17 +596,7 @@ function ClientAnalog() {
 
 // ─── Scene 6: Sensor Catalog (Theory) ────────────────────────────────────────
 function ClientCatalog() {
-  return (
-    <div className="flex-center full-screen" style={{ flexDirection: 'column', gap: '2rem', padding: '2rem' }}>
-      <h2 className="text-glow-blue" style={{ fontSize: '1.5rem', textAlign: 'center', margin: 0 }}>รู้จักอวัยวะรับสัมผัส (Sensor)</h2>
-      <div className="glass-panel" style={{ padding: '2rem', width: '100%', maxWidth: 400, textAlign: 'center' }}>
-        <div style={{ fontSize: '4rem', filter: 'drop-shadow(0 0 20px rgba(0,240,255,0.5))', marginBottom: '1rem' }}>👀👂👃</div>
-        <p style={{ color: 'var(--text-primary)', fontSize: '1.1rem', lineHeight: 1.6 }}>
-          ดูแคตตาล็อกบน <b>หน้าจอของคุณครู</b> หรือเปิดคำอธิบายด้านล่างเพื่ออ่านหน้าที่ ตัวอย่าง และข้อจำกัดของเซนเซอร์แต่ละชนิด
-        </p>
-      </div>
-    </div>
-  );
+  return <SensorCatalog />;
 }
 
 // ─── Scene 7: Sensor Quiz ──────────────────────────────────────────────────

@@ -1,22 +1,18 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { lessons, sensorQuizExplanation } from '../content/lessons';
+import { SectionExplanation, LessonRecap } from './LessonGraphics';
 import './LessonContent.css';
 
-const PHASE_TO_CHAPTER = {
-  1: 1, 2: 2, 3: 3, 4: 3, 5: 4, 6: 4, 7: 5, 8: 5, 
-  9: 6, 10: 6, 11: 6, 12: 6, 13: 7, 14: 8, 15: 9, 16: 10
-};
-
 export default function LessonContent({ phase, quizRevealed = false }) {
-  const chapter = PHASE_TO_CHAPTER[phase] || 1;
+  const chapter = phase;
   const lesson = lessons[chapter];
   if (!lesson) return null;
 
   return (
     <article className="lesson-content" aria-labelledby={`lesson-title-${phase}`} lang="th">
       <header className="lesson-header">
-        <span className="lesson-eyebrow">IOT LAB · บทที่ {phase} / 10</span>
+        <span className="lesson-eyebrow">IOT LAB · บทที่ {chapter} / 10</span>
         <h1 id={`lesson-title-${phase}`}>{lesson.title}</h1>
         <p>{lesson.intro}</p>
       </header>
@@ -46,7 +42,10 @@ export default function LessonContent({ phase, quizRevealed = false }) {
         {lesson.sections.map((section, index) => (
           <section className="glass-panel lesson-section" key={section.title}>
             <span className="lesson-section-number">{String(index + 1).padStart(2, '0')}</span>
-            <div><h2>{section.title}</h2><p>{section.text}</p></div>
+            <div>
+              <h2>{section.title}</h2>
+              <SectionExplanation section={section} />
+            </div>
           </section>
         ))}
       </div>
@@ -63,12 +62,13 @@ export default function LessonContent({ phase, quizRevealed = false }) {
         ? <aside className="lesson-callout" aria-live="polite"><h2>เฉลยพร้อมเหตุผล</h2><p>{sensorQuizExplanation}</p></aside>
         : <p className="lesson-muted">ลองตอบในกิจกรรมก่อน แล้วดูเหตุผลเมื่อครูเปิดเฉลย</p>)}
       {lesson.sources && <footer className="lesson-sources">อ่านเพิ่มเติมจากผู้พัฒนาอุปกรณ์: {lesson.sources.map(source => <a key={source.url} href={source.url} target="_blank" rel="noreferrer">{source.label}</a>)}</footer>}
+      <LessonRecap lesson={lesson} />
     </article>
   );
 }
 
 export function StudentLessonNotes({ phase, quizRevealed }) {
-  const chapter = PHASE_TO_CHAPTER[phase] || 1;
+  const chapter = phase;
   return (
     <details className="student-lesson-notes" key={phase}>
       <summary>📖 อ่านคำอธิบายบทที่ {chapter} เพิ่มเติม</summary>
@@ -81,7 +81,7 @@ export function StudentLessonNotes({ phase, quizRevealed }) {
 // controlledSlide: when provided, the component uses this as the current slide (teacher mode)
 // onSlideChange: called with new slide index when navigation happens (teacher mode)
 export function LessonSlideshow({ phase, quizRevealed = false, controlledSlide, onSlideChange }) {
-  const chapter = PHASE_TO_CHAPTER[phase] || 1;
+  const chapter = phase;
   const lesson = lessons[chapter];
 
   // Internal state — used in student uncontrolled mode
@@ -148,12 +148,12 @@ export function LessonSlideshow({ phase, quizRevealed = false, controlledSlide, 
   lesson.sections.forEach((section, i) => {
     slides.push({
       id: `section-${i}`,
-      label: `${i + 1}. ${section.title.length > 12 ? section.title.slice(0, 12) + '…' : section.title}`,
+      label: `${i + 1}. ${section.title}`,
       content: (
         <div className="lesson-slide-body">
           <span className="lesson-slide-section-num">ส่วนที่ {i + 1} / {lesson.sections.length}</span>
           <h2 className="lesson-slide-section-title">{section.title}</h2>
-          <p className="lesson-slide-section-text">{section.text}</p>
+          <SectionExplanation section={section} />
         </div>
       ),
     });
@@ -165,6 +165,7 @@ export function LessonSlideshow({ phase, quizRevealed = false, controlledSlide, 
     label: 'ตัวอย่าง',
     content: (
       <div className="lesson-slide-body">
+        {lesson.code && <pre className="lesson-code" aria-label="ตัวอย่างรหัสลำลอง"><code>{lesson.code}</code></pre>}
         <div className="lesson-slide-callout">
           <h2>🔗 ลองเชื่อมกับตัวอย่าง</h2>
           <p>{lesson.example}</p>
@@ -194,6 +195,13 @@ export function LessonSlideshow({ phase, quizRevealed = false, controlledSlide, 
     ),
   });
 
+  slides.push({
+    id: 'recap',
+    label: 'สรุปและจุดประสงค์',
+    content: <div className="lesson-slide-body"><LessonRecap lesson={lesson} /></div>,
+  });
+
+  const currentIndex = Math.min(Math.max(slideIndex, 0), slides.length - 1);
   const goTo = (idx) => {
     if (isControlled && onSlideChange) {
       // Teacher mode: dispatch to server, server will echo back via roomState
@@ -204,8 +212,8 @@ export function LessonSlideshow({ phase, quizRevealed = false, controlledSlide, 
       setSlideIndex(idx);
     }
   };
-  const prev = () => { if (slideIndex > 0) goTo(slideIndex - 1); };
-  const next = () => { if (slideIndex < slides.length - 1) goTo(slideIndex + 1); };
+  const prev = () => { if (currentIndex > 0) goTo(currentIndex - 1); };
+  const next = () => { if (currentIndex < slides.length - 1) goTo(currentIndex + 1); };
 
   const variants = {
     enter: d => ({ opacity: 0, x: d > 0 ? 60 : -60 }),
@@ -214,12 +222,12 @@ export function LessonSlideshow({ phase, quizRevealed = false, controlledSlide, 
   };
 
   return (
-    <div className="lesson-slideshow">
+    <div className="lesson-slideshow" lang="th">
       {/* Slide content */}
       <div className="lesson-slideshow-stage">
         <AnimatePresence mode="wait" custom={direction}>
           <motion.div
-            key={slides[slideIndex].id}
+            key={slides[currentIndex].id}
             custom={direction}
             variants={variants}
             initial="enter"
@@ -228,7 +236,7 @@ export function LessonSlideshow({ phase, quizRevealed = false, controlledSlide, 
             transition={{ duration: 0.28, ease: 'easeInOut' }}
             className="lesson-slideshow-slide"
           >
-            {slides[slideIndex].content}
+            {slides[currentIndex].content}
           </motion.div>
         </AnimatePresence>
       </div>
@@ -238,7 +246,7 @@ export function LessonSlideshow({ phase, quizRevealed = false, controlledSlide, 
         <button
           className="lesson-nav-arrow"
           onClick={prev}
-          disabled={slideIndex === 0}
+          disabled={currentIndex === 0}
           aria-label="หน้าก่อน"
         >
           ‹
@@ -248,12 +256,13 @@ export function LessonSlideshow({ phase, quizRevealed = false, controlledSlide, 
           {slides.map((slide, i) => (
             <button
               key={slide.id}
-              className={`lesson-nav-page-btn${i === slideIndex ? ' active' : ''}`}
+              className={`lesson-nav-page-btn${i === currentIndex ? ' active' : ''}`}
               onClick={() => goTo(i)}
-              aria-current={i === slideIndex ? 'true' : undefined}
+              aria-current={i === currentIndex ? 'true' : undefined}
               title={slide.label}
+              aria-label={slide.label}
             >
-              {i === 0 ? '📋' : i === slides.length - 1 ? '💡' : i}
+              {i === 0 ? '📋' : i === slides.length - 1 ? 'สรุป' : i}
             </button>
           ))}
         </div>
@@ -261,7 +270,7 @@ export function LessonSlideshow({ phase, quizRevealed = false, controlledSlide, 
         <button
           className="lesson-nav-arrow"
           onClick={next}
-          disabled={slideIndex === slides.length - 1}
+          disabled={currentIndex === slides.length - 1}
           aria-label="หน้าถัดไป"
         >
           ›
