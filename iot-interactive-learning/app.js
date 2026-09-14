@@ -19,7 +19,7 @@ app.use((req, res, next) => {
 app.use(express.static(path.join(__dirname, 'dist')));
 
 // SPA Fallback: ให้ React Router จัดการ Path แทน (กรณีคนกด Refresh หน้าเว็บ)
-app.get('*', (req, res) => {
+app.use((req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
