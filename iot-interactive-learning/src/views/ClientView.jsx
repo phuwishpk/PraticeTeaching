@@ -5,6 +5,7 @@ import { Rocket, User, Cpu, Wifi, Cloud, AlertTriangle, Target, Trophy, Medal, B
 import { ImageWithModal } from '../components/ImageWithModal';
 import React, { useState, useRef, useEffect } from 'react';
 import { useRoom } from '../context/RoomContext';
+import { CHAPTER_FLOW } from '../../shared/roomState';
 import { motion, AnimatePresence } from 'framer-motion';
 import { StudentLessonNotes, LessonSlideshow } from '../components/LessonContent';
 import { sensorQuizExplanation } from '../content/lessons';
@@ -328,7 +329,7 @@ function ClientProblem() {
         </div>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
         {options.map(opt => {
           const count = Object.values(allVotes).filter(v => v === opt.id).length;
           const pct = totalVotes === 0 ? 0 : Math.round((count / totalVotes) * 100);
@@ -337,33 +338,44 @@ function ClientProblem() {
           
           return (
             <motion.button key={opt.id}
-              whileTap={{ scale: 0.97 }}
+              whileTap={{ scale: 0.95 }}
               onClick={() => !myVote && !isTimeUp && voteProblem(opt.id, myName)}
               disabled={!!myVote || isTimeUp}
               style={{
-                background: showResults && isCorrectAnswer ? 'rgba(80,250,123,0.15)'
-                  : isMyVote ? `${opt.color}22` : 'rgba(255,255,255,0.04)',
-                border: `2px solid ${showResults && isCorrectAnswer ? '#50fa7b' : isMyVote ? opt.color : 'rgba(255,255,255,0.1)'}`,
+                background: showResults && isCorrectAnswer ? '#50fa7b'
+                  : showResults && !isCorrectAnswer ? 'rgba(255,255,255,0.1)'
+                  : isMyVote ? `${opt.color}dd` : opt.color,
+                color: showResults && !isCorrectAnswer ? 'var(--text-secondary)' : '#1a1a2e',
+                border: `3px solid ${isMyVote ? 'white' : 'transparent'}`,
                 borderRadius: 14, padding: '1rem', cursor: myVote || isTimeUp ? 'default' : 'pointer',
-                position: 'relative', overflow: 'hidden', textAlign: 'left'
+                position: 'relative', overflow: 'hidden', textAlign: 'center',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+                minHeight: '140px',
+                boxShadow: isMyVote ? '0 0 15px rgba(255,255,255,0.5)' : '0 4px 6px rgba(0,0,0,0.3)',
+                transform: isMyVote ? 'scale(1.02)' : 'scale(1)',
+                transition: 'all 0.2s'
               }}
             >
               {showResults && (
-                <motion.div initial={{ width: '0%' }} animate={{ width: `${pct}%` }}
-                  style={{ position: 'absolute', inset: 0, background: `${opt.color}18`, borderRadius: 12 }}
+                <motion.div initial={{ height: '0%' }} animate={{ height: `${pct}%` }}
+                  style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.1)', zIndex: 1 }}
                 />
               )}
-              <div style={{ position: 'relative', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  {opt.image && <ImageWithModal src={opt.image} alt={opt.label} style={{ width: '36px', height: '36px', objectFit: 'cover', borderRadius: '8px' }} />}
-                  <span style={{ color: showResults && isCorrectAnswer ? '#50fa7b' : isMyVote ? opt.color : 'white', fontWeight: isMyVote || (showResults && isCorrectAnswer) ? 'bold' : 'normal', fontSize: '1rem' }}>
-                    {opt.label} {isMyVote && '✅'} {showResults && isCorrectAnswer && '🎯'}
-                  </span>
-                </div>
+              <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', zIndex: 2 }}>
+                {opt.image && <img src={opt.image} alt={opt.label} style={{ width: '50px', height: '50px', objectFit: 'cover', borderRadius: '8px', border: '2px solid rgba(0,0,0,0.1)', pointerEvents: 'none' }} />}
+                <span style={{ fontWeight: 'bold', fontSize: '0.9rem', marginTop: '0.5rem', lineHeight: '1.2' }}>
+                  {opt.label}
+                </span>
                 {showResults && totalVotes > 0 && (
-                  <span style={{ color: opt.color, fontWeight: 'bold', fontSize: '1.1rem' }}>
+                  <span style={{ fontWeight: '900', fontSize: '1.2rem', marginTop: '0.2rem' }}>
                     {pct}%
                   </span>
+                )}
+                {showResults && isCorrectAnswer && (
+                  <span style={{ position: 'absolute', top: -30, right: -30, fontSize: '1.5rem', background: 'white', borderRadius: '50%', padding: '2px' }}>🎯</span>
+                )}
+                {isMyVote && !showResults && (
+                  <span style={{ position: 'absolute', top: -30, left: -30, fontSize: '1.5rem', background: 'white', borderRadius: '50%', padding: '2px' }}>✅</span>
                 )}
               </div>
             </motion.button>
@@ -828,7 +840,7 @@ function ClientLogic() {
 function ClientWrapUp() {
   const { roomState, addFloatingEmoji } = useRoom();
   const myName = sessionStorage.getItem('student_name');
-  const scores = roomState.scores || {};
+  const scores = (roomState.chapterScores && roomState.chapterScores[roomState.chapter]) || {};
   const students = roomState.students || [];
   const sortedStudents = [...students].sort((a, b) => (scores[b.name] || 0) - (scores[a.name] || 0));
   const myRank = sortedStudents.findIndex(s => s.name === myName) + 1;
@@ -837,7 +849,6 @@ function ClientWrapUp() {
   
   return (
     <div className="flex-center full-screen" style={{ flexDirection: 'column', gap: '1.5rem', padding: '1.5rem' }}>
-      {roomState.phase === 9 && <WrapUpActivity />}
       <div className="glass-panel" style={{ padding: '2rem', width: '100%', maxWidth: 400, textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         <h2 className="text-glow-blue" style={{ fontSize: '1.8rem', margin: 0 }}>ยินดีด้วย! 🎉</h2>
         
@@ -883,9 +894,10 @@ export default function ClientView() {
   const { roomState } = useRoom();
   const myName = sessionStorage.getItem('student_name');
   const [tab, setTab] = useState(TAB_ACTIVITY);
-  const myScore = (roomState.scores || {})[myName] || 0;
+  const myScore = ((roomState.chapterScores && roomState.chapterScores[roomState.chapter]) || {})[myName] || 0;
 
-  const effectivePhase = myName ? roomState.phase : 1;
+  const currentChapterFlow = CHAPTER_FLOW[roomState.chapter] || CHAPTER_FLOW[1];
+  const currentStepData = currentChapterFlow[roomState.step] || currentChapterFlow[0];
 
   // Auto-follow teacher's presentation mode
   useEffect(() => {
@@ -896,23 +908,29 @@ export default function ClientView() {
   }, [roomState.presentation?.mode, myName]);
 
   const renderScene = () => {
-    switch (effectivePhase) {
-      case 1: return <ClientLobby />;
-      case 2: return <ClientArchitecture />;
-      case 3: return <ClientProblem />;
-      case 4: return <ClientDigital />;
-      case 5: return <ClientAnalog />;
-      case 6: return <ClientCatalog />;
-      case 7: return <ClientQuiz />;
-      case 8: return <ClientLogic />;
-      case 9:
-      case 10: return <ClientWrapUp />;
+    if (!myName) return <ClientLobby />;
+    
+    switch (currentStepData.type) {
+      case 'lobby': return <ClientLobby />;
+      case 'podium': return <ClientWrapUp />;
+      case 'activity':
+        switch (currentStepData.id) {
+          case 'architecture': return <ClientArchitecture />;
+          case 'problem': return <ClientProblem />;
+          case 'digital': return <ClientDigital />;
+          case 'analog': return <ClientAnalog />;
+          case 'catalog': return <ClientCatalog />;
+          case 'quiz': return <ClientQuiz />;
+          case 'logic': return <ClientLogic />;
+          case 'wrapup': return <ClientWrapUp />;
+          case 'ideation': return <div className="flex-center full-screen" style={{ flexDirection: 'column' }}><h2>รอกิจกรรมออกแบบไอเดีย...</h2></div>;
+          default: return <div>Unknown Activity</div>;
+        }
       default:
         return (
           <div className="flex-center full-screen" style={{ flexDirection: 'column', gap: '1rem' }}>
             <div style={{ fontSize: '5rem' }}>📱</div>
-            <h2 className="text-glow-blue">Phase {roomState.phase}</h2>
-            <p style={{ color: 'var(--text-secondary)' }}>รอคุณครูดำเนินการ...</p>
+            <h2 className="text-glow-blue">รอคุณครูดำเนินการ...</h2>
           </div>
         );
     }

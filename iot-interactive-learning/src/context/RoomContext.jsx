@@ -51,8 +51,9 @@ export function RoomProvider({ children }) {
     return request;
   }, [acceptSnapshot]);
 
-  const setPhase = useCallback(phase => dispatch('phase', { phase }), [dispatch]);
-  const setPresentation = useCallback(patch => dispatch('presentation', { phase: roomState.phase, ...patch }), [dispatch, roomState.phase]);
+  const setChapter = useCallback(chapter => dispatch('changeChapter', { chapter }), [dispatch]);
+  const setStep = useCallback(step => dispatch('changeStep', { step }), [dispatch]);
+  const setPresentation = useCallback(patch => dispatch('presentation', { chapter: roomState.chapter, step: roomState.step, ...patch }), [dispatch, roomState.chapter, roomState.step]);
   const joinRoom = useCallback((name, pin) => dispatch('join', { name, pin }), [dispatch]);
   const setVoteItem = useCallback(item => dispatch('voteItem', { item }), [dispatch]);
   const submitVote = useCallback((item, layer, name) => dispatch('architectureVote', { item, layer, name }), [dispatch]);
@@ -69,7 +70,7 @@ export function RoomProvider({ children }) {
   const voteAnalog = useCallback((option, name) => dispatch('analogVote', { option, name }), [dispatch]);
 
   return (
-    <RoomContext.Provider value={{ roomState, connected, error, joinUrl, setPhase, setPresentation, joinRoom,
+    <RoomContext.Provider value={{ roomState, connected, error, joinUrl, setChapter, setStep, setPresentation, joinRoom,
       setVoteItem, submitVote, sendFloatingEmoji,
       addFloatingEmoji, voteQuiz, revealQuiz, voteLogic, activateSense, resetRoom,
       voteProblem, voteDigital, voteAnalog }}>

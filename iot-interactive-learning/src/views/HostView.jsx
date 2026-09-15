@@ -3,6 +3,7 @@ import { SignalActivityReview } from '../components/SignalGraphics';
 import { SensorCatalog } from '../components/LessonGraphics';
 import React, { useEffect, useState, useMemo } from 'react';
 import { useRoom } from '../context/RoomContext';
+import { CHAPTER_FLOW } from '../../shared/roomState';
 import { motion, AnimatePresence } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
 import ReactConfetti from 'react-confetti';
@@ -32,6 +33,7 @@ function FloatingEmojis({ emojis }) {
           </motion.div>
         ))}
       </AnimatePresence>
+
     </div>
   );
 }
@@ -802,7 +804,7 @@ function HostPodium() {
 const PHASES = ['Lobby', 'Architecture', 'The Problem', 'Digital Signal', 'Analog', 'Sensors', 'Sensor Quiz', 'Logic', 'Wrap-up', 'Podium'];
 
 // Controlled slideshow for teacher — slide syncs with roomState.presentation
-function HostLessonSlideshow({ phase, quizRevealed }) {
+function HostLessonSlideshow({ chapter, step, quizRevealed }) {
   const { roomState, setPresentation } = useRoom();
   const currentSlide = roomState.presentation?.slide ?? 0;
 
@@ -812,8 +814,8 @@ function HostLessonSlideshow({ phase, quizRevealed }) {
 
   return (
     <LessonSlideshow
-      key={phase}
-      phase={phase}
+      key={`${chapter}-${step}`}
+      phase={CHAPTER_FLOW[chapter][step].lessonId}
       quizRevealed={quizRevealed}
       controlledSlide={currentSlide}
       onSlideChange={handleSlideChange}
@@ -822,7 +824,35 @@ function HostLessonSlideshow({ phase, quizRevealed }) {
 }
 
 export default function HostView() {
-  const { roomState, setPhase, resetRoom, setPresentation } = useRoom();
+  const { roomState, setChapter, setStep, resetRoom, setPresentation } = useRoom();
+  const currentChapterFlow = CHAPTER_FLOW[roomState.chapter];
+  const currentStepData = currentChapterFlow[roomState.step];
+  const [pendingChapter, setPendingChapter] = useState(null);
+
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (roomState.students.length > 0) {
+        e.preventDefault();
+        e.returnValue = 'มีนักเรียนอยู่ในห้อง คุณแน่ใจหรือไม่ที่จะออกจากระบบ?';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [roomState.students.length]);
+
+  const requestChapterChange = (newChapter) => {
+    if (newChapter === roomState.chapter) return;
+    if (roomState.students.length > 0) {
+      setPendingChapter(newChapter);
+    } else {
+      setChapter(newChapter);
+    }
+  };
+
+  const confirmChapterChange = () => {
+    setChapter(pendingChapter);
+    setPendingChapter(null);
+  };
   const lessonMode = roomState.presentation?.mode === 'lesson';
 
   const handleTabChange = (mode) => {
@@ -836,12 +866,24 @@ export default function HostView() {
       {/* Navbar */}
       <div className="glass-panel host-navbar" style={{ margin: '10px 14px 0', padding: '10px 18px', display: 'flex', alignItems: 'center', gap: '10px', zIndex: 100, flexShrink: 0 }}>
         <h2 className="text-glow-blue" style={{ marginRight: 'auto', fontSize: '1.2rem' }}>🖥️ Host Dashboard</h2>
-        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-          {PHASES.slice(0, 10).map((name, i) => (
-            <button key={i} onClick={() => setPhase(i + 1)}
+        {/* Chapter Dropdown */}
+        <select 
+          className="neu-button" 
+          value={roomState.chapter} 
+          onChange={(e) => requestChapterChange(Number(e.target.value))}
+          style={{ padding: '8px', fontSize: '1rem', fontWeight: 'bold', background: 'var(--glass-bg)', color: 'white', border: '1px solid rgba(255,255,255,0.2)' }}>
+          <option value={1} style={{color: 'black'}}>บทที่ 1: พื้นฐานและเซนเซอร์</option>
+          <option value={2} style={{color: 'black'}}>บทที่ 2: สัญญาณ Digital/Analog</option>
+          <option value={3} style={{color: 'black'}}>บทที่ 3: Logic และ ไอเดีย</option>
+        </select>
+
+        {/* Steps for current Chapter */}
+        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginLeft: '10px' }}>
+          {currentChapterFlow.map((step, i) => (
+            <button key={i} onClick={() => setStep(i)}
               className="neu-button"
-              style={{ padding: '5px 12px', fontSize: '0.75rem', color: roomState.phase === i + 1 ? 'var(--neon-blue)' : 'inherit', boxShadow: roomState.phase === i + 1 ? 'var(--neumorph-inset)' : 'var(--neumorph-shadow)' }}>
-              {i + 1}. {name}
+              style={{ padding: '5px 12px', fontSize: '0.75rem', color: roomState.step === i ? 'var(--neon-blue)' : 'inherit', boxShadow: roomState.step === i ? 'var(--neumorph-inset)' : 'var(--neumorph-shadow)' }}>
+              {step.type === 'lobby' ? 'Lobby' : step.type === 'podium' ? 'Podium' : step.id}
             </button>
           ))}
         </div>
@@ -876,25 +918,38 @@ export default function HostView() {
           {lessonMode ? (
             <motion.div key="lesson" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}
               style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-              <HostLessonSlideshow phase={roomState.phase} quizRevealed={roomState.quizRevealed} />
+              <HostLessonSlideshow chapter={roomState.chapter} step={roomState.step} quizRevealed={roomState.quizRevealed} />
             </motion.div>
           ) : (
             <motion.div key="activity" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }}
               className="host-activity" style={{ flex: 1, overflow: 'auto' }}>
-              {roomState.phase === 1 && <HostLobby />}
-              {roomState.phase === 2 && <HostArchitecture />}
-              {roomState.phase === 3 && <HostProblem />}
-              {roomState.phase === 4 && <HostDigital />}
-              {roomState.phase === 5 && <HostAnalog />}
-              {roomState.phase === 6 && <HostCatalog />}
-              {roomState.phase === 7 && <HostQuiz />}
-              {roomState.phase === 8 && <HostLogic />}
-              {roomState.phase === 9 && <HostWrapUp />}
-              {roomState.phase === 10 && <HostPodium />}
+              {currentStepData.type === 'lobby' && <HostLobby />}
+              {currentStepData.id === 'architecture' && <HostArchitecture />}
+              {currentStepData.id === 'problem' && <HostProblem />}
+              {currentStepData.id === 'digital' && <HostDigital />}
+              {currentStepData.id === 'analog' && <HostAnalog />}
+              {currentStepData.id === 'catalog' && <HostCatalog />}
+              {currentStepData.id === 'quiz' && <HostQuiz />}
+              {currentStepData.id === 'logic' && <HostLogic />}
+              {currentStepData.id === 'wrapup' && <HostWrapUp />}
+              {currentStepData.id === 'ideation' && <div style={{padding: '50px', textAlign: 'center'}}><h2>Idea Design (Activity Pending)</h2></div>}
+              {currentStepData.type === 'podium' && <HostPodium />}
             </motion.div>
           )}
         </AnimatePresence>
       </main>
+      {pendingChapter !== null && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+          <div className="glass-panel" style={{ padding: '30px', textAlign: 'center', maxWidth: '400px' }}>
+            <h3 style={{ color: '#ff6b6b' }}>ยืนยันการเปลี่ยนบทเรียน?</h3>
+            <p style={{ margin: '15px 0' }}>ขณะนี้มีนักเรียนในห้อง {roomState.students.length} คน การเปลี่ยนบทเรียนจะทำให้หน้าจอของทุกคนเปลี่ยนตามทันที</p>
+            <div style={{ display: 'flex', justifyContent: 'space-around', marginTop: '20px' }}>
+              <button className="neu-button" onClick={() => setPendingChapter(null)}>ยกเลิก</button>
+              <button className="neu-button" onClick={confirmChapterChange} style={{ color: '#ff6b6b' }}>ยืนยัน</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
