@@ -5,7 +5,6 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useRoom } from '../context/RoomContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
-import { ResponsivePanel } from '../components/ResponsivePanel';
 import { ImageWithModal } from '../components/ImageWithModal';
 import { sensorQuizExplanation } from '../content/lessons';
 import CountdownTimer from '../components/CountdownTimer';

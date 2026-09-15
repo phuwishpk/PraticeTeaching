@@ -2,7 +2,6 @@ import { WrapUpActivity } from '../components/WrapUpGraphics';
 import { SignalActivityReview } from '../components/SignalGraphics';
 import { SensorCatalog } from '../components/LessonGraphics';
 import { Rocket, User, Cpu, Wifi, Cloud, AlertTriangle, Target, Trophy, Medal, BookOpen, Gamepad2, CheckCircle2, Timer, Lock, Unlock, Flame, Sun, Radio, Zap, Lightbulb, Thermometer, Smartphone, PartyPopper, Heart, XCircle, Activity, Sprout, PersonStanding, ThumbsUp } from 'lucide-react';
-import { ResponsivePanel } from '../components/ResponsivePanel';
 import { ImageWithModal } from '../components/ImageWithModal';
 import React, { useState, useRef, useEffect } from 'react';
 import { useRoom } from '../context/RoomContext';
