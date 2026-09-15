@@ -12,6 +12,13 @@ export function RoomProvider({ children }) {
   const queue = useRef(Promise.resolve());
   const acceptSnapshot = useCallback(snapshot => {
     const current = version.current;
+    // If server restarted (new instance), force page reload to get fresh PIN
+    if (current.instance !== null && snapshot.instance !== current.instance) {
+      console.warn('[RoomContext] Server restarted — reloading page to sync PIN...');
+      sessionStorage.removeItem('student_name');
+      window.location.reload();
+      return;
+    }
     if (snapshot.instance !== current.instance || snapshot.revision >= current.revision) {
       version.current = { instance: snapshot.instance, revision: snapshot.revision };
       setRoomState(snapshot.state);
@@ -54,7 +61,24 @@ export function RoomProvider({ children }) {
   const setChapter = useCallback(chapter => dispatch('changeChapter', { chapter }), [dispatch]);
   const setStep = useCallback(step => dispatch('changeStep', { step }), [dispatch]);
   const setPresentation = useCallback(patch => dispatch('presentation', { chapter: roomState.chapter, step: roomState.step, ...patch }), [dispatch, roomState.chapter, roomState.step]);
-  const joinRoom = useCallback((name, pin) => dispatch('join', { name, pin }), [dispatch]);
+  const joinRoom = useCallback(async (name, pin) => {
+    try {
+      const response = await fetch('/api/room/actions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'join', payload: { name, pin } }),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        return { ok: false, error: result.error || 'ไม่สามารถเข้าร่วมห้องได้' };
+      }
+      acceptSnapshot(result);
+      setError('');
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, error: 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้' };
+    }
+  }, [acceptSnapshot]);
   const setVoteItem = useCallback(item => dispatch('voteItem', { item }), [dispatch]);
   const submitVote = useCallback((item, layer, name) => dispatch('architectureVote', { item, layer, name }), [dispatch]);
   const setCatalogQuestion = useCallback(question => dispatch('setCatalogQuestion', { question }), [dispatch]);

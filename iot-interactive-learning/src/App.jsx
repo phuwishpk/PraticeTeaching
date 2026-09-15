@@ -11,6 +11,7 @@ function App() {
         <Routes>
           {/* Main UI for users: directly enter PIN */}
           <Route path="/" element={<ClientView />} />
+          <Route path="/client" element={<ClientView />} />
           {/* Hidden admin endpoint */}
           <Route path="/host" element={<HostView />} />
         </Routes>

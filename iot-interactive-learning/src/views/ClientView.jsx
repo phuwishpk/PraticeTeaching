@@ -29,7 +29,7 @@ function MiniBar({ value, max, color = 'var(--neon-blue)', label, count }) {
 
 // ─── Scene 1: Lobby ───────────────────────────────────────────────────────────
 function ClientLobby() {
-  const { roomState, joinRoom, sendFloatingEmoji } = useRoom();
+  const { roomState, connected, joinRoom, sendFloatingEmoji } = useRoom();
   const [pin, setPin] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     return params.get('pin') || '';
@@ -37,14 +37,49 @@ function ClientLobby() {
   const [pinVerified, setPinVerified] = useState(false);
   const [name, setName] = useState('');
   const [pinError, setPinError] = useState('');
-  const myName = sessionStorage.getItem('student_name') || '';
+  const [joinError, setJoinError] = useState('');
+  const [isCheckingPin, setIsCheckingPin] = useState(false);
+  const [isJoining, setIsJoining] = useState(false);
+  const [localName, setLocalName] = useState(() => sessionStorage.getItem('student_name') || '');
 
-  if (myName) {
+  const isJoined = Boolean(localName && roomState.students?.some(s => s.name === localName));
+
+  // Auto verify PIN if present in URL (?pin=XXXX)
+  useEffect(() => {
+    const urlPin = new URLSearchParams(window.location.search).get('pin');
+    if (urlPin && urlPin.trim().length === 4 && !pinVerified) {
+      setPin(urlPin.trim());
+      fetch('/api/room/actions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'verifyPin', payload: { pin: urlPin.trim() } }),
+      })
+      .then(res => {
+        if (res.ok) {
+          setPinVerified(true);
+          setPinError('');
+        }
+      })
+      .catch(() => {});
+    }
+  }, []);
+
+  // If connected, ensure localName is actually registered on server; otherwise clear stale session
+  useEffect(() => {
+    if (connected && localName && roomState.students && !isJoined) {
+      console.warn('[ClientLobby] Session expired or student not in room. Resetting session.');
+      sessionStorage.removeItem('student_name');
+      setLocalName('');
+    }
+  }, [connected, localName, roomState.students, isJoined]);
+
+  // Already joined and registered in room
+  if (localName && isJoined) {
     return (
-      <div className="flex-center full-screen" style={{ flexDirection: 'column', gap: '2rem' }}>
+      <div className="flex-center full-screen" style={{ flexDirection: 'column', gap: '1.5rem', padding: '1rem' }}>
         <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} style={{ fontSize: '5rem' }}>🎉</motion.div>
-        <h2 className="text-glow-blue" style={{ fontSize: '2rem' }}>สวัสดี, {myName}!</h2>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '1.2rem' }}>รอคุณครูเริ่มเนื้อหา...</p>
+        <h2 className="text-glow-blue" style={{ fontSize: '2rem', margin: 0, textAlign: 'center' }}>สวัสดี, {localName}!</h2>
+        <p style={{ color: 'var(--text-secondary)', fontSize: '1.2rem', margin: 0, textAlign: 'center' }}>รอคุณครูเริ่มเนื้อหา...</p>
 
         {/* เพื่อนในห้อง */}
         {roomState.students.length > 1 && (
@@ -55,57 +90,105 @@ function ClientLobby() {
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', justifyContent: 'center' }}>
               {roomState.students.map(s => (
                 <span key={s.id} style={{
-                  background: s.name === myName ? 'rgba(0,240,255,0.25)' : 'rgba(255,255,255,0.07)',
-                  border: `1px solid ${s.name === myName ? 'var(--neon-blue)' : 'rgba(255,255,255,0.12)'}`,
+                  background: s.name === localName ? 'rgba(0,240,255,0.25)' : 'rgba(255,255,255,0.07)',
+                  border: `1px solid ${s.name === localName ? 'var(--neon-blue)' : 'rgba(255,255,255,0.12)'}`,
                   borderRadius: 20, padding: '4px 12px', fontSize: '0.85rem',
-                  color: s.name === myName ? 'var(--neon-blue)' : 'var(--text-primary)'
+                  color: s.name === localName ? 'var(--neon-blue)' : 'var(--text-primary)'
                 }}>
-                  {s.name === myName ? '👤' : '🧑‍🔬'} {s.name}
+                  {s.name === localName ? '👤' : '🧑‍🔬'} {s.name}
                 </span>
               ))}
             </div>
           </div>
         )}
 
-        <div className="glass-panel" style={{ padding: '2rem', display: 'flex', gap: '1.5rem' }}>
+        <div className="glass-panel" style={{ padding: '1.5rem', display: 'flex', gap: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}>
           {['👍', '💡', '❤️', '🔥'].map(emoji => (
             <motion.button key={emoji} whileTap={{ scale: 0.8 }} className="neu-button"
-              onClick={() => sendFloatingEmoji(emoji, myName)}
-              style={{ fontSize: '2.5rem', padding: '1rem' }}>
+              onClick={() => sendFloatingEmoji(emoji, localName)}
+              style={{ fontSize: '2rem', padding: '0.8rem 1rem' }}>
               {emoji}
             </motion.button>
           ))}
         </div>
+
+        <button
+          type="button"
+          onClick={() => {
+            sessionStorage.removeItem('student_name');
+            setLocalName('');
+            window.location.reload();
+          }}
+          style={{
+            background: 'transparent',
+            border: '1px solid rgba(255,255,255,0.2)',
+            borderRadius: 8,
+            color: 'var(--text-secondary)',
+            cursor: 'pointer',
+            padding: '6px 14px',
+            fontSize: '0.85rem',
+            marginTop: '0.5rem'
+          }}
+        >
+          🚪 ออกจากห้อง / เปลี่ยนชื่อ
+        </button>
       </div>
     );
   }
 
-  // ── Step 1: ใส่ PIN ─────────────────────────────────────────────────────────
-  const handlePinCheck = (e) => {
+  // ── Step 1: ใส่ PIN (validate on server-side) ────────────────────────────────
+  const handlePinCheck = async (e) => {
     e.preventDefault();
-    if (pin.trim().length !== 4) {
+    const cleanPin = pin.trim();
+    if (cleanPin.length !== 4) {
       setPinError('กรุณากรอก PIN 4 หลัก');
       return;
     }
-    if (pin.trim() !== roomState.pin) {
-      setPinError('❌ รหัส PIN ไม่ถูกต้อง!');
-      return;
-    }
+    setIsCheckingPin(true);
     setPinError('');
-    setPinVerified(true);
+    try {
+      const response = await fetch('/api/room/actions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'verifyPin', payload: { pin: cleanPin } }),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        setPinError(result.error || '❌ รหัส PIN ไม่ถูกต้อง!');
+        return;
+      }
+      setPinError('');
+      setPinVerified(true);
+    } catch (err) {
+      setPinError('❌ ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้');
+    } finally {
+      setIsCheckingPin(false);
+    }
   };
 
   // ── Step 2: กรอกชื่อแล้วเข้าร่วม ───────────────────────────────────────────
   const handleJoin = async (e) => {
     e.preventDefault();
-    if (!name.trim()) {
-      alert('❌ กรุณากรอกชื่อของคุณ');
+    const cleanName = name.trim();
+    if (!cleanName) {
+      setJoinError('กรุณากรอกชื่อของคุณ');
       return;
     }
-    const success = await joinRoom(name.trim(), pin.trim());
-    if (success) {
-      sessionStorage.setItem('student_name', name.trim());
-      window.location.reload();
+    setJoinError('');
+    setIsJoining(true);
+    try {
+      const res = await joinRoom(cleanName, pin.trim());
+      if (res?.ok) {
+        sessionStorage.setItem('student_name', cleanName);
+        setLocalName(cleanName);
+        window.location.reload();
+      } else {
+        setJoinError(res?.error || '❌ ไม่สามารถเข้าร่วมห้องได้');
+      }
+    } catch (err) {
+      setJoinError('❌ การเชื่อมต่อขัดข้อง กรุณาลองใหม่');
+    } finally {
+      setIsJoining(false);
     }
   };
 
@@ -132,9 +215,9 @@ function ClientLobby() {
                 {pinError}
               </motion.p>
             )}
-            <motion.button type="submit" whileTap={{ scale: 0.95 }} className="neu-button"
+            <motion.button type="submit" disabled={isCheckingPin} whileTap={{ scale: 0.95 }} className="neu-button"
               style={{ marginTop: '0.5rem', padding: '1rem', fontSize: '1.2rem', color: 'var(--neon-blue)', width: '100%' }}>
-              🔓 ยืนยัน PIN
+              {isCheckingPin ? '⏳ กำลังตรวจสอบ...' : '🔓 ยืนยัน PIN'}
             </motion.button>
           </form>
         </motion.div>
@@ -150,15 +233,30 @@ function ClientLobby() {
         style={{ padding: '3rem 2.5rem', width: '90%', maxWidth: 420, display: 'flex', flexDirection: 'column', gap: '1.5rem', alignItems: 'center' }}>
         <div style={{ fontSize: '4rem' }}>🚀</div>
         <h2 className="text-glow-blue" style={{ fontSize: '2rem', textAlign: 'center', margin: 0 }}>Welcome to IoT Lab</h2>
-        <p style={{ color: 'var(--neon-green)', fontSize: '0.9rem', margin: 0 }}>✅ PIN ถูกต้อง!</p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <p style={{ color: 'var(--neon-green)', fontSize: '0.9rem', margin: 0 }}>✅ PIN: {pin} ถูกต้อง</p>
+          <button
+            type="button"
+            onClick={() => { setPinVerified(false); setPinError(''); setJoinError(''); }}
+            style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', textDecoration: 'underline', fontSize: '0.8rem', cursor: 'pointer' }}
+          >
+            (เปลี่ยน)
+          </button>
+        </div>
         <form onSubmit={handleJoin} style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem', width: '100%' }}>
           <input type="text" placeholder="ชื่อเล่นนักเรียน" className="neu-input"
-            value={name} onChange={e => setName(e.target.value)} maxLength={20}
+            value={name} onChange={e => { setName(e.target.value); setJoinError(''); }} maxLength={20}
             autoFocus
             style={{ textAlign: 'center', fontSize: '1.2rem' }} />
-          <motion.button type="submit" whileTap={{ scale: 0.95 }} className="neu-button"
+          {joinError && (
+            <motion.p initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }}
+              style={{ color: '#ff6b6b', textAlign: 'center', margin: 0, fontSize: '0.9rem' }}>
+              {joinError}
+            </motion.p>
+          )}
+          <motion.button type="submit" disabled={isJoining} whileTap={{ scale: 0.95 }} className="neu-button"
             style={{ marginTop: '0.5rem', padding: '1rem', fontSize: '1.2rem', color: 'var(--neon-blue)', width: '100%' }}>
-            🚀 เริ่มการทดลอง
+            {isJoining ? '⏳ กำลังเข้าห้อง...' : '🚀 เริ่มการทดลอง'}
           </motion.button>
         </form>
       </motion.div>
@@ -215,8 +313,10 @@ function ClientArchitecture() {
         <div>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>อุปกรณ์ที่กำลังโหวต</div>
           <div style={{ fontWeight: 'bold', color: 'var(--neon-blue)', fontSize: '1.1rem' }}>{activeItem.name}</div>
-          <div style={{ fontSize: '0.75rem', color: isTimeUp ? (totalVotes >= totalStudents ? 'var(--neon-green)' : 'var(--text-secondary)') : 'var(--neon-blue)' }}>
-            {isTimeUp ? `โหวตแล้ว ${totalVotes} / ${totalStudents} คน` : 'กำลังเปิดรับคำตอบ... ⏳'}
+          <div style={{ fontSize: '0.75rem', color: showResults ? (isAllAnswered ? 'var(--neon-green)' : 'var(--text-secondary)') : 'var(--neon-blue)', fontWeight: 'bold' }}>
+            {showResults
+              ? (isAllAnswered ? `✅ ตอบครบทุกคนแล้ว (${totalVotes}/${totalStudents} คน)` : `⏰ หมดเวลา (${totalVotes}/${totalStudents} คน)`)
+              : `โหวตแล้ว ${totalVotes} / ${totalStudents} คน ⏳`}
           </div>
         </div>
       </div>
@@ -268,7 +368,7 @@ function ClientArchitecture() {
       {myVote && !showResults && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
           style={{ textAlign: 'center', color: 'var(--neon-blue)', fontSize: '0.9rem', padding: '0.5rem' }}>
-          ⏳ บันทึกคำตอบแล้ว — รอสรุปผลเมื่อหมดเวลา
+          ⏳ บันทึกคำตอบแล้ว — กำลังรอเพื่อนๆ ตอบให้ครบ ({totalVotes} / {totalStudents} คน)
         </motion.div>
       )}
       {showResults && myVote && (
@@ -323,8 +423,10 @@ function ClientProblem() {
         <div>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>คำถาม</div>
           <div style={{ fontWeight: 'bold', color: 'var(--neon-blue)', fontSize: '1rem' }}>อุปกรณ์ใดคือ "ตา หู จมูก"?</div>
-          <div style={{ fontSize: '0.75rem', color: isTimeUp ? (totalVotes >= totalStudents ? 'var(--neon-green)' : 'var(--text-secondary)') : 'var(--neon-blue)' }}>
-            {isTimeUp ? `โหวตแล้ว ${totalVotes} / ${totalStudents} คน` : 'กำลังเปิดรับคำตอบ... ⏳'}
+          <div style={{ fontSize: '0.75rem', color: showResults ? (isAllAnswered ? 'var(--neon-green)' : 'var(--text-secondary)') : 'var(--neon-blue)', fontWeight: 'bold' }}>
+            {showResults
+              ? (isAllAnswered ? `✅ ตอบครบทุกคนแล้ว (${totalVotes}/${totalStudents} คน)` : `⏰ หมดเวลา (${totalVotes}/${totalStudents} คน)`)
+              : `โหวตแล้ว ${totalVotes} / ${totalStudents} คน ⏳`}
           </div>
         </div>
       </div>
@@ -386,7 +488,7 @@ function ClientProblem() {
       {myVote && !showResults && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
           style={{ textAlign: 'center', color: 'var(--neon-blue)', fontSize: '0.9rem', padding: '0.5rem' }}>
-          ⏳ บันทึกคำตอบแล้ว — รอสรุปผลเมื่อหมดเวลา
+          ⏳ บันทึกคำตอบแล้ว — กำลังรอเพื่อนๆ ตอบให้ครบ ({totalVotes} / {totalStudents} คน)
         </motion.div>
       )}
       {showResults && myVote && (
@@ -441,8 +543,10 @@ function ClientDigital() {
         <div>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>คำถาม</div>
           <div style={{ fontWeight: 'bold', color: 'var(--neon-blue)', fontSize: '1rem' }}>สัญญาณ Digital มีกี่สถานะ?</div>
-          <div style={{ fontSize: '0.75rem', color: isTimeUp ? (totalVotes >= totalStudents ? 'var(--neon-green)' : 'var(--text-secondary)') : 'var(--neon-blue)' }}>
-            {isTimeUp ? `โหวตแล้ว ${totalVotes} / ${totalStudents} คน` : 'กำลังเปิดรับคำตอบ... ⏳'}
+          <div style={{ fontSize: '0.75rem', color: showResults ? (isAllAnswered ? 'var(--neon-green)' : 'var(--text-secondary)') : 'var(--neon-blue)', fontWeight: 'bold' }}>
+            {showResults
+              ? (isAllAnswered ? `✅ ตอบครบทุกคนแล้ว (${totalVotes}/${totalStudents} คน)` : `⏰ หมดเวลา (${totalVotes}/${totalStudents} คน)`)
+              : `โหวตแล้ว ${totalVotes} / ${totalStudents} คน ⏳`}
           </div>
         </div>
       </div>
@@ -490,7 +594,7 @@ function ClientDigital() {
       {myVote && !showResults && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
           style={{ textAlign: 'center', color: 'var(--neon-blue)', fontSize: '0.9rem', padding: '0.5rem' }}>
-          ⏳ บันทึกคำตอบแล้ว — รอสรุปผลเมื่อหมดเวลา
+          ⏳ บันทึกคำตอบแล้ว — กำลังรอเพื่อนๆ ตอบให้ครบ ({totalVotes} / {totalStudents} คน)
         </motion.div>
       )}
       {showResults && myVote && (
@@ -546,8 +650,10 @@ function ClientAnalog() {
         <div>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>คำถาม</div>
           <div style={{ fontWeight: 'bold', color: '#ffd08a', fontSize: '1rem' }}>สัญญาณ Analog แตกต่างจาก Digital อย่างไร?</div>
-          <div style={{ fontSize: '0.75rem', color: isTimeUp ? (totalVotes >= totalStudents ? 'var(--neon-green)' : 'var(--text-secondary)') : 'var(--neon-blue)' }}>
-            {isTimeUp ? `โหวตแล้ว ${totalVotes} / ${totalStudents} คน` : 'กำลังเปิดรับคำตอบ... ⏳'}
+          <div style={{ fontSize: '0.75rem', color: showResults ? (isAllAnswered ? 'var(--neon-green)' : 'var(--text-secondary)') : 'var(--neon-blue)', fontWeight: 'bold' }}>
+            {showResults
+              ? (isAllAnswered ? `✅ ตอบครบทุกคนแล้ว (${totalVotes}/${totalStudents} คน)` : `⏰ หมดเวลา (${totalVotes}/${totalStudents} คน)`)
+              : `โหวตแล้ว ${totalVotes} / ${totalStudents} คน ⏳`}
           </div>
         </div>
       </div>
@@ -595,7 +701,7 @@ function ClientAnalog() {
       {myVote && !showResults && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
           style={{ textAlign: 'center', color: 'var(--neon-blue)', fontSize: '0.9rem', padding: '0.5rem' }}>
-          ⏳ บันทึกคำตอบแล้ว — รอสรุปผลเมื่อหมดเวลา
+          ⏳ บันทึกคำตอบแล้ว — กำลังรอเพื่อนๆ ตอบให้ครบ ({totalVotes} / {totalStudents} คน)
         </motion.div>
       )}
       {showResults && myVote && (
@@ -661,8 +767,10 @@ function ClientCatalog() {
         <div>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>คำถามที่ {qIndex} / 4</div>
           <div style={{ fontWeight: 'bold', color: 'var(--neon-blue)', fontSize: '1rem', lineHeight: '1.3' }}>{currentQ.prompt}</div>
-          <div style={{ fontSize: '0.75rem', color: isTimeUp ? (totalVotes >= totalStudents ? 'var(--neon-green)' : 'var(--text-secondary)') : 'var(--neon-blue)' }}>
-            {isTimeUp ? `โหวตแล้ว ${totalVotes} / ${totalStudents} คน` : 'กำลังเปิดรับคำตอบ... ⏳'}
+          <div style={{ fontSize: '0.75rem', color: showResults ? (isAllAnswered ? 'var(--neon-green)' : 'var(--text-secondary)') : 'var(--neon-blue)', fontWeight: 'bold' }}>
+            {showResults
+              ? (isAllAnswered ? `✅ ตอบครบทุกคนแล้ว (${totalVotes}/${totalStudents} คน)` : `⏰ หมดเวลา (${totalVotes}/${totalStudents} คน)`)
+              : `โหวตแล้ว ${totalVotes} / ${totalStudents} คน ⏳`}
           </div>
         </div>
       </div>
@@ -720,6 +828,25 @@ function ClientCatalog() {
           );
         })}
       </div>
+
+      {myVote && !showResults && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+          style={{ textAlign: 'center', color: 'var(--neon-blue)', fontSize: '0.9rem', padding: '0.5rem' }}>
+          ⏳ บันทึกคำตอบแล้ว — กำลังรอเพื่อนๆ ตอบให้ครบ ({totalVotes} / {totalStudents} คน)
+        </motion.div>
+      )}
+      {showResults && myVote && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+          style={{ textAlign: 'center', color: myVote === correctAnswer ? 'var(--neon-green)' : '#ff6b6b', fontSize: '0.9rem', padding: '0.5rem' }}>
+          {myVote === correctAnswer ? '🎉 ถูกต้อง!' : '❌ ไม่ถูก — คำตอบที่ถูกคือ ' + options.find(o => o.id === correctAnswer)?.label}
+        </motion.div>
+      )}
+      {showResults && !myVote && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+          style={{ textAlign: 'center', color: '#ff6b6b', fontSize: '0.9rem' }}>
+          ⏰ หมดเวลา! คำตอบที่ถูกคือ {options.find(o => o.id === correctAnswer)?.label}
+        </motion.div>
+      )}
     </div>
   );
 }
@@ -798,14 +925,16 @@ function ClientQuiz() {
         })}
       </div>
 
-      <div style={{ textAlign: 'center', fontSize: '0.78rem', color: showResults ? 'var(--text-secondary)' : 'var(--neon-blue)' }}>
-        {showResults ? `โหวตแล้ว ${totalVoted} / ${totalStudents} คน` : 'กำลังเปิดรับคำตอบ... ⏳'}
+      <div style={{ textAlign: 'center', fontSize: '0.78rem', color: showResults ? (isAllAnswered ? 'var(--neon-green)' : 'var(--text-secondary)') : 'var(--neon-blue)', fontWeight: 'bold' }}>
+        {showResults
+          ? (isAllAnswered ? `✅ ตอบครบทุกคนแล้ว (${totalVoted}/${totalStudents} คน)` : `⏰ หมดเวลา (${totalVoted}/${totalStudents} คน)`)
+          : `กำลังเปิดรับคำตอบ... (${totalVoted}/${totalStudents} คน) ⏳`}
       </div>
 
       {myVote && !showResults && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
           style={{ textAlign: 'center', color: 'var(--neon-blue)', fontSize: '0.9rem', padding: '0.25rem' }}>
-          ⏳ บันทึกคำตอบแล้ว — รอสรุปผลเมื่อหมดเวลา
+          ⏳ บันทึกคำตอบแล้ว — กำลังรอเพื่อนๆ ตอบให้ครบ ({totalVoted} / {totalStudents} คน)
         </motion.div>
       )}
 
@@ -913,14 +1042,16 @@ function ClientLogic() {
         })}
       </div>
 
-      <div style={{ textAlign: 'center', fontSize: '0.78rem', color: showResults ? 'var(--text-secondary)' : 'var(--neon-blue)' }}>
-        {showResults ? `ตอบแล้ว ${totalVoted} / ${totalStudents} คน` : 'กำลังเปิดรับคำตอบ... ⏳'}
+      <div style={{ textAlign: 'center', fontSize: '0.78rem', color: showResults ? (isAllAnswered ? 'var(--neon-green)' : 'var(--text-secondary)') : 'var(--neon-blue)', fontWeight: 'bold' }}>
+        {showResults
+          ? (isAllAnswered ? `✅ ตอบครบทุกคนแล้ว (${totalVoted}/${totalStudents} คน)` : `⏰ หมดเวลา (${totalVoted}/${totalStudents} คน)`)
+          : `กำลังเปิดรับคำตอบ... (${totalVoted}/${totalStudents} คน) ⏳`}
       </div>
 
       {myVote && !showResults && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
           style={{ textAlign: 'center', color: 'var(--neon-blue)', fontSize: '0.9rem', padding: '0.5rem' }}>
-          ⏳ บันทึกคำตอบแล้ว — รอสรุปผลเมื่อหมดเวลา
+          ⏳ บันทึกคำตอบแล้ว — กำลังรอเพื่อนๆ ตอบให้ครบ ({totalVoted} / {totalStudents} คน)
         </motion.div>
       )}
 
@@ -995,24 +1126,32 @@ const TAB_ACTIVITY = 'activity';
 const TAB_LESSON   = 'lesson';
 
 export default function ClientView() {
-  const { roomState } = useRoom();
-  const myName = sessionStorage.getItem('student_name');
+  const { roomState, connected } = useRoom();
+  const [myName, setMyName] = useState(() => sessionStorage.getItem('student_name') || '');
+  const isJoined = Boolean(myName && roomState.students?.some(s => s.name === myName));
   const [tab, setTab] = useState(TAB_ACTIVITY);
   const myScore = ((roomState.chapterScores && roomState.chapterScores[roomState.chapter]) || {})[myName] || 0;
 
+  // Clear stale session if server restarted or student was removed
+  useEffect(() => {
+    if (connected && myName && roomState.students && !isJoined) {
+      sessionStorage.removeItem('student_name');
+      setMyName('');
+    }
+  }, [connected, myName, roomState.students, isJoined]);
+
   const currentChapterFlow = CHAPTER_FLOW[roomState.chapter] || CHAPTER_FLOW[1];
   const currentStepData = currentChapterFlow[roomState.step] || currentChapterFlow[0];
-
   // Auto-follow teacher's presentation mode
   useEffect(() => {
-    if (!myName) return;
+    if (!myName || !isJoined) return;
     const mode = roomState.presentation?.mode;
     if (mode === 'lesson') setTab(TAB_LESSON);
     else if (mode === 'activity') setTab(TAB_ACTIVITY);
-  }, [roomState.presentation?.mode, myName]);
+  }, [roomState.presentation?.mode, myName, isJoined]);
 
   const renderScene = () => {
-    if (!myName) return <ClientLobby />;
+    if (!myName || !isJoined) return <ClientLobby />;
     
     switch (currentStepData.type) {
       case 'lobby': return <ClientLobby />;
@@ -1112,7 +1251,7 @@ export default function ClientView() {
         <AnimatePresence mode="wait">
           {tab === TAB_ACTIVITY ? (
             <motion.div
-              key={`activity-${effectivePhase}`}
+              key={`activity-${currentStepData.lessonId}`}
               initial={{ opacity: 0, x: -24 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -24 }}
@@ -1123,7 +1262,7 @@ export default function ClientView() {
             </motion.div>
           ) : (
             <motion.div
-              key={`lesson-${effectivePhase}`}
+              key={`lesson-${currentStepData.lessonId}`}
               initial={{ opacity: 0, x: 24 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 24 }}
@@ -1131,8 +1270,8 @@ export default function ClientView() {
               style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
             >
               <LessonSlideshow
-                key={effectivePhase}
-                phase={effectivePhase}
+                key={currentStepData.lessonId}
+                phase={currentStepData.lessonId}
                 quizRevealed={roomState.quizRevealed}
                 controlledSlide={roomState.presentation?.slide ?? 0}
               />

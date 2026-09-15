@@ -103,6 +103,10 @@ export function applyRoomAction(state, action) {
       if (p.mode === 'activity') newState.questionStartTime = Date.now();
       return newState;
     }
+    case 'verifyPin': {
+      requireValue(p.pin === state.pin, 'รหัส PIN ไม่ถูกต้อง');
+      return state; // No state change, just validates
+    }
     case 'join': {
       requireValue(p.pin === state.pin, 'รหัส PIN ไม่ถูกต้อง');
       const name = validName(p.name);

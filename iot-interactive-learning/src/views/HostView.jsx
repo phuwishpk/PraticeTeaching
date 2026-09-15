@@ -143,8 +143,10 @@ function HostArchitecture() {
           )}
           <h2 style={{ margin: 0, color: 'var(--neon-blue)', fontSize: '2rem' }}>{activeItemData.name}</h2>
           
-          <div style={{ marginTop: '1rem', color: showResults ? 'var(--text-secondary)' : 'var(--neon-blue)' }}>
-            {showResults ? `โหวตแล้ว: ${totalVotes} / ${totalStudents} คน` : 'กำลังเปิดรับคำตอบ... ⏳'}
+          <div style={{ marginTop: '1rem', color: showResults ? (isAllAnswered ? 'var(--neon-green)' : 'var(--text-secondary)') : 'var(--neon-blue)', fontWeight: 'bold' }}>
+            {showResults
+              ? (isAllAnswered ? `✅ ตอบครบทุกคนแล้ว (${totalVotes}/${totalStudents} คน)` : `⏰ หมดเวลา (${totalVotes}/${totalStudents} คน)`)
+              : `⏳ กำลังรอคำตอบ... (${totalVotes}/${totalStudents} คน)`}
           </div>
 
           <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
@@ -272,8 +274,10 @@ function HostProblem() {
         <div className="glass-panel" style={{ flex: 1.5, padding: '2rem', display: 'flex', flexDirection: 'column' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
             <h2 style={{ color: 'var(--neon-purple)', margin: 0 }}>ผลโหวต</h2>
-            <div style={{ color: showResults ? 'var(--text-secondary)' : 'var(--neon-blue)' }}>
-              {showResults ? `โหวตแล้ว ${totalVotes} / ${totalStudents} คน` : 'กำลังเปิดรับคำตอบ... ⏳'}
+            <div style={{ color: showResults ? (isAllAnswered ? 'var(--neon-green)' : 'var(--text-secondary)') : 'var(--neon-blue)', fontWeight: 'bold' }}>
+              {showResults
+                ? (isAllAnswered ? `✅ ตอบครบทุกคนแล้ว (${totalVotes}/${totalStudents} คน)` : `⏰ หมดเวลา (${totalVotes}/${totalStudents} คน)`)
+                : `⏳ กำลังรอคำตอบ... (${totalVotes}/${totalStudents} คน)`}
             </div>
           </div>
           
@@ -358,8 +362,10 @@ function HostDigital() {
         <div className="glass-panel" style={{ flex: 1.5, padding: '2rem', display: 'flex', flexDirection: 'column' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
             <h2 style={{ color: 'var(--neon-green)', margin: 0 }}>ผลโหวต</h2>
-            <div style={{ color: showResults ? 'var(--text-secondary)' : 'var(--neon-blue)' }}>
-              {showResults ? `โหวตแล้ว ${totalVotes} / ${totalStudents} คน` : 'กำลังเปิดรับคำตอบ... ⏳'}
+            <div style={{ color: showResults ? (isAllAnswered ? 'var(--neon-green)' : 'var(--text-secondary)') : 'var(--neon-blue)', fontWeight: 'bold' }}>
+              {showResults
+                ? (isAllAnswered ? `✅ ตอบครบทุกคนแล้ว (${totalVotes}/${totalStudents} คน)` : `⏰ หมดเวลา (${totalVotes}/${totalStudents} คน)`)
+                : `⏳ กำลังรอคำตอบ... (${totalVotes}/${totalStudents} คน)`}
             </div>
           </div>
           
@@ -442,8 +448,10 @@ function HostAnalog() {
         <div className="glass-panel" style={{ flex: 1.5, padding: '2rem', display: 'flex', flexDirection: 'column' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
             <h2 style={{ color: 'var(--neon-green)', margin: 0 }}>ผลโหวต</h2>
-            <div style={{ color: showResults ? 'var(--text-secondary)' : 'var(--neon-blue)' }}>
-              {showResults ? `โหวตแล้ว ${totalVotes} / ${totalStudents} คน` : 'กำลังเปิดรับคำตอบ... ⏳'}
+            <div style={{ color: showResults ? (isAllAnswered ? 'var(--neon-green)' : 'var(--text-secondary)') : 'var(--neon-blue)', fontWeight: 'bold' }}>
+              {showResults
+                ? (isAllAnswered ? `✅ ตอบครบทุกคนแล้ว (${totalVotes}/${totalStudents} คน)` : `⏰ หมดเวลา (${totalVotes}/${totalStudents} คน)`)
+                : `⏳ กำลังรอคำตอบ... (${totalVotes}/${totalStudents} คน)`}
             </div>
           </div>
           
@@ -603,8 +611,10 @@ function HostQuiz() {
       </div>
       
       <div className="glass-panel" style={{ width: '80%', maxWidth: 800, padding: '3rem', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-        <div style={{ color: isRevealed ? 'var(--text-secondary)' : 'var(--neon-blue)', textAlign: 'center' }}>
-          {isRevealed ? `โหวตแล้ว ${Object.keys(votes).length} / ${totalStudents} คน` : 'กำลังเปิดรับคำตอบ... ⏳'}
+        <div style={{ color: isRevealed ? (isAllAnswered ? 'var(--neon-green)' : 'var(--text-secondary)') : 'var(--neon-blue)', textAlign: 'center', fontWeight: 'bold' }}>
+          {isRevealed
+            ? (isAllAnswered ? `✅ ตอบครบทุกคนแล้ว (${Object.keys(votes).length}/${totalStudents} คน)` : `⏰ หมดเวลา (${Object.keys(votes).length}/${totalStudents} คน)`)
+            : `⏳ กำลังรอคำตอบ... (${Object.keys(votes).length}/${totalStudents} คน)`}
         </div>
         
         {options.map(opt => {
@@ -696,8 +706,10 @@ function HostLogic() {
         <div className="glass-panel" style={{ flex: 1, padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h2 style={{ color: 'var(--neon-green)', margin: '0 0 1rem 0' }}>ผลโหวตเติมคำในช่องว่าง</h2>
-            <div style={{ color: showResults ? 'var(--text-secondary)' : 'var(--neon-blue)' }}>
-              {showResults ? `โหวตแล้ว ${Object.keys(votes).length} / ${totalStudents} คน` : 'กำลังเปิดรับคำตอบ... ⏳'}
+            <div style={{ color: showResults ? (isAllAnswered ? 'var(--neon-green)' : 'var(--text-secondary)') : 'var(--neon-blue)', fontWeight: 'bold' }}>
+              {showResults
+                ? (isAllAnswered ? `✅ ตอบครบทุกคนแล้ว (${Object.keys(votes).length}/${totalStudents} คน)` : `⏰ หมดเวลา (${Object.keys(votes).length}/${totalStudents} คน)`)
+                : `⏳ กำลังรอคำตอบ... (${Object.keys(votes).length}/${totalStudents} คน)`}
             </div>
           </div>
           
