@@ -36,6 +36,7 @@ export function createRoomState() {
     problemVotes: {}, digitalVotes: {}, analogVotes: {},
     floatingEmojis: [], quizVotes: {}, quizRevealed: false,
     logicVotes: {}, architectureVotes: { esp32: {}, wifi: {}, cloud: {} },
+    catalogCurrentQuestion: 1, catalogVotes: { 1: {}, 2: {}, 3: {}, 4: {} },
     currentVoteItem: 'esp32', canvasImages: [],
     chapterScores: { 1: {}, 2: {}, 3: {} }, questionStartTime: Date.now(),
   };
@@ -144,6 +145,33 @@ export function applyRoomAction(state, action) {
     case 'voteItem':
       requireValue(['esp32', 'wifi', 'cloud'].includes(p.item));
       return { ...state, currentVoteItem: p.item, questionStartTime: Date.now() };
+    case 'setCatalogQuestion':
+      requireValue(Number.isInteger(p.question) && p.question >= 1 && p.question <= 4);
+      return { ...state, catalogCurrentQuestion: p.question, questionStartTime: Date.now() };
+    case 'catalogVote': {
+      const name = validName(p.name);
+      requireValue(['ldr', 'dht11', 'pir', 'ultrasonic'].includes(p.option));
+      
+      const qIndex = state.catalogCurrentQuestion;
+      const correctAnswers = { 1: 'ldr', 2: 'dht11', 3: 'pir', 4: 'ultrasonic' };
+      const isCorrect = p.option === correctAnswers[qIndex];
+      
+      let newScores = { ...state.chapterScores };
+      let chapScores = { ...(newScores[state.chapter] || {}) };
+      if (isCorrect && !state.catalogVotes[qIndex][name]) {
+        chapScores[name] = (chapScores[name] || 0) + calculateScore(state.questionStartTime);
+      }
+      newScores[state.chapter] = chapScores;
+      
+      return { 
+        ...state, 
+        catalogVotes: { 
+          ...state.catalogVotes, 
+          [qIndex]: { ...state.catalogVotes[qIndex], [name]: p.option } 
+        }, 
+        chapterScores: newScores 
+      };
+    }
     case 'architectureVote': {
       const name = validName(p.name);
       requireValue(['esp32', 'wifi', 'cloud'].includes(p.item) && ['device', 'network', 'service'].includes(p.layer));

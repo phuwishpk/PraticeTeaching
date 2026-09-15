@@ -57,6 +57,8 @@ export function RoomProvider({ children }) {
   const joinRoom = useCallback((name, pin) => dispatch('join', { name, pin }), [dispatch]);
   const setVoteItem = useCallback(item => dispatch('voteItem', { item }), [dispatch]);
   const submitVote = useCallback((item, layer, name) => dispatch('architectureVote', { item, layer, name }), [dispatch]);
+  const setCatalogQuestion = useCallback(question => dispatch('setCatalogQuestion', { question }), [dispatch]);
+  const voteCatalog = useCallback((option, name) => dispatch('catalogVote', { option, name }), [dispatch]);
   const sendFloatingEmoji = useCallback((emoji, name) => dispatch('emoji', { emoji, name }), [dispatch]);
   const addFloatingEmoji = useCallback(emoji => dispatch('emoji', { emoji }), [dispatch]);
   const voteQuiz = useCallback((option, name) => dispatch('quizVote', { option, name }), [dispatch]);
@@ -73,7 +75,7 @@ export function RoomProvider({ children }) {
     <RoomContext.Provider value={{ roomState, connected, error, joinUrl, setChapter, setStep, setPresentation, joinRoom,
       setVoteItem, submitVote, sendFloatingEmoji,
       addFloatingEmoji, voteQuiz, revealQuiz, voteLogic, activateSense, resetRoom,
-      voteProblem, voteDigital, voteAnalog }}>
+      voteProblem, voteDigital, voteAnalog, setCatalogQuestion, voteCatalog }}>
       {children}
     </RoomContext.Provider>
   );

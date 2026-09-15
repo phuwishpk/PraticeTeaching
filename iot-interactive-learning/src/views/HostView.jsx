@@ -480,7 +480,91 @@ function HostAnalog() {
 
 // ─── Scene 6: Sensor Catalog ────────────────────────────────────────────────
 function HostCatalog() {
-  return <SensorCatalog />;
+  const { roomState, setCatalogQuestion } = useRoom();
+  const qIndex = roomState.catalogCurrentQuestion || 1;
+  const votes = roomState.catalogVotes?.[qIndex] || {};
+  const [isTimeUp, setIsTimeUp] = useState(false);
+  
+  useEffect(() => {
+    setIsTimeUp(false);
+    const remaining = 30000 - (Date.now() - roomState.questionStartTime);
+    if (remaining <= 0) { setIsTimeUp(true); return; }
+    const timer = setTimeout(() => setIsTimeUp(true), remaining);
+    return () => clearTimeout(timer);
+  }, [roomState.questionStartTime, qIndex]);
+
+  const questions = {
+    1: { prompt: "อุปกรณ์ใดใช้วัดความสว่างของแสง?", correct: "ldr" },
+    2: { prompt: "อุปกรณ์ใดใช้วัดอุณหภูมิและความชื้นในอากาศ?", correct: "dht11" },
+    3: { prompt: "เซนเซอร์ใดใช้ตรวจจับการเคลื่อนไหวของสิ่งมีชีวิต?", correct: "pir" },
+    4: { prompt: "เซนเซอร์ใดใช้วัดระยะทางด้วยคลื่นเสียง?", correct: "ultrasonic" },
+  };
+
+  const options = [
+    { id: 'ldr', label: 'LDR (เซนเซอร์แสง)', color: '#ffb86c', icon: '☀️' },
+    { id: 'dht11', label: 'DHT11 (อุณหภูมิ/ความชื้น)', color: '#ff79c6', icon: '🌡️' },
+    { id: 'pir', label: 'PIR (ตรวจจับความเคลื่อนไหว)', color: '#8be9fd', icon: '🚶' },
+    { id: 'ultrasonic', label: 'Ultrasonic (วัดระยะทาง)', color: '#50fa7b', icon: '🦇' }
+  ];
+
+  const totalStudents = roomState.students.length;
+  const totalVotesCount = Object.keys(votes).length;
+  const isAllAnswered = totalStudents > 0 && totalVotesCount >= totalStudents;
+  const isRevealed = isTimeUp || isAllAnswered;
+  const currentQ = questions[qIndex];
+
+  return (
+    <div className="flex-center full-screen" style={{ flexDirection: 'column', gap: '2rem', position: 'relative' }}>
+      {/* Navigation Buttons for Teacher */}
+      <div style={{ display: 'flex', gap: '1rem', zIndex: 10, marginBottom: '-10px' }}>
+        <button className="neu-button" disabled={qIndex <= 1} onClick={() => setCatalogQuestion(qIndex - 1)}>
+          ⬅️ ข้อก่อนหน้า
+        </button>
+        <div style={{ padding: '10px 20px', background: 'rgba(255,255,255,0.1)', borderRadius: '10px', fontWeight: 'bold', border: '1px solid rgba(255,255,255,0.2)' }}>
+          คำถามที่ {qIndex} / 4
+        </div>
+        <button className="neu-button" disabled={qIndex >= 4} onClick={() => setCatalogQuestion(qIndex + 1)}>
+          ข้อต่อไป ➡️
+        </button>
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', justifyContent: 'center' }}>
+        <CountdownTimer startTime={roomState.questionStartTime} duration={30} size={70} />
+        <h1 className="text-glow-blue" style={{ fontSize: '2.2rem', margin: 0, textAlign: 'center', maxWidth: '800px', lineHeight: '1.4' }}>
+          {currentQ.prompt}
+        </h1>
+      </div>
+      
+      <div style={{ fontSize: '1.2rem', color: isRevealed ? 'var(--neon-green)' : 'var(--text-secondary)' }}>
+        โหวตแล้ว: {totalVotesCount} / {totalStudents} คน
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', width: '100%', maxWidth: 800 }}>
+        {options.map(opt => {
+          const count = Object.values(votes).filter(v => v === opt.id).length;
+          const pct = totalVotesCount === 0 ? 0 : Math.round((count / totalVotesCount) * 100);
+          const isCorrect = opt.id === currentQ.correct;
+
+          return (
+            <div key={opt.id} className="glass-panel" style={{ padding: '1.5rem', textAlign: 'center', border: isRevealed && isCorrect ? '3px solid #50fa7b' : '1px solid rgba(255,255,255,0.1)' }}>
+              <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>{opt.icon}</div>
+              <h3 style={{ margin: '0 0 1rem 0', color: opt.color }}>{opt.label}</h3>
+              {isRevealed ? (
+                <div>
+                  <div style={{ fontSize: '2rem', fontWeight: 'bold', color: isCorrect ? '#50fa7b' : 'white' }}>
+                    {count} คน ({pct}%)
+                  </div>
+                  {isCorrect && <div style={{ color: '#50fa7b', fontSize: '1.2rem', marginTop: '10px' }}>✅ คำตอบที่ถูกต้อง!</div>}
+                </div>
+              ) : (
+                <div style={{ fontSize: '1.5rem', color: 'var(--text-secondary)' }}>...</div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 // ─── Scene 7: Sensor Quiz ──────────────────────────────────────────────────

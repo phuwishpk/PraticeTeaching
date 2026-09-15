@@ -615,9 +615,113 @@ function ClientAnalog() {
   );
 }
 
-// ─── Scene 6: Sensor Catalog (Theory) ────────────────────────────────────────
+// ─── Scene 6: Sensor Catalog ────────────────────────────────────────────────
 function ClientCatalog() {
-  return <SensorCatalog />;
+  const { roomState, voteCatalog } = useRoom();
+  const myName = sessionStorage.getItem('student_name');
+  const [isTimeUp, setIsTimeUp] = useState(false);
+  
+  const qIndex = roomState.catalogCurrentQuestion || 1;
+  const allVotes = roomState.catalogVotes?.[qIndex] || {};
+  const myVote = allVotes[myName];
+  const totalVotes = Object.keys(allVotes).length;
+  const totalStudents = roomState.students.length;
+
+  const correctAnswers = { 1: 'ldr', 2: 'dht11', 3: 'pir', 4: 'ultrasonic' };
+  const correctAnswer = correctAnswers[qIndex];
+  const isAllAnswered = totalStudents > 0 && totalVotes >= totalStudents;
+  const showResults = isTimeUp || isAllAnswered;
+
+  useEffect(() => {
+    setIsTimeUp(false);
+    const timer = setTimeout(() => setIsTimeUp(true), 30000 - (Date.now() - roomState.questionStartTime));
+    return () => clearTimeout(timer);
+  }, [roomState.questionStartTime, qIndex]);
+
+  const questions = {
+    1: { prompt: "อุปกรณ์ใดใช้วัดความสว่างของแสง?" },
+    2: { prompt: "อุปกรณ์ใดใช้วัดอุณหภูมิและความชื้นในอากาศ?" },
+    3: { prompt: "เซนเซอร์ใดใช้ตรวจจับการเคลื่อนไหวของสิ่งมีชีวิต?" },
+    4: { prompt: "เซนเซอร์ใดใช้วัดระยะทางด้วยคลื่นเสียง?" },
+  };
+  const currentQ = questions[qIndex];
+
+  const options = [
+    { id: 'ldr', label: 'LDR (เซนเซอร์แสง)', color: '#ffb86c', icon: '☀️' },
+    { id: 'dht11', label: 'DHT11 (อุณหภูมิ/ความชื้น)', color: '#ff79c6', icon: '🌡️' },
+    { id: 'pir', label: 'PIR (ตรวจจับความเคลื่อนไหว)', color: '#8be9fd', icon: '🚶' },
+    { id: 'ultrasonic', label: 'Ultrasonic (วัดระยะทาง)', color: '#50fa7b', icon: '🦇' }
+  ];
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1.5rem', maxWidth: 440, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
+      
+      <div className="glass-panel" style={{ padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <CountdownTimer startTime={roomState.questionStartTime} duration={30} size={50} />
+        <div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>คำถามที่ {qIndex} / 4</div>
+          <div style={{ fontWeight: 'bold', color: 'var(--neon-blue)', fontSize: '1rem', lineHeight: '1.3' }}>{currentQ.prompt}</div>
+          <div style={{ fontSize: '0.75rem', color: isTimeUp ? (totalVotes >= totalStudents ? 'var(--neon-green)' : 'var(--text-secondary)') : 'var(--neon-blue)' }}>
+            {isTimeUp ? `โหวตแล้ว ${totalVotes} / ${totalStudents} คน` : 'กำลังเปิดรับคำตอบ... ⏳'}
+          </div>
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+        {options.map(opt => {
+          const count = Object.values(allVotes).filter(v => v === opt.id).length;
+          const pct = totalVotes === 0 ? 0 : Math.round((count / totalVotes) * 100);
+          const isMyVote = myVote === opt.id;
+          const isCorrectAnswer = opt.id === correctAnswer;
+          
+          return (
+            <motion.button key={opt.id}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => !myVote && !isTimeUp && voteCatalog(opt.id, myName)}
+              disabled={!!myVote || isTimeUp}
+              style={{
+                background: showResults && isCorrectAnswer ? '#50fa7b'
+                  : showResults && !isCorrectAnswer ? 'rgba(255,255,255,0.1)'
+                  : isMyVote ? `${opt.color}dd` : opt.color,
+                color: showResults && !isCorrectAnswer ? 'var(--text-secondary)' : '#1a1a2e',
+                border: `3px solid ${isMyVote ? 'white' : 'transparent'}`,
+                borderRadius: 14, padding: '1rem', cursor: myVote || isTimeUp ? 'default' : 'pointer',
+                position: 'relative', overflow: 'hidden', textAlign: 'center',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+                minHeight: '140px',
+                boxShadow: isMyVote ? '0 0 15px rgba(255,255,255,0.5)' : '0 4px 6px rgba(0,0,0,0.3)',
+                transform: isMyVote ? 'scale(1.02)' : 'scale(1)',
+                transition: 'all 0.2s'
+              }}
+            >
+              {showResults && (
+                <motion.div initial={{ height: '0%' }} animate={{ height: `${pct}%` }}
+                  style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(0,0,0,0.1)', zIndex: 1 }}
+                />
+              )}
+              <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', zIndex: 2 }}>
+                <span style={{ fontSize: '2.5rem' }}>{opt.icon}</span>
+                <span style={{ fontWeight: 'bold', fontSize: '0.9rem', marginTop: '0.5rem', lineHeight: '1.2' }}>
+                  {opt.label}
+                </span>
+                {showResults && totalVotes > 0 && (
+                  <span style={{ fontWeight: '900', fontSize: '1.2rem', marginTop: '0.2rem' }}>
+                    {pct}%
+                  </span>
+                )}
+                {showResults && isCorrectAnswer && (
+                  <span style={{ position: 'absolute', top: -30, right: -30, fontSize: '1.5rem', background: 'white', borderRadius: '50%', padding: '2px' }}>🎯</span>
+                )}
+                {isMyVote && !showResults && (
+                  <span style={{ position: 'absolute', top: -30, left: -30, fontSize: '1.5rem', background: 'white', borderRadius: '50%', padding: '2px' }}>✅</span>
+                )}
+              </div>
+            </motion.button>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 // ─── Scene 7: Sensor Quiz ──────────────────────────────────────────────────
