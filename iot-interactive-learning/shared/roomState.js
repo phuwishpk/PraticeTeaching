@@ -21,7 +21,10 @@ function requireValue(condition, message = 'ข้อมูลคำสั่ง
 }
 function validName(name) {
   requireValue(typeof name === 'string' && name.trim().length > 0 && name.length <= 20, 'กรุณากรอกชื่อไม่เกิน 20 ตัวอักษร');
-  return name.trim();
+  const cleanName = name.trim();
+  const dangerous = ['__proto__', 'constructor', 'prototype'];
+  requireValue(!dangerous.includes(cleanName.toLowerCase()), 'ชื่อนี้ไม่สามารถใช้งานได้');
+  return cleanName;
 }
 
 function calculateScore(startTime) {

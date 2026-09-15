@@ -50,14 +50,7 @@ export default function LessonContent({ phase, quizRevealed = false }) {
         ))}
       </div>
       {lesson.code && <pre className="lesson-code" aria-label="ตัวอย่างรหัสลำลอง"><code>{lesson.code}</code></pre>}
-      <aside className="lesson-callout"><h2>ลองเชื่อมกับตัวอย่าง</h2><p>{lesson.example}</p></aside>
-      <aside className="lesson-callout lesson-caution"><h2>จุดที่ควรเข้าใจให้ชัด</h2><p>{lesson.caution}</p></aside>
-      {lesson.question && (
-        <section className="lesson-check">
-          <h2>เช็กความเข้าใจ</h2><p>{lesson.question}</p>
-          <details key={phase}><summary>ดูแนวคำตอบและเหตุผล</summary><p>{lesson.answer}</p></details>
-        </section>
-      )}
+      {/* Example, caution, and check sections removed as requested */}
       {phase === 7 && (quizRevealed
         ? <aside className="lesson-callout" aria-live="polite"><h2>เฉลยพร้อมเหตุผล</h2><p>{sensorQuizExplanation}</p></aside>
         : <p className="lesson-muted">ลองตอบในกิจกรรมก่อน แล้วดูเหตุผลเมื่อครูเปิดเฉลย</p>)}
@@ -159,41 +152,22 @@ export function LessonSlideshow({ phase, quizRevealed = false, controlledSlide, 
     });
   });
 
-  // Example + Caution slide
-  slides.push({
-    id: 'example',
-    label: 'ตัวอย่าง',
-    content: (
-      <div className="lesson-slide-body">
-        {lesson.code && <pre className="lesson-code" aria-label="ตัวอย่างรหัสลำลอง"><code>{lesson.code}</code></pre>}
-        <div className="lesson-slide-callout">
-          <h2>🔗 ลองเชื่อมกับตัวอย่าง</h2>
-          <p>{lesson.example}</p>
+  if (lesson.code || phase === 7) {
+    slides.push({
+      id: 'example', // Reusing 'example' ID so index doesn't break if someone hardcoded it
+      label: 'รหัสลำลอง/เพิ่มเติม',
+      content: (
+        <div className="lesson-slide-body">
+          {lesson.code && <pre className="lesson-code" aria-label="ตัวอย่างรหัสลำลอง"><code>{lesson.code}</code></pre>}
+          {phase === 7 && (
+            quizRevealed
+              ? <div className="lesson-slide-callout" style={{ marginTop: 16 }}><h2>✅ เฉลยพร้อมเหตุผล</h2><p>{sensorQuizExplanation}</p></div>
+              : <p className="lesson-muted" style={{ marginTop: 16 }}>รอครูเปิดเฉลย...</p>
+          )}
         </div>
-        <div className="lesson-slide-caution">
-          <h2>⚠️ จุดที่ควรเข้าใจให้ชัด</h2>
-          <p>{lesson.caution}</p>
-        </div>
-        {lesson.question && (
-          <div className="lesson-slide-check">
-            <h2>❓ เช็กความเข้าใจ</h2>
-            <p>{lesson.question}</p>
-            <details><summary>ดูแนวคำตอบ</summary><p>{lesson.answer}</p></details>
-          </div>
-        )}
-        {phase === 7 && (
-          quizRevealed
-            ? <div className="lesson-slide-callout" style={{ marginTop: 16 }}><h2>✅ เฉลยพร้อมเหตุผล</h2><p>{sensorQuizExplanation}</p></div>
-            : <p className="lesson-muted">ลองตอบในกิจกรรมก่อน แล้วดูเหตุผลเมื่อครูเปิดเฉลย</p>
-        )}
-        {lesson.sources && (
-          <footer className="lesson-sources" style={{ marginTop: 16 }}>
-            อ่านเพิ่มเติม: {lesson.sources.map(s => <a key={s.url} href={s.url} target="_blank" rel="noreferrer">{s.label}</a>)}
-          </footer>
-        )}
-      </div>
-    ),
-  });
+      ),
+    });
+  }
 
   slides.push({
     id: 'recap',
