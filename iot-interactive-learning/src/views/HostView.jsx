@@ -10,7 +10,7 @@ import ReactConfetti from 'react-confetti';
 import { useWindowSize } from 'react-use';
 import { LessonSlideshow } from '../components/LessonContent';
 import { ImageWithModal } from '../components/ImageWithModal';
-import { sensorQuizExplanation } from '../content/lessons';
+import { lessons, sensorQuizExplanation } from '../content/lessons';
 import CountdownTimer from '../components/CountdownTimer';
 
 // ─── Floating Emojis Overlay ──────────────────────────────────────────────────
@@ -897,7 +897,19 @@ function HostPodium() {
 }
 
 // ─── Host View Shell ──────────────────────────────────────────────────────────
-const PHASES = ['Lobby', 'Architecture', 'The Problem', 'Digital Signal', 'Analog', 'Sensors', 'Sensor Quiz', 'Logic', 'Wrap-up', 'Podium'];
+const STEP_LABELS = {
+  lobby: 'เข้าห้องเรียน',
+  architecture: 'ทบทวนระบบ IoT',
+  problem: 'วิเคราะห์โจทย์',
+  catalog: 'หน้าที่อุปกรณ์',
+  quiz: 'เลือกเซ็นเซอร์',
+  digital: 'Digital: 0 และ 1',
+  analog: 'Analog และ ADC',
+  logic: 'เงื่อนไข IF / ELSE',
+  wrapup: 'สรุประบบ IoT',
+  ideation: 'ออกแบบระบบ IoT',
+  podium: 'สรุปคะแนน',
+};
 
 // Controlled slideshow for teacher — slide syncs with roomState.presentation
 function HostLessonSlideshow({ chapter, step, quizRevealed }) {
@@ -974,17 +986,19 @@ export default function HostView() {
         </select>
 
         {/* Steps for current Chapter */}
-        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginLeft: '10px' }}>
+        <nav aria-label="หัวข้อในบทเรียน" style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', minWidth: 0 }}>
           {currentChapterFlow.map((step, i) => (
-            <button key={i} onClick={() => setStep(i)}
+            <button key={step.id || step.type} type="button" onClick={() => setStep(i)}
+              aria-current={roomState.step === i ? 'step' : undefined}
+              title={step.type === 'activity' ? lessons[step.lessonId]?.title : STEP_LABELS[step.type]}
               className="neu-button"
-              style={{ padding: '5px 12px', fontSize: '0.75rem', color: roomState.step === i ? 'var(--neon-blue)' : 'inherit', boxShadow: roomState.step === i ? 'var(--neumorph-inset)' : 'var(--neumorph-shadow)' }}>
-              {step.type === 'lobby' ? 'Lobby' : step.type === 'podium' ? 'Podium' : step.id}
+              style={{ padding: '8px 12px', fontSize: '0.85rem', lineHeight: 1.6, whiteSpace: 'nowrap', color: roomState.step === i ? 'var(--neon-blue)' : 'inherit', boxShadow: roomState.step === i ? 'var(--neumorph-inset)' : 'var(--neumorph-shadow)' }}>
+              {STEP_LABELS[step.id || step.type] || lessons[step.lessonId]?.title}
             </button>
           ))}
-        </div>
-        <button onClick={resetRoom} style={{ background: 'transparent', border: '1px solid rgba(255,0,100,0.4)', color: '#ff6b6b', borderRadius: 8, padding: '5px 10px', cursor: 'pointer', fontSize: '0.75rem' }}>
-          🔄 Reset
+        </nav>
+        <button title="ล้างข้อมูลห้องเรียนและเริ่มใหม่" onClick={resetRoom} style={{ background: 'transparent', border: '1px solid rgba(255,0,100,0.4)', color: '#ff6b6b', borderRadius: 8, padding: '5px 10px', cursor: 'pointer', fontSize: '0.75rem' }}>
+          🔄 เริ่มห้องใหม่
         </button>
       </div>
 
