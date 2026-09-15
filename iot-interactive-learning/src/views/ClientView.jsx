@@ -1,5 +1,5 @@
 import ProblemActivity from '../components/ProblemActivity';
-import { WrapUpActivity } from '../components/WrapUpGraphics';
+import ClassroomChoiceActivity from '../components/ClassroomChoiceActivity';
 import { SignalActivityReview } from '../components/SignalGraphics';
 import { SensorCatalog } from '../components/LessonGraphics';
 import { Rocket, User, Cpu, Wifi, Cloud, AlertTriangle, Target, Trophy, Medal, BookOpen, Gamepad2, CheckCircle2, Timer, Lock, Unlock, Flame, Sun, Radio, Zap, Lightbulb, Thermometer, Smartphone, PartyPopper, Heart, XCircle, Activity, Sprout, PersonStanding, ThumbsUp } from 'lucide-react';
@@ -10,6 +10,7 @@ import { CHAPTER_FLOW } from '../../shared/roomState';
 import { motion, AnimatePresence } from 'framer-motion';
 import { StudentLessonNotes, LessonSlideshow } from '../components/LessonContent';
 import { sensorQuizExplanation } from '../content/lessons';
+import { sensorCatalogOptions, sensorCatalogQuestions } from '../content/sensorCatalogActivity';
 import CountdownTimer from '../components/CountdownTimer';
 
 // ─── Shared Mini Progress Bar ─────────────────────────────────────────────────
@@ -307,7 +308,7 @@ function ClientArchitecture() {
       
       {/* อุปกรณ์ที่กำลังโหวต */}
       <div className="glass-panel" style={{ padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-        <CountdownTimer startTime={roomState.questionStartTime} duration={30} size={50} />
+        <CountdownTimer startTime={roomState.questionStartTime} duration={30} size={50} stopped={isAllAnswered} />
         <motion.div key={currentItem} initial={{ scale: 0 }} animate={{ scale: 1 }} style={{ fontSize: '3rem' }}>
           {activeItem.icon}
         </motion.div>
@@ -424,7 +425,7 @@ function ClientDigital() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1.5rem', maxWidth: 440, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
       
       <div className="glass-panel" style={{ padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-        <CountdownTimer startTime={roomState.questionStartTime} duration={30} size={50} />
+        <CountdownTimer startTime={roomState.questionStartTime} duration={30} size={50} stopped={isAllAnswered} />
         <div>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>คำถาม</div>
           <div style={{ fontWeight: 'bold', color: 'var(--neon-blue)', fontSize: '1rem' }}>สัญญาณ Digital มีกี่สถานะ?</div>
@@ -531,7 +532,7 @@ function ClientAnalog() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1.5rem', maxWidth: 440, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
       
       <div className="glass-panel" style={{ padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-        <CountdownTimer startTime={roomState.questionStartTime} duration={30} size={50} />
+        <CountdownTimer startTime={roomState.questionStartTime} duration={30} size={50} stopped={isAllAnswered} />
         <div>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>คำถาม</div>
           <div style={{ fontWeight: 'bold', color: '#ffd08a', fontSize: '1rem' }}>สัญญาณ Analog แตกต่างจาก Digital อย่างไร?</div>
@@ -618,8 +619,7 @@ function ClientCatalog() {
   const totalVotes = Object.keys(allVotes).length;
   const totalStudents = roomState.students.length;
 
-  const correctAnswers = { 1: 'ldr', 2: 'dht11', 3: 'pir', 4: 'ultrasonic' };
-  const correctAnswer = correctAnswers[qIndex];
+  const correctAnswer = sensorCatalogQuestions[qIndex].correct;
   const isAllAnswered = totalStudents > 0 && totalVotes >= totalStudents;
   const showResults = isTimeUp || isAllAnswered;
 
@@ -629,26 +629,13 @@ function ClientCatalog() {
     return () => clearTimeout(timer);
   }, [roomState.questionStartTime, qIndex]);
 
-  const questions = {
-    1: { prompt: "อุปกรณ์ใดใช้วัดความสว่างของแสง?" },
-    2: { prompt: "อุปกรณ์ใดใช้วัดอุณหภูมิและความชื้นในอากาศ?" },
-    3: { prompt: "เซนเซอร์ใดใช้ตรวจจับการเคลื่อนไหวของสิ่งมีชีวิต?" },
-    4: { prompt: "เซนเซอร์ใดใช้วัดระยะทางด้วยคลื่นเสียง?" },
-  };
-  const currentQ = questions[qIndex];
-
-  const options = [
-    { id: 'ldr', label: 'LDR (เซนเซอร์แสง)', color: '#ffb86c', icon: '☀️' },
-    { id: 'dht11', label: 'DHT11 (อุณหภูมิ/ความชื้น)', color: '#ff79c6', icon: '🌡️' },
-    { id: 'pir', label: 'PIR (ตรวจจับความเคลื่อนไหว)', color: '#8be9fd', icon: '🚶' },
-    { id: 'ultrasonic', label: 'Ultrasonic (วัดระยะทาง)', color: '#50fa7b', icon: '🦇' }
-  ];
+  const currentQ = sensorCatalogQuestions[qIndex];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1.5rem', maxWidth: 440, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
       
       <div className="glass-panel" style={{ padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-        <CountdownTimer startTime={roomState.questionStartTime} duration={30} size={50} />
+        <CountdownTimer startTime={roomState.questionStartTime} duration={30} size={50} stopped={isAllAnswered} />
         <div>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>คำถามที่ {qIndex} / 4</div>
           <div style={{ fontWeight: 'bold', color: 'var(--neon-blue)', fontSize: '1rem', lineHeight: '1.3' }}>{currentQ.prompt}</div>
@@ -661,7 +648,7 @@ function ClientCatalog() {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-        {options.map(opt => {
+        {sensorCatalogOptions.map(opt => {
           const count = Object.values(allVotes).filter(v => v === opt.id).length;
           const pct = totalVotes === 0 ? 0 : Math.round((count / totalVotes) * 100);
           const isMyVote = myVote === opt.id;
@@ -723,13 +710,13 @@ function ClientCatalog() {
       {showResults && myVote && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
           style={{ textAlign: 'center', color: myVote === correctAnswer ? 'var(--neon-green)' : '#ff6b6b', fontSize: '0.9rem', padding: '0.5rem' }}>
-          {myVote === correctAnswer ? '🎉 ถูกต้อง!' : '❌ ไม่ถูก — คำตอบที่ถูกคือ ' + options.find(o => o.id === correctAnswer)?.label}
+          {myVote === correctAnswer ? '🎉 ถูกต้อง!' : '❌ ไม่ถูก — คำตอบที่ถูกคือ ' + sensorCatalogOptions.find(o => o.id === correctAnswer)?.label}
         </motion.div>
       )}
       {showResults && !myVote && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
           style={{ textAlign: 'center', color: '#ff6b6b', fontSize: '0.9rem' }}>
-          ⏰ หมดเวลา! คำตอบที่ถูกคือ {options.find(o => o.id === correctAnswer)?.label}
+          ⏰ หมดเวลา! คำตอบที่ถูกคือ {sensorCatalogOptions.find(o => o.id === correctAnswer)?.label}
         </motion.div>
       )}
     </div>
@@ -768,7 +755,7 @@ function ClientQuiz() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1.5rem', maxWidth: 440, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
       
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem' }}>
-        <CountdownTimer startTime={roomState.questionStartTime} duration={30} size={45} />
+        <CountdownTimer startTime={roomState.questionStartTime} duration={30} size={45} stopped={isAllAnswered || isRevealed} />
         <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
           โจทย์อยู่บนหน้าจอครู! เลือกเซนเซอร์ที่เหมาะสมที่สุด
         </span>
@@ -880,7 +867,7 @@ function ClientLogic() {
       
       {/* Timer + Code preview */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-        <CountdownTimer startTime={roomState.questionStartTime} duration={30} size={50} />
+        <CountdownTimer startTime={roomState.questionStartTime} duration={30} size={50} stopped={isAllAnswered} />
         <div style={{ flex: 1, background: 'rgba(0,0,0,0.35)', padding: '1rem', borderRadius: 10, borderLeft: '4px solid var(--neon-purple)', fontFamily: 'monospace', fontSize: '0.95rem', color: '#ffb86c', lineHeight: 1.8 }}>
         IF ( <span style={{ color: 'var(--neon-blue)', borderBottom: myVote ? `2px solid var(--neon-blue)` : '2px dashed rgba(0,240,255,0.4)' }}>
           {myVote ? conditions.find(c => c.id === myVote)?.label : '\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0'}
@@ -1037,14 +1024,14 @@ export default function ClientView() {
       case 'activity':
         switch (currentStepData.id) {
           case 'architecture': return <ClientArchitecture />;
+          case 'roles': return <ClassroomChoiceActivity activityId="roles" />;
+          case 'sensors': return <ClientCatalog />;
           case 'problem': return <ClientProblem />;
           case 'digital': return <ClientDigital />;
           case 'analog': return <ClientAnalog />;
-          case 'catalog': return <ClientCatalog />;
-          case 'quiz': return <ClientQuiz />;
           case 'logic': return <ClientLogic />;
-          case 'wrapup': return <ClientWrapUp />;
-          case 'ideation': return <div className="flex-center full-screen" style={{ flexDirection: 'column' }}><h2>รอกิจกรรมออกแบบไอเดีย...</h2></div>;
+          case 'wrapup': return <ClassroomChoiceActivity activityId="wrapup" />;
+          case 'ideation': return <ClassroomChoiceActivity activityId="ideation" />;
           default: return <div>Unknown Activity</div>;
         }
       default:

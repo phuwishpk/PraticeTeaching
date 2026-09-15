@@ -3,6 +3,20 @@ import assert from 'node:assert/strict';
 import { lessons } from '../src/content/lessons.js';
 import { CHAPTER_FLOW, applyRoomAction, createRoomState } from '../shared/roomState.js';
 
+test('chapter one builds knowledge before asking learners to solve a problem', () => {
+  assert.deepEqual(
+    CHAPTER_FLOW[1].map(({ id, type, lessonId }) => [id || type, lessonId]),
+    [
+      ['lobby', 1],
+      ['architecture', 2],
+      ['roles', 3],
+      ['sensors', 6],
+      ['problem', 7],
+      ['podium', 1],
+    ],
+  );
+});
+
 test('each chapter step accepts valid navigation and rejects out-of-range slides', () => {
   let state = createRoomState();
   for (const [chapterKey, steps] of Object.entries(CHAPTER_FLOW)) {
@@ -33,4 +47,20 @@ test('changing steps resets navigation and ignores delayed actions from the prev
   assert.equal(state.presentation.slide, 0);
   assert.equal(state.presentation.mode, 'activity');
   assert.equal(applyRoomAction(state, { type: 'presentation', payload: { chapter: 1, step: 4, slide: 2 } }), state);
+});
+
+test('opening a podium displays the activity view immediately', () => {
+  const podiumStep = CHAPTER_FLOW[1].findIndex(({ type }) => type === 'podium');
+  const state = applyRoomAction(createRoomState(), { type: 'changeStep', payload: { step: podiumStep } });
+  assert.equal(state.presentation.mode, 'activity');
+});
+
+test('the sensor review scores the four sensors taught in chapter one', () => {
+  let state = { ...createRoomState(), catalogCurrentQuestion: 4 };
+  state = applyRoomAction(state, { type: 'catalogVote', payload: { name: 'Learner', option: 'soil' } });
+  assert.ok(state.chapterScores[1].Learner > 0);
+  assert.throws(() => applyRoomAction(state, {
+    type: 'catalogVote',
+    payload: { name: 'Another learner', option: 'ultrasonic' },
+  }));
 });

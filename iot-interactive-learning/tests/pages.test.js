@@ -40,7 +40,7 @@ test('teacher and student pages render with the current chapter/step room state'
       setChapter: noop, setStep: noop, resetRoom: noop, setPresentation: noop,
       addFloatingEmoji: noop, sendFloatingEmoji: noop, setVoteItem: noop, submitVote: noop,
       voteProblem: noop, voteDigital: noop, voteAnalog: noop, voteQuiz: noop, voteLogic: noop,
-      setCatalogQuestion: noop, voteCatalog: noop, revealQuiz: noop,
+      voteChoice: noop, setCatalogQuestion: noop, voteCatalog: noop, revealQuiz: noop,
     });
     await t.test('new visitors see the PIN form even when the teacher is showing a lesson', () => {
       provide({ ...createRoomState(), step: 1, presentation: { mode: 'lesson', slide: 0 } });
@@ -50,7 +50,8 @@ test('teacher and student pages render with the current chapter/step room state'
     });
     await t.test('problem activity matches on both screens and only reveals explanations when voting ends', () => {
       entries.set('student_name', 'Test learner');
-      const state = { ...createRoomState(), chapter: 1, step: 2,
+      const problemStep = CHAPTER_FLOW[1].findIndex(({ id }) => id === 'problem');
+      const state = { ...createRoomState(), chapter: 1, step: problemStep,
         students: [{ id: 'test', name: 'Test learner' }, { id: 'peer', name: 'Peer' }],
         presentation: { mode: 'activity', slide: 0 },
         problemVotes: { 'Test learner': 'motion_plan' },
@@ -63,7 +64,11 @@ test('teacher and student pages render with the current chapter/step room state'
         assert.ok(!html.includes('problem-explanation'));
       }
       provide({ ...state, problemVotes: { ...state.problemVotes, Peer: 'light_plan' } });
-      for (const Component of [Host, Client]) assert.ok(renderPage(Component).includes('problem-explanation'));
+      for (const Component of [Host, Client]) {
+        const html = renderPage(Component);
+        assert.ok(html.includes('problem-explanation'));
+        assert.ok(html.includes('data-timer-status="stopped"'));
+      }
       provide({ ...state, problemVotes: {}, questionStartTime: Date.now() - 61000 });
       for (const Component of [Host, Client]) assert.ok(renderPage(Component).includes('problem-explanation'));
     });
@@ -83,6 +88,21 @@ test('teacher and student pages render with the current chapter/step room state'
             assert.ok(student.length > 500);
             assert.ok(!student.includes('Unknown Activity'));
           }
+        }
+      }
+    });
+    await t.test('every classroom activity gives students multiple choices', () => {
+      entries.set('student_name', 'Test learner');
+      for (const [chapterKey, steps] of Object.entries(CHAPTER_FLOW)) {
+        for (let step = 0; step < steps.length; step++) {
+          if (steps[step].type !== 'activity') continue;
+          provide({ ...createRoomState(), chapter: Number(chapterKey), step,
+            students: [{ id: 'test-learner', name: 'Test learner' }],
+            presentation: { mode: 'activity', slide: 0 },
+          });
+          const html = renderPage(Client);
+          const answerButtons = html.match(/<button/g) || [];
+          assert.ok(answerButtons.length >= 2, `${steps[step].id} must render multiple answer buttons`);
         }
       }
     });

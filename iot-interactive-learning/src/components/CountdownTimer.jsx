@@ -9,25 +9,26 @@ import { motion } from 'framer-motion';
  * @param {number} startTime - timestamp when the question started (Date.now())
  * @param {number} duration  - total seconds for the countdown (default 30)
  * @param {number} size      - diameter in pixels (default 80)
+ * @param {boolean} stopped  - freeze the timer when everyone has answered
  */
-export default function CountdownTimer({ startTime, duration = 30, size = 80 }) {
-  const [remaining, setRemaining] = useState(duration);
+export default function CountdownTimer({ startTime, duration = 30, size = 80, stopped = false }) {
+  const getRemaining = () => Math.max(0, duration - (Date.now() - startTime) / 1000);
+  const [remaining, setRemaining] = useState(getRemaining);
   const rafRef = useRef(null);
 
   useEffect(() => {
     const tick = () => {
-      const elapsed = (Date.now() - startTime) / 1000;
-      const left = Math.max(0, duration - elapsed);
+      const left = getRemaining();
       setRemaining(left);
-      if (left > 0) {
+      if (left > 0 && !stopped) {
         rafRef.current = requestAnimationFrame(tick);
       }
     };
-    rafRef.current = requestAnimationFrame(tick);
+    tick();
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [startTime, duration]);
+  }, [startTime, duration, stopped]);
 
   const seconds = Math.ceil(remaining);
   const progress = remaining / duration; // 1 → 0
@@ -45,7 +46,7 @@ export default function CountdownTimer({ startTime, duration = 30, size = 80 }) 
   const isExpired = remaining <= 0;
 
   return (
-    <div style={{ position: 'relative', width: size, height: size, flexShrink: 0 }}>
+    <div data-timer-status={stopped ? 'stopped' : isExpired ? 'expired' : 'running'} aria-label={stopped ? `หยุดเวลา เหลือ ${seconds} วินาที` : undefined} style={{ position: 'relative', width: size, height: size, flexShrink: 0 }}>
       <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
         {/* Background circle */}
         <circle
@@ -89,10 +90,10 @@ export default function CountdownTimer({ startTime, duration = 30, size = 80 }) 
         {!isExpired && (
           <span style={{
             fontSize: size * 0.13,
-            color: 'var(--text-secondary)',
+            color: stopped ? '#50fa7b' : 'var(--text-secondary)',
             marginTop: 2,
           }}>
-            วินาที
+            {stopped ? 'หยุดแล้ว' : 'วินาที'}
           </span>
         )}
       </div>

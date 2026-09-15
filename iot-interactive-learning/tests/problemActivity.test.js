@@ -1,11 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { problemActivity } from '../src/content/problemActivity.js';
-import { createRoomState, applyRoomAction } from '../shared/roomState.js';
+import { CHAPTER_FLOW, createRoomState, applyRoomAction } from '../shared/roomState.js';
 
 test('problem scoring awards points only for the plan that measures light', () => {
   for (const option of problemActivity.options) {
-    const state = { ...createRoomState(), chapter: 1, step: 2 };
+    const state = {
+      ...createRoomState(),
+      chapter: 1,
+      step: CHAPTER_FLOW[1].findIndex(({ id }) => id === 'problem'),
+    };
     const next = applyRoomAction(state, { type: 'problemVote', payload: { name: 'Learner', option: option.id } });
     assert.equal(next.problemVotes.Learner, option.id);
     assert.equal((next.chapterScores[1].Learner || 0) > 0, option.id === problemActivity.correctId);

@@ -1,5 +1,5 @@
 import ProblemActivity from '../components/ProblemActivity';
-import { WrapUpActivity } from '../components/WrapUpGraphics';
+import ClassroomChoiceActivity from '../components/ClassroomChoiceActivity';
 import { SignalActivityReview } from '../components/SignalGraphics';
 import { SensorCatalog } from '../components/LessonGraphics';
 import React, { useEffect, useState, useMemo } from 'react';
@@ -12,6 +12,7 @@ import { useWindowSize } from 'react-use';
 import { LessonSlideshow } from '../components/LessonContent';
 import { ImageWithModal } from '../components/ImageWithModal';
 import { lessons, sensorQuizExplanation } from '../content/lessons';
+import { sensorCatalogOptions, sensorCatalogQuestions } from '../content/sensorCatalogActivity';
 import CountdownTimer from '../components/CountdownTimer';
 
 // ─── Floating Emojis Overlay ──────────────────────────────────────────────────
@@ -123,7 +124,7 @@ function HostArchitecture() {
   return (
     <div className="flex-center full-screen" style={{ flexDirection: 'column', gap: '2rem' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-        <CountdownTimer startTime={roomState.questionStartTime} duration={30} size={70} />
+        <CountdownTimer startTime={roomState.questionStartTime} duration={30} size={70} stopped={isAllAnswered} />
         <h1 className="text-glow-blue" style={{ fontSize: '3rem', margin: 0 }}>โหวต: อุปกรณ์นี้อยู่ชั้นไหน?</h1>
       </div>
       
@@ -250,7 +251,7 @@ function HostDigital() {
   return (
     <div className="flex-center full-screen" style={{ flexDirection: 'column', gap: '2rem' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-        <CountdownTimer startTime={roomState.questionStartTime} duration={30} size={70} />
+        <CountdownTimer startTime={roomState.questionStartTime} duration={30} size={70} stopped={isAllAnswered} />
         <h1 className="text-glow-blue" style={{ fontSize: '3rem', margin: 0 }}>สัญญาณภาษาเครื่อง (Digital)</h1>
       </div>
       
@@ -336,7 +337,7 @@ function HostAnalog() {
   return (
     <div className="flex-center full-screen" style={{ flexDirection: 'column', gap: '2rem' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-        <CountdownTimer startTime={roomState.questionStartTime} duration={30} size={70} />
+        <CountdownTimer startTime={roomState.questionStartTime} duration={30} size={70} stopped={isAllAnswered} />
         <h1 className="signal-analog-title" style={{ fontSize: '3rem', margin: 0 }}>สัญญาณค่าต่อเนื่อง (Analog)</h1>
       </div>
       
@@ -410,25 +411,11 @@ function HostCatalog() {
     return () => clearTimeout(timer);
   }, [roomState.questionStartTime, qIndex]);
 
-  const questions = {
-    1: { prompt: "อุปกรณ์ใดใช้วัดความสว่างของแสง?", correct: "ldr" },
-    2: { prompt: "อุปกรณ์ใดใช้วัดอุณหภูมิและความชื้นในอากาศ?", correct: "dht11" },
-    3: { prompt: "เซนเซอร์ใดใช้ตรวจจับการเคลื่อนไหวของสิ่งมีชีวิต?", correct: "pir" },
-    4: { prompt: "เซนเซอร์ใดใช้วัดระยะทางด้วยคลื่นเสียง?", correct: "ultrasonic" },
-  };
-
-  const options = [
-    { id: 'ldr', label: 'LDR (เซนเซอร์แสง)', color: '#ffb86c', icon: '☀️' },
-    { id: 'dht11', label: 'DHT11 (อุณหภูมิ/ความชื้น)', color: '#ff79c6', icon: '🌡️' },
-    { id: 'pir', label: 'PIR (ตรวจจับความเคลื่อนไหว)', color: '#8be9fd', icon: '🚶' },
-    { id: 'ultrasonic', label: 'Ultrasonic (วัดระยะทาง)', color: '#50fa7b', icon: '🦇' }
-  ];
-
   const totalStudents = roomState.students.length;
   const totalVotesCount = Object.keys(votes).length;
   const isAllAnswered = totalStudents > 0 && totalVotesCount >= totalStudents;
   const isRevealed = isTimeUp || isAllAnswered;
-  const currentQ = questions[qIndex];
+  const currentQ = sensorCatalogQuestions[qIndex];
 
   return (
     <div className="flex-center full-screen" style={{ flexDirection: 'column', gap: '2rem', position: 'relative' }}>
@@ -446,7 +433,7 @@ function HostCatalog() {
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', justifyContent: 'center' }}>
-        <CountdownTimer startTime={roomState.questionStartTime} duration={30} size={70} />
+        <CountdownTimer startTime={roomState.questionStartTime} duration={30} size={70} stopped={isAllAnswered} />
         <h1 className="text-glow-blue" style={{ fontSize: '2.2rem', margin: 0, textAlign: 'center', maxWidth: '800px', lineHeight: '1.4' }}>
           {currentQ.prompt}
         </h1>
@@ -457,7 +444,7 @@ function HostCatalog() {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', width: '100%', maxWidth: 800 }}>
-        {options.map(opt => {
+        {sensorCatalogOptions.map(opt => {
           const count = Object.values(votes).filter(v => v === opt.id).length;
           const pct = totalVotesCount === 0 ? 0 : Math.round((count / totalVotesCount) * 100);
           const isCorrect = opt.id === currentQ.correct;
@@ -513,7 +500,7 @@ function HostQuiz() {
   return (
     <div className="flex-center full-screen" style={{ flexDirection: 'column', gap: '2rem' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', justifyContent: 'center' }}>
-        <CountdownTimer startTime={roomState.questionStartTime} duration={30} size={70} />
+        <CountdownTimer startTime={roomState.questionStartTime} duration={30} size={70} stopped={isAllAnswered || roomState.quizRevealed} />
         <h1 className="text-glow-blue" style={{ fontSize: '2.5rem', margin: 0, textAlign: 'center' }}>
           "อยากทำระบบเปิดไฟหน้าบ้านอัตโนมัติตอนกลางคืน ต้องใช้เซนเซอร์อะไร?"
         </h1>
@@ -593,7 +580,7 @@ function HostLogic() {
   return (
     <div className="flex-center full-screen" style={{ flexDirection: 'column', gap: '2rem' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', justifyContent: 'center' }}>
-        <CountdownTimer startTime={roomState.questionStartTime} duration={30} size={70} />
+        <CountdownTimer startTime={roomState.questionStartTime} duration={30} size={70} stopped={isAllAnswered} />
         <h1 className="text-glow-blue" style={{ fontSize: '3rem', margin: 0 }}>ประกอบร่าง Logic (ตรรกะ)</h1>
       </div>
       
@@ -648,33 +635,6 @@ function HostLogic() {
         </div>
 
       </div>
-    </div>
-  );
-}
-
-// ─── Scene 9: Summary & Wrap-up ─────────────────────────────────────────────
-function HostWrapUp() {
-  const { roomState } = useRoom();
-  const emojis = roomState.floatingEmojis || [];
-
-  return (
-    <div className="flex-center full-screen" style={{ flexDirection: 'column', gap: '2rem', position: 'relative', overflow: 'hidden' }}>
-      
-      {/* Floating Emojis */}
-      <AnimatePresence>
-        {emojis.map((e) => (
-          <motion.div key={e.id}
-            initial={{ y: 900, x: `${e.x}vw`, opacity: 1, scale: 2 }}
-            animate={{ y: -100, opacity: 0 }}
-            transition={{ duration: 3, ease: 'easeOut' }}
-            style={{ position: 'absolute', fontSize: '4rem', zIndex: 0 }}
-          >
-            {e.emoji}
-          </motion.div>
-        ))}
-      </AnimatePresence>
-
-      <WrapUpActivity />
     </div>
   );
 }
@@ -808,10 +768,10 @@ function HostPodium() {
 // ─── Host View Shell ──────────────────────────────────────────────────────────
 const STEP_LABELS = {
   lobby: 'เข้าห้องเรียน',
-  architecture: 'ทบทวนระบบ IoT',
+  architecture: 'ภาพรวมระบบ IoT',
+  roles: 'หน้าที่อุปกรณ์',
+  sensors: 'รู้จักเซ็นเซอร์',
   problem: 'วิเคราะห์โจทย์',
-  catalog: 'หน้าที่อุปกรณ์',
-  quiz: 'เลือกเซ็นเซอร์',
   digital: 'Digital: 0 และ 1',
   analog: 'Analog และ ADC',
   logic: 'เงื่อนไข IF / ELSE',
@@ -944,14 +904,14 @@ export default function HostView() {
               className="host-activity" style={{ flex: 1, overflow: 'auto' }}>
               {currentStepData.type === 'lobby' && <HostLobby />}
               {currentStepData.id === 'architecture' && <HostArchitecture />}
+              {currentStepData.id === 'roles' && <ClassroomChoiceActivity activityId="roles" audience="teacher" />}
+              {currentStepData.id === 'sensors' && <HostCatalog />}
               {currentStepData.id === 'problem' && <HostProblem />}
               {currentStepData.id === 'digital' && <HostDigital />}
               {currentStepData.id === 'analog' && <HostAnalog />}
-              {currentStepData.id === 'catalog' && <HostCatalog />}
-              {currentStepData.id === 'quiz' && <HostQuiz />}
               {currentStepData.id === 'logic' && <HostLogic />}
-              {currentStepData.id === 'wrapup' && <HostWrapUp />}
-              {currentStepData.id === 'ideation' && <div style={{padding: '50px', textAlign: 'center'}}><h2>Idea Design (Activity Pending)</h2></div>}
+              {currentStepData.id === 'wrapup' && <ClassroomChoiceActivity activityId="wrapup" audience="teacher" />}
+              {currentStepData.id === 'ideation' && <ClassroomChoiceActivity activityId="ideation" audience="teacher" />}
               {currentStepData.type === 'podium' && <HostPodium />}
             </motion.div>
           )}

@@ -1,4 +1,6 @@
 import { problemActivity, isProblemOption } from '../src/content/problemActivity.js';
+import { isSensorCatalogOption, sensorCatalogQuestions } from '../src/content/sensorCatalogActivity.js';
+import { classroomChoiceActivities, isClassroomChoice } from '../src/content/classroomChoiceActivities.js';
 import { lessons } from '../src/content/lessons.js';
 
 export const initialPresentation = (mode = 'lesson') => ({
@@ -10,9 +12,9 @@ export const CHAPTER_FLOW = {
   1: [
     { type: 'lobby', lessonId: 1 },
     { type: 'activity', id: 'architecture', lessonId: 2 },
+    { type: 'activity', id: 'roles', lessonId: 3 },
+    { type: 'activity', id: 'sensors', lessonId: 6 },
     { type: 'activity', id: 'problem', lessonId: 7 },
-    { type: 'activity', id: 'catalog', lessonId: 3 },
-    { type: 'activity', id: 'quiz', lessonId: 6 },
     { type: 'podium', lessonId: 1 }
   ],
   2: [
@@ -35,6 +37,7 @@ export function createRoomState() {
     pin: String(Math.floor(1000 + Math.random() * 9000)), chapter: 1, step: 0, presentation: initialPresentation('activity'),
     students: [], senses: { eyes: false, ears: false, hands: false },
     problemVotes: {}, digitalVotes: {}, analogVotes: {},
+    choiceVotes: { roles: {}, wrapup: {}, ideation: {} },
     floatingEmojis: [], quizVotes: {}, quizRevealed: false,
     logicVotes: {}, architectureVotes: { esp32: {}, wifi: {}, cloud: {} },
     catalogCurrentQuestion: 1, catalogVotes: { 1: {}, 2: {}, 3: {}, 4: {} },
@@ -74,7 +77,8 @@ export function applyRoomAction(state, action) {
     case 'changeStep': {
       const maxStep = CHAPTER_FLOW[state.chapter].length - 1;
       requireValue(p.step >= 0 && p.step <= maxStep);
-      return { ...state, step: p.step, presentation: initialPresentation(CHAPTER_FLOW[state.chapter][p.step].type === 'lobby' ? 'activity' : 'lesson'), questionStartTime: Date.now() };
+      const stepType = CHAPTER_FLOW[state.chapter][p.step].type;
+      return { ...state, step: p.step, presentation: initialPresentation(stepType === 'activity' ? 'lesson' : 'activity'), questionStartTime: Date.now() };
     }
     case 'presentation': {
       if (p.chapter !== state.chapter || p.step !== state.step) return state;
@@ -126,6 +130,29 @@ export function applyRoomAction(state, action) {
       newScores[state.chapter] = chapScores;
       return { ...state, problemVotes: { ...state.problemVotes, [name]: p.option }, chapterScores: newScores };
     }
+    case 'choiceVote': {
+      const name = validName(p.name);
+      requireValue(Object.hasOwn(classroomChoiceActivities, p.activityId));
+      requireValue(isClassroomChoice(p.activityId, p.option));
+      const activityVotes = state.choiceVotes?.[p.activityId] || {};
+      if (activityVotes[name]) return state;
+
+      const activity = classroomChoiceActivities[p.activityId];
+      const newScores = { ...state.chapterScores };
+      const chapterScores = { ...(newScores[state.chapter] || {}) };
+      if (p.option === activity.correctId) {
+        chapterScores[name] = (chapterScores[name] || 0) + calculateScore(state.questionStartTime);
+      }
+      newScores[state.chapter] = chapterScores;
+      return {
+        ...state,
+        choiceVotes: {
+          ...state.choiceVotes,
+          [p.activityId]: { ...activityVotes, [name]: p.option },
+        },
+        chapterScores: newScores,
+      };
+    }
     case 'digitalVote': {
       const name = validName(p.name);
       requireValue(['2_states', '10_states', 'infinite', 'none'].includes(p.option));
@@ -156,11 +183,10 @@ export function applyRoomAction(state, action) {
       return { ...state, catalogCurrentQuestion: p.question, questionStartTime: Date.now() };
     case 'catalogVote': {
       const name = validName(p.name);
-      requireValue(['ldr', 'dht11', 'pir', 'ultrasonic'].includes(p.option));
+      requireValue(isSensorCatalogOption(p.option));
       
       const qIndex = state.catalogCurrentQuestion;
-      const correctAnswers = { 1: 'ldr', 2: 'dht11', 3: 'pir', 4: 'ultrasonic' };
-      const isCorrect = p.option === correctAnswers[qIndex];
+      const isCorrect = p.option === sensorCatalogQuestions[qIndex].correct;
       
       let newScores = { ...state.chapterScores };
       let chapScores = { ...(newScores[state.chapter] || {}) };

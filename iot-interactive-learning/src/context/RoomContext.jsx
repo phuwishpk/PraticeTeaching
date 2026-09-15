@@ -94,12 +94,13 @@ export function RoomProvider({ children }) {
   const voteProblem = useCallback((option, name) => dispatch('problemVote', { option, name }), [dispatch]);
   const voteDigital = useCallback((option, name) => dispatch('digitalVote', { option, name }), [dispatch]);
   const voteAnalog = useCallback((option, name) => dispatch('analogVote', { option, name }), [dispatch]);
+  const voteChoice = useCallback((activityId, option, name) => dispatch('choiceVote', { activityId, option, name }), [dispatch]);
 
   return (
     <RoomContext.Provider value={{ roomState, connected, error, joinUrl, setChapter, setStep, setPresentation, joinRoom,
       setVoteItem, submitVote, sendFloatingEmoji,
       addFloatingEmoji, voteQuiz, revealQuiz, voteLogic, activateSense, resetRoom,
-      voteProblem, voteDigital, voteAnalog, setCatalogQuestion, voteCatalog }}>
+      voteProblem, voteDigital, voteAnalog, voteChoice, setCatalogQuestion, voteCatalog }}>
       {children}
     </RoomContext.Provider>
   );
