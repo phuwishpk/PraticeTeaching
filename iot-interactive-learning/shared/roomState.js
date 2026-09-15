@@ -1,3 +1,4 @@
+import { problemActivity, isProblemOption } from '../src/content/problemActivity.js';
 import { lessons } from '../src/content/lessons.js';
 
 export const initialPresentation = (mode = 'lesson') => ({
@@ -115,10 +116,11 @@ export function applyRoomAction(state, action) {
     }
     case 'problemVote': {
       const name = validName(p.name);
-      requireValue(['sensor', 'motor', 'wifi', 'usb'].includes(p.option));
+      requireValue(isProblemOption(p.option));
+      if (isProblemOption(state.problemVotes[name])) return state;
       let newScores = { ...state.chapterScores };
       let chapScores = { ...(newScores[state.chapter] || {}) };
-      if (p.option === 'sensor' && !state.problemVotes[name]) {
+      if (p.option === problemActivity.correctId) {
         chapScores[name] = (chapScores[name] || 0) + calculateScore(state.questionStartTime);
       }
       newScores[state.chapter] = chapScores;

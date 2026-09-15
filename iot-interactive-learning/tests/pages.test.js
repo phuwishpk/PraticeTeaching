@@ -48,6 +48,25 @@ test('teacher and student pages render with the current chapter/step room state'
       assert.ok(html.includes('PIN'));
       assert.ok(!html.includes('lesson-slideshow-stage'));
     });
+    await t.test('problem activity matches on both screens and only reveals explanations when voting ends', () => {
+      entries.set('student_name', 'Test learner');
+      const state = { ...createRoomState(), chapter: 1, step: 2,
+        students: [{ id: 'test', name: 'Test learner' }, { id: 'peer', name: 'Peer' }],
+        presentation: { mode: 'activity', slide: 0 },
+        problemVotes: { 'Test learner': 'motion_plan' },
+      };
+      provide(state);
+      for (const Component of [Host, Client]) {
+        const html = renderPage(Component);
+        assert.ok(html.includes('problem-plan-steps'));
+        assert.ok(html.includes('LDR'));
+        assert.ok(!html.includes('problem-explanation'));
+      }
+      provide({ ...state, problemVotes: { ...state.problemVotes, Peer: 'light_plan' } });
+      for (const Component of [Host, Client]) assert.ok(renderPage(Component).includes('problem-explanation'));
+      provide({ ...state, problemVotes: {}, questionStartTime: Date.now() - 61000 });
+      for (const Component of [Host, Client]) assert.ok(renderPage(Component).includes('problem-explanation'));
+    });
     await t.test('all steps render on both screens in activity and lesson modes', () => {
       entries.set('student_name', 'Test learner');
       for (const [chapterKey, steps] of Object.entries(CHAPTER_FLOW)) {

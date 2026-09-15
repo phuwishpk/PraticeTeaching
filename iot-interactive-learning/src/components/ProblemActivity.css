@@ -1,0 +1,62 @@
+.problem-activity { width: min(100%, 1120px); margin: 0 auto; padding: clamp(18px, 3vw, 32px); display: grid; gap: 24px; color: #d9e5ed; line-height: 1.8; }
+.problem-heading { display: flex; gap: 20px; justify-content: space-between; align-items: center; }
+.problem-heading > div:first-child { min-width: 0; }
+.problem-heading > div:last-child { flex-shrink: 0; }
+.problem-heading span { color: #8edbdf; font-size: .84rem; }
+.problem-heading h1 { font-size: clamp(1.4rem, 3vw, 2rem); line-height: 1.6; margin-top: 8px; }
+.problem-scenario { background: #172c3c; border: 1px solid #446881; border-radius: 20px; padding: 22px; }
+.problem-scenario > p { margin: 0 0 20px; font-size: 1.12rem; color: #e8f1f8; }
+.problem-scene-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.problem-scene-pair > div { display: flex; flex-wrap: wrap; gap: 18px; align-items: center; justify-content: center; padding: 24px 14px; border-radius: 14px; }
+.problem-scene-pair svg { width: 32px; height: 32px; }
+.problem-scene-pair svg:nth-child(2) { width: 50px; height: 50px; }
+.problem-scene-pair strong { flex-basis: 100%; text-align: center; }
+.problem-night { background: #121c35; color: #b9d3ec; border: 1px solid #42567b; }
+.problem-night svg:nth-child(3) { color: #ffdb8d; filter: drop-shadow(0 0 8px #ffd77888); }
+.problem-day { background: #403829; color: #f5deac; border: 1px solid #84724e; }
+.problem-day svg:nth-child(3) { color: #adadab; }
+.problem-question h2 { font-size: clamp(1.1rem, 2vw, 1.35rem); line-height: 1.8; }
+.problem-question p { color: #acbecf; margin: 8px 0; }
+.problem-question > span { color: #88d6db; font-size: .88rem; }
+.problem-options { display: grid; gap: 14px; }
+.problem-option { display: grid; gap: 18px; width: 100%; font: inherit; text-align: left; color: #dbe5f0; padding: 20px; background: #142334; border: 1px solid #415570; border-radius: 16px; }
+button.problem-option { cursor: pointer; }
+button.problem-option:hover:not(:disabled) { border-color: #93d8ee; background: #1b3045; }
+button.problem-option:disabled { cursor: default; }
+.problem-option:focus-visible, .problem-reasons summary:focus-visible { outline: 3px solid #85e4ed; outline-offset: 4px; }
+.problem-option.is-selected { border: 2px solid #8cdbeb; background: #1b3746; }
+.problem-option.is-correct { border: 2px solid #8cdaad; background: #1a342d; }
+.problem-option-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+.problem-option-heading > b { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 9px; background: #ffffff12; font-size: 1.2rem; }
+.problem-correct-label { display: flex; align-items: center; gap: 8px; color: #b6edca; margin-left: auto; font-size: .9rem; }
+.problem-plan-steps { display: grid; grid-template-columns: 1fr 22px 1fr 22px 1fr; gap: 14px; align-items: center; }
+.problem-plan-steps > span { min-width: 0; display: grid; gap: 8px; }
+.problem-plan-steps small { color: #9eb6c7; font-size: .8rem; }
+.problem-plan-steps strong { font-size: 1rem; font-weight: 600; line-height: 1.8; }
+.problem-plan-steps svg { color: #82a1b5; width: 22px; }
+.problem-result { display: grid; gap: 8px; font-size: .85rem; color: #b9d6df; }
+.problem-result-track { display: block; height: 8px; background: #ffffff12; border-radius: 8px; overflow: hidden; }
+.problem-result-track > span { display: block; height: 100%; background: #83c9de; }
+.is-correct .problem-result-track > span { background: #9be5b5; }
+.problem-wait { color: #a8dbe5; }
+.problem-explanation { display: grid; gap: 18px; padding: 24px; border: 1px solid #5e8b74; border-radius: 18px; background: #152c26; }
+.problem-explanation h2 { color: #b1ebc6; font-size: 1.25rem; line-height: 1.8; }
+.problem-explanation p { margin: 0; }
+.problem-reasons { display: grid; gap: 10px; }
+.problem-reasons details { border-bottom: 1px solid #ffffff20; padding-bottom: 10px; }
+.problem-reasons summary { cursor: pointer; padding: 8px 0; color: #c9e5d6; }
+.problem-reasons p { color: #b9ccca; margin-top: 8px; }
+.problem-explanation .problem-prompt { padding: 16px; border-left: 3px solid #b5deca; background: #ffffff06; }
+.problem-explanation .problem-note { font-size: .86rem; color: #a9c2b8; }
+.problem-explanation > strong { color: #c0e4ce; }
+@media (max-width: 650px) {
+  .problem-activity { padding: 18px 14px; }
+  .problem-plan-steps { grid-template-columns: 1fr; gap: 10px; }
+  .problem-plan-steps svg { transform: rotate(90deg); margin-left: 14px; }
+  .problem-plan-steps > span { grid-template-columns: 100px 1fr; gap: 12px; align-items: baseline; }
+  .problem-option, .problem-scenario, .problem-explanation { padding: 18px; }
+  .problem-scene-pair { gap: 10px; }
+  .problem-scene-pair > div { gap: 12px; padding: 16px 8px; }
+  .problem-scene-pair svg { width: 22px; height: 22px; }
+  .problem-scene-pair svg:nth-child(2) { width: 32px; height: 32px; }
+}

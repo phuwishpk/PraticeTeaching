@@ -1,3 +1,4 @@
+import ProblemActivity from '../components/ProblemActivity';
 import { WrapUpActivity } from '../components/WrapUpGraphics';
 import { SignalActivityReview } from '../components/SignalGraphics';
 import { SensorCatalog } from '../components/LessonGraphics';
@@ -218,99 +219,7 @@ function HostArchitecture() {
 
 // ─── Scene 3: The Problem ─────────────────────────────────────────────────────
 function HostProblem() {
-  const { roomState } = useRoom();
-  const votes = roomState.problemVotes || {};
-  const totalVotes = Object.keys(votes).length;
-  const [isTimeUp, setIsTimeUp] = useState(false);
-  
-  useEffect(() => {
-    setIsTimeUp(false);
-    const remaining = 30000 - (Date.now() - roomState.questionStartTime);
-    if (remaining <= 0) { setIsTimeUp(true); return; }
-    const timer = setTimeout(() => setIsTimeUp(true), remaining);
-    return () => clearTimeout(timer);
-  }, [roomState.questionStartTime]);
-
-  const totalStudents = roomState.students.length;
-  const isAllAnswered = totalStudents > 0 && totalVotes >= totalStudents;
-  const showResults = isTimeUp || isAllAnswered;
-
-  const options = [
-    { id: 'wifi', label: 'Wi-Fi Router (ตัวส่งเน็ต)', image: '/images/wifi.jpg' },
-    { id: 'sensor', label: 'Sensor (เซนเซอร์)', image: '/images/sensor.jpg' },
-    { id: 'motor', label: 'Motor (มอเตอร์)', image: '/images/motor.jpg' },
-    { id: 'usb', label: 'USB Cable (สายเชื่อมต่อ)', image: '/images/usb.jpg' }
-  ];
-
-  return (
-    <div className="flex-center full-screen" style={{ flexDirection: 'column', gap: '2rem' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-        <CountdownTimer startTime={roomState.questionStartTime} duration={30} size={70} />
-        <h1 className="text-glow-blue" style={{ fontSize: '2.5rem', margin: 0 }}>
-          ปัญหาของบอร์ด ESP32: สมองพร้อม แต่ประสาทสัมผัสล่ะ?
-        </h1>
-      </div>
-      
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2rem', width: '95%', maxWidth: 1200, minHeight: '60vh', justifyContent: 'center' }}>
-        
-        {/* Left: Problem Statement */}
-        <div className="glass-panel" style={{ flex: 1, padding: '2.5rem', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-          <motion.div animate={{ background: ['rgba(255,0,0,0.1)', 'rgba(255,0,0,0.2)', 'rgba(255,0,0,0.1)'] }} transition={{ repeat: Infinity, duration: 1 }}
-            style={{ padding: '2rem', border: '2px solid #ff4d4d', borderRadius: 16, boxShadow: '0 0 20px rgba(255,0,0,0.2)' }}>
-            <h3 style={{ color: '#ff6b6b', margin: '0 0 1rem 0', fontSize: '1.8rem' }}>⚠️ สมองที่ตาบอด</h3>
-            <p style={{ color: 'white', fontSize: '1.2rem', margin: 0, lineHeight: 1.6, textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
-              ESP32 ประมวลผลได้ แต่มันไม่รู้ว่าห้องร้อนหรือหนาว มืดหรือสว่าง
-            </p>
-          </motion.div>
-
-          <div className="flex-center" style={{ flex: 1 }}>
-            <ImageWithModal src="/images/esp32_board_1789207904514.jpg" alt="ESP32" style={{ width: '80%', maxHeight: 200, objectFit: 'cover', borderRadius: 16, border: '2px solid rgba(255,255,255,0.2)' }} />
-          </div>
-          
-          <h2 style={{ textAlign: 'center', color: 'var(--neon-blue)' }}>คำถาม: อุปกรณ์ใดทำหน้าที่เปรียบเสมือน "ตา หู จมูก" ให้กับบอร์ด?</h2>
-        </div>
-
-        {/* Right: Quiz Results */}
-        <div className="glass-panel" style={{ flex: 1.5, padding: '2rem', display: 'flex', flexDirection: 'column' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-            <h2 style={{ color: 'var(--neon-purple)', margin: 0 }}>ผลโหวต</h2>
-            <div style={{ color: showResults ? (isAllAnswered ? 'var(--neon-green)' : 'var(--text-secondary)') : 'var(--neon-blue)', fontWeight: 'bold' }}>
-              {showResults
-                ? (isAllAnswered ? `✅ ตอบครบทุกคนแล้ว (${totalVotes}/${totalStudents} คน)` : `⏰ หมดเวลา (${totalVotes}/${totalStudents} คน)`)
-                : `⏳ กำลังรอคำตอบ... (${totalVotes}/${totalStudents} คน)`}
-            </div>
-          </div>
-          
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1rem', justifyContent: 'center' }}>
-            {options.map(opt => {
-              const count = Object.values(votes).filter(v => v === opt.id).length;
-              const pct = totalVotes === 0 ? 0 : Math.round((count / totalVotes) * 100);
-              const isCorrect = opt.id === 'sensor';
-              return (
-                <div key={opt.id} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                    {opt.image && <ImageWithModal src={opt.image} alt={opt.label} style={{ width: '50px', height: '50px', objectFit: 'cover', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.2)' }} />}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', flex: 1 }}>
-                      <span style={{ fontSize: '1.2rem', color: showResults && isCorrect ? 'var(--neon-green)' : 'white' }}>
-                        {opt.label} {showResults && isCorrect && '🎯'}
-                      </span>
-                      {showResults && <span style={{ fontSize: '1.2rem' }}>{count} โหวต ({pct}%)</span>}
-                    </div>
-                  </div>
-                  {showResults && (
-                    <div style={{ width: '100%', height: 16, background: 'rgba(255,255,255,0.1)', borderRadius: 8, overflow: 'hidden' }}>
-                      <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} style={{ height: '100%', background: isCorrect ? 'var(--neon-green)' : 'var(--neon-blue)' }} />
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-      </div>
-    </div>
-  );
+  return <ProblemActivity audience="teacher" />;
 }
 
 function HostDigital() {
