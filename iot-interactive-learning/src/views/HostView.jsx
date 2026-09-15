@@ -58,7 +58,7 @@ function HostLobby() {
         </div>
 
         <div style={{ flex: 1, borderLeft: '1px solid rgba(255,255,255,0.1)', paddingLeft: '3rem', display: 'flex', flexDirection: 'column' }}>
-          <h2 style={{ color: 'var(--neon-purple)' }}>นักวิจัยที่เข้าร่วมแล้ว: {roomState.students.length} คน</h2>
+          <h2 style={{ color: 'var(--neon-purple)' }}>นักเรียนที่เข้าร่วมแล้ว: {roomState.students.length} คน</h2>
           <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexWrap: 'wrap', gap: '1rem', alignContent: 'flex-start', marginTop: '1rem' }}>
             <AnimatePresence>
               {roomState.students.length === 0 && (

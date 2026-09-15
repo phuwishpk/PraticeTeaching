@@ -149,7 +149,7 @@ function ClientLobby() {
         <h2 className="text-glow-blue" style={{ fontSize: '2rem', textAlign: 'center', margin: 0 }}>Welcome to IoT Lab</h2>
         <p style={{ color: 'var(--neon-green)', fontSize: '0.9rem', margin: 0 }}>✅ PIN ถูกต้อง!</p>
         <form onSubmit={handleJoin} style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem', width: '100%' }}>
-          <input type="text" placeholder="ชื่อเล่นนักวิจัย" className="neu-input"
+          <input type="text" placeholder="ชื่อเล่นนักเรียน" className="neu-input"
             value={name} onChange={e => setName(e.target.value)} maxLength={20}
             autoFocus
             style={{ textAlign: 'center', fontSize: '1.2rem' }} />
