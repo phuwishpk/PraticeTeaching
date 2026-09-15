@@ -114,7 +114,7 @@ function HostArchitecture() {
     if (remaining <= 0) { setIsTimeUp(true); return; }
     const timer = setTimeout(() => setIsTimeUp(true), remaining);
     return () => clearTimeout(timer);
-  }, [roomState.questionStartTime, currentItem]);
+  }, [roomState.questionStartTime, roomState.questionDurationMs, currentItem]);
 
   const getPercent = (layer) => totalVotes === 0 ? 0 : Math.round((Object.values(votes).filter(v => v === layer).length / totalVotes) * 100);
   const { total: totalStudents, allAnswered: isAllAnswered } = answerProgress(roomState, votes);
@@ -249,7 +249,7 @@ function HostDigital() {
     if (remaining <= 0) { setIsTimeUp(true); return; }
     const timer = setTimeout(() => setIsTimeUp(true), remaining);
     return () => clearTimeout(timer);
-  }, [roomState.questionStartTime]);
+  }, [roomState.questionStartTime, roomState.questionDurationMs]);
 
   const { total: totalStudents, allAnswered: isAllAnswered } = answerProgress(roomState, votes);
   const showResults = isTimeUp || isAllAnswered;
@@ -334,7 +334,7 @@ function HostAnalog() {
     if (remaining <= 0) { setIsTimeUp(true); return; }
     const timer = setTimeout(() => setIsTimeUp(true), remaining);
     return () => clearTimeout(timer);
-  }, [roomState.questionStartTime]);
+  }, [roomState.questionStartTime, roomState.questionDurationMs]);
 
   const { total: totalStudents, allAnswered: isAllAnswered } = answerProgress(roomState, votes);
   const showResults = isTimeUp || isAllAnswered;
@@ -421,7 +421,7 @@ function HostCatalog() {
     if (remaining <= 0) { setIsTimeUp(true); return; }
     const timer = setTimeout(() => setIsTimeUp(true), remaining);
     return () => clearTimeout(timer);
-  }, [roomState.questionStartTime, qIndex]);
+  }, [roomState.questionStartTime, roomState.questionDurationMs, qIndex]);
 
   const { answered: totalVotesCount, total: totalStudents, allAnswered: isAllAnswered } = answerProgress(roomState, votes);
   const isRevealed = isTimeUp || isAllAnswered;
@@ -493,7 +493,7 @@ function HostQuiz() {
     if (remaining <= 0) { setIsTimeUp(true); return; }
     const timer = setTimeout(() => setIsTimeUp(true), remaining);
     return () => clearTimeout(timer);
-  }, [roomState.questionStartTime]);
+  }, [roomState.questionStartTime, roomState.questionDurationMs]);
   
   const options = [
     { id: 'ldr', label: 'LDR (แสง)', color: '#ffb86c' },
@@ -572,7 +572,7 @@ function HostLogic() {
     if (remaining <= 0) { setIsTimeUp(true); return; }
     const timer = setTimeout(() => setIsTimeUp(true), remaining);
     return () => clearTimeout(timer);
-  }, [roomState.questionStartTime]);
+  }, [roomState.questionStartTime, roomState.questionDurationMs]);
   
   const options = [
     { id: 'dark', label: 'ถ้า "แสงมืด" (LDR < 500)' },

@@ -293,7 +293,7 @@ function ClientArchitecture() {
     setIsTimeUp(false);
     const timer = setTimeout(() => setIsTimeUp(true), (roomState.questionDurationMs ?? 30000) - (Date.now() - roomState.questionStartTime));
     return () => clearTimeout(timer);
-  }, [roomState.questionStartTime]);
+  }, [roomState.questionStartTime, roomState.questionDurationMs]);
 
   const layers = [
     { id: 'service', label: 'Layer 3: Service', color: 'var(--neon-purple)', emoji: '☁️' },
@@ -415,7 +415,7 @@ function ClientDigital() {
     setIsTimeUp(false);
     const timer = setTimeout(() => setIsTimeUp(true), (roomState.questionDurationMs ?? 30000) - (Date.now() - roomState.questionStartTime));
     return () => clearTimeout(timer);
-  }, [roomState.questionStartTime]);
+  }, [roomState.questionStartTime, roomState.questionDurationMs]);
 
   const options = [
     { id: '2_states', label: '2 สถานะ (เช่น 0 กับ 1, ปิดกับเปิด)', color: '#ff4d4d' },
@@ -520,7 +520,7 @@ function ClientAnalog() {
     setIsTimeUp(false);
     const timer = setTimeout(() => setIsTimeUp(true), (roomState.questionDurationMs ?? 30000) - (Date.now() - roomState.questionStartTime));
     return () => clearTimeout(timer);
-  }, [roomState.questionStartTime]);
+  }, [roomState.questionStartTime, roomState.questionDurationMs]);
 
   const options = [
     { id: 'binary', label: 'มีแค่สถานะเปิดกับปิด (0 กับ 1)', color: '#ffb86c' },
@@ -626,7 +626,7 @@ function ClientCatalog() {
     setIsTimeUp(false);
     const timer = setTimeout(() => setIsTimeUp(true), (roomState.questionDurationMs ?? 30000) - (Date.now() - roomState.questionStartTime));
     return () => clearTimeout(timer);
-  }, [roomState.questionStartTime, qIndex]);
+  }, [roomState.questionStartTime, roomState.questionDurationMs, qIndex]);
 
   const currentQ = sensorCatalogQuestions[qIndex];
 
@@ -746,7 +746,7 @@ function ClientQuiz() {
     if (remaining <= 0) { setIsTimeUp(true); return; }
     const timer = setTimeout(() => setIsTimeUp(true), remaining);
     return () => clearTimeout(timer);
-  }, [roomState.questionStartTime]);
+  }, [roomState.questionStartTime, roomState.questionDurationMs]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1.5rem', maxWidth: 440, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
@@ -848,7 +848,7 @@ function ClientLogic() {
     if (remaining <= 0) { setIsTimeUp(true); return; }
     const timer = setTimeout(() => setIsTimeUp(true), remaining);
     return () => clearTimeout(timer);
-  }, [roomState.questionStartTime]);
+  }, [roomState.questionStartTime, roomState.questionDurationMs]);
 
   const conditions = [
     { id: 'dark',   label: 'ถ้า "แสงมืด" (LDR < 500)',        color: '#8be9fd' },
