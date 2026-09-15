@@ -1,3 +1,4 @@
+import { WrapUpActivity } from '../components/WrapUpGraphics';
 import { SignalActivityReview } from '../components/SignalGraphics';
 import { SensorCatalog } from '../components/LessonGraphics';
 import React, { useState, useRef, useEffect } from 'react';
@@ -831,6 +832,7 @@ function ClientWrapUp() {
   
   return (
     <div className="flex-center full-screen" style={{ flexDirection: 'column', gap: '1.5rem', padding: '1.5rem' }}>
+      {roomState.phase === 9 && <WrapUpActivity />}
       <div className="glass-panel" style={{ padding: '2rem', width: '100%', maxWidth: 400, textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         <h2 className="text-glow-blue" style={{ fontSize: '1.8rem', margin: 0 }}>ยินดีด้วย! 🎉</h2>
         

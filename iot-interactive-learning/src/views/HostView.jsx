@@ -1,3 +1,4 @@
+import { WrapUpActivity } from '../components/WrapUpGraphics';
 import { SignalActivityReview } from '../components/SignalGraphics';
 import { SensorCatalog } from '../components/LessonGraphics';
 import React, { useEffect, useState, useMemo } from 'react';
@@ -654,16 +655,7 @@ function HostWrapUp() {
         ))}
       </AnimatePresence>
 
-      <div className="glass-panel" style={{ padding: '4rem', width: '80%', maxWidth: 800, textAlign: 'center', zIndex: 1 }}>
-        <h1 className="text-glow-blue" style={{ fontSize: '4rem', margin: '0 0 2rem 0' }}>บทสรุป IoT 🌐</h1>
-        
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', textAlign: 'left', fontSize: '1.5rem', color: 'white', lineHeight: 1.6 }}>
-          <p>✅ <b>3-Layer:</b> Device (รับรู้/ทำ), Network (ส่ง), Service (แสดงผล)</p>
-          <p>✅ <b>Sensor:</b> อวัยวะรับสัมผัส (ตา หู จมูก ผิวหนัง) ของบอร์ด</p>
-          <p>✅ <b>Signal:</b> Digital (0/1) และ Analog (ค่าต่อเนื่อง 0-4095)</p>
-          <p>✅ <b>Logic:</b> เงื่อนไข IF ช่วยให้บอร์ดคิดและสั่งงานอัตโนมัติ!</p>
-        </div>
-      </div>
+      <WrapUpActivity />
     </div>
   );
 }

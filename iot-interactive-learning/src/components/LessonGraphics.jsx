@@ -3,6 +3,7 @@ import { Sun, Thermometer, PersonStanding, Sprout, Lightbulb, Volume2, Monitor, 
 import { devices, sensorIds } from '../content/devices.js';
 import ActuatorDemo from './ActuatorDemo';
 import SignalGraphic, { SignalComparison } from './SignalGraphics';
+import WrapUpGraphic, { WrapUpOverview } from './WrapUpGraphics';
 
 const icons = { sun: Sun, thermometer: Thermometer, person: PersonStanding, sprout: Sprout, light: Lightbulb, volume: Volume2, display: Monitor, fan: Fan, gauge: Gauge, water: Droplets, switch: ToggleRight };
 
@@ -70,7 +71,8 @@ export function SectionExplanation({ section }) {
     {section.detail && <p className="section-detail">{section.detail}</p>}
     {section.graphicType === 'actuator-demo' && <ActuatorDemo />}
     {section.signalGraphic && <SignalGraphic type={section.signalGraphic} />}
-    {!section.signalGraphic && section.diagram && <FlowGraphic steps={section.diagram} label="ภาพสรุปท้ายหัวข้อ" />}
+    {section.wrapGraphic && <WrapUpGraphic type={section.wrapGraphic} />}
+    {!section.signalGraphic && !section.wrapGraphic && section.diagram && <FlowGraphic steps={section.diagram} label="ภาพสรุปท้ายหัวข้อ" />}
     {section.takeaway && <aside className="section-takeaway"><CheckCircle2 size={22} aria-hidden="true" /><div><h3>ใจความสำคัญ</h3><p>{section.takeaway}</p></div></aside>}
   </div>;
 }
@@ -79,7 +81,7 @@ export function LessonRecap({ lesson }) {
   return <section className="lesson-recap" aria-label="สรุปและจุดประสงค์การเรียนรู้ท้ายบท">
     <span className="lesson-eyebrow">ทบทวนก่อนจบบท</span>
     <h2 className="lesson-slide-section-title">{lesson.recap.title}</h2>
-    {lesson.signalComparison ? <SignalComparison /> : <FlowGraphic steps={lesson.recap.diagram} label="ภาพรวมที่ควรจำ" />}
+    {lesson.wrapOverview ? <WrapUpOverview /> : lesson.signalComparison ? <SignalComparison /> : <FlowGraphic steps={lesson.recap.diagram} label="ภาพรวมที่ควรจำ" />}
     {lesson.deviceIds && <div className="device-recap-grid">{lesson.deviceIds.map(id => {
       const device = devices[id];
       return <div className="device-recap-item" key={id}><DeviceIcon device={device} size={28} /><div><strong>{device.name}</strong><span>{device.subtitle}</span></div></div>;

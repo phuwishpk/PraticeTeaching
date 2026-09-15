@@ -107,6 +107,10 @@ export function enrichLessons(lessons) {
   for (const [chapter, [title, diagram]] of Object.entries(recaps)) {
     lessons[chapter].recap = { title, diagram };
   }
+  ['sensing', 'decision', 'network', 'troubleshoot'].forEach((type, index) => {
+    lessons[9].sections[index].wrapGraphic = type;
+  });
+  lessons[9].wrapOverview = true;
   lessons[3].deviceIds = outputIds;
   lessons[6].deviceIds = sensorIds;
 }
