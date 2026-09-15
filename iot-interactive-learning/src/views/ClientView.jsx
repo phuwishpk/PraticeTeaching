@@ -1,6 +1,9 @@
 import { WrapUpActivity } from '../components/WrapUpGraphics';
 import { SignalActivityReview } from '../components/SignalGraphics';
 import { SensorCatalog } from '../components/LessonGraphics';
+import { Rocket, User, Cpu, Wifi, Cloud, AlertTriangle, Target, Trophy, Medal, BookOpen, Gamepad2, CheckCircle2, Timer, Lock, Unlock, Flame, Sun, Radio, Zap, Lightbulb, Thermometer, Smartphone, PartyPopper, Heart, XCircle, Activity, Sprout, PersonStanding, ThumbsUp } from 'lucide-react';
+import { ResponsivePanel } from '../components/ResponsivePanel';
+import { ImageWithModal } from '../components/ImageWithModal';
 import React, { useState, useRef, useEffect } from 'react';
 import { useRoom } from '../context/RoomContext';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -306,10 +309,10 @@ function ClientProblem() {
   }, [roomState.questionStartTime]);
 
   const options = [
-    { id: 'wifi', label: 'Wi-Fi Router (ตัวส่งเน็ต)', color: '#ffb86c' },
-    { id: 'sensor', label: 'Sensor (เซนเซอร์)', color: '#50fa7b' },
-    { id: 'motor', label: 'Motor (มอเตอร์)', color: '#ff79c6' },
-    { id: 'usb', label: 'USB Cable (สายเชื่อมต่อ)', color: '#8be9fd' }
+    { id: 'wifi', label: 'Wi-Fi Router (ตัวส่งเน็ต)', color: '#ffb86c', image: '/images/wifi.jpg' },
+    { id: 'sensor', label: 'Sensor (เซนเซอร์)', color: '#50fa7b', image: '/images/sensor.jpg' },
+    { id: 'motor', label: 'Motor (มอเตอร์)', color: '#ff79c6', image: '/images/motor.jpg' },
+    { id: 'usb', label: 'USB Cable (สายเชื่อมต่อ)', color: '#8be9fd', image: '/images/usb.jpg' }
   ];
 
   return (
@@ -352,9 +355,12 @@ function ClientProblem() {
                 />
               )}
               <div style={{ position: 'relative', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ color: showResults && isCorrectAnswer ? '#50fa7b' : isMyVote ? opt.color : 'white', fontWeight: isMyVote || (showResults && isCorrectAnswer) ? 'bold' : 'normal', fontSize: '1rem' }}>
-                  {opt.label} {isMyVote && '✅'} {showResults && isCorrectAnswer && '🎯'}
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  {opt.image && <ImageWithModal src={opt.image} alt={opt.label} style={{ width: '36px', height: '36px', objectFit: 'cover', borderRadius: '8px' }} />}
+                  <span style={{ color: showResults && isCorrectAnswer ? '#50fa7b' : isMyVote ? opt.color : 'white', fontWeight: isMyVote || (showResults && isCorrectAnswer) ? 'bold' : 'normal', fontSize: '1rem' }}>
+                    {opt.label} {isMyVote && '✅'} {showResults && isCorrectAnswer && '🎯'}
+                  </span>
+                </div>
                 {showResults && totalVotes > 0 && (
                   <span style={{ color: opt.color, fontWeight: 'bold', fontSize: '1.1rem' }}>
                     {pct}%

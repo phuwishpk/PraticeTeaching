@@ -149,3 +149,72 @@ h1, h2, h3, h4, h5, h6 {
 .animate-pulse-neon {
   animation: pulse-neon 2s infinite;
 }
+
+/* ==========================================================================
+   Responsive Typography & Utilities (Added for fluid layout)
+   ========================================================================== */
+
+:root {
+  /* Fluid typography variables */
+  --font-size-sm: clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem);
+  --font-size-base: clamp(0.875rem, 0.8rem + 0.38vw, 1.0625rem);
+  --font-size-md: clamp(1rem, 0.9rem + 0.5vw, 1.25rem);
+  --font-size-lg: clamp(1.25rem, 1.1rem + 0.75vw, 1.625rem);
+  --font-size-xl: clamp(1.5rem, 1.3rem + 1vw, 2rem);
+  --font-size-2xl: clamp(1.75rem, 1.5rem + 1.25vw, 2.5rem);
+  --font-size-3xl: clamp(2rem, 1.7rem + 1.5vw, 3rem);
+  --font-size-4xl: clamp(2.5rem, 2rem + 2.5vw, 4rem);
+  --font-size-huge: clamp(3rem, 2.5rem + 3.5vw, 6rem);
+  
+  /* Fluid Spacing */
+  --spacing-sm: clamp(0.5rem, 0.4rem + 0.5vw, 0.75rem);
+  --spacing-md: clamp(1rem, 0.8rem + 1vw, 1.5rem);
+  --spacing-lg: clamp(1.5rem, 1.2rem + 1.5vw, 2.5rem);
+  --spacing-xl: clamp(2rem, 1.5rem + 2.5vw, 3.5rem);
+}
+
+/* Responsive Grid/Flex Containers */
+.responsive-grid {
+  display: grid;
+  gap: var(--spacing-md);
+}
+.responsive-grid-2col {
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+}
+
+.responsive-flex-row {
+  display: flex;
+  flex-direction: column; /* Mobile first */
+  gap: var(--spacing-md);
+}
+
+.responsive-padding {
+  padding: var(--spacing-md);
+}
+
+/* Media Queries for Layouts */
+@media (min-width: 768px) {
+  .responsive-flex-row {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+}
+
+/* Fix panel max widths on mobile */
+@media (max-width: 480px) {
+  .glass-panel {
+    padding: var(--spacing-md) !important;
+    width: 95% !important;
+  }
+  
+  .neu-button {
+    padding: 12px 20px !important;
+    font-size: var(--font-size-sm) !important;
+  }
+  
+  .neu-input {
+    padding: 12px 16px !important;
+    font-size: var(--font-size-base) !important;
+  }
+}

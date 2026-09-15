@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Sun, Thermometer, PersonStanding, Sprout, Lightbulb, Volume2, Monitor, Fan, Gauge, Droplets, ToggleRight, Cpu, ArrowRight, CheckCircle2, Radio } from 'lucide-react';
 import { devices, sensorIds } from '../content/devices.js';
+import { ImageWithModal } from './ImageWithModal';
 import ActuatorDemo from './ActuatorDemo';
 import SignalGraphic, { SignalComparison } from './SignalGraphics';
 import WrapUpGraphic, { WrapUpOverview } from './WrapUpGraphics';
@@ -8,6 +9,9 @@ import WrapUpGraphic, { WrapUpOverview } from './WrapUpGraphics';
 const icons = { sun: Sun, thermometer: Thermometer, person: PersonStanding, sprout: Sprout, light: Lightbulb, volume: Volume2, display: Monitor, fan: Fan, gauge: Gauge, water: Droplets, switch: ToggleRight };
 
 export function DeviceIcon({ device, size = 40 }) {
+  if (device.image) {
+    return <ImageWithModal src={device.image} alt={device.name} style={{ width: size, height: size, objectFit: 'cover', borderRadius: '4px' }} />;
+  }
   const Icon = icons[device.icon];
   return <Icon size={size} strokeWidth={1.6} aria-hidden="true" />;
 }
@@ -39,7 +43,7 @@ function DeviceLesson({ deviceId }) {
     <div className={`device-lesson ${isInput ? 'is-input' : 'is-output'}`}>
       <div className="device-introduction">
         <div className="device-portrait">
-          {device.image ? <img src={device.image} alt={`ลักษณะอุปกรณ์ ${device.name}`} /> : <DeviceIcon device={device} size={72} />}
+          {device.image ? <ImageWithModal src={device.image} alt={`ลักษณะอุปกรณ์ ${device.name}`} /> : <DeviceIcon device={device} size={72} />}
           <span>{isInput ? 'INPUT · รับข้อมูล' : 'OUTPUT · สร้างผลลัพธ์'}</span>
         </div>
         <div><span className="device-kicker">{isInput ? 'ตรวจวัดอะไร?' : 'ทำอะไรได้?'}</span><p className="device-purpose">{device.measures}</p></div>

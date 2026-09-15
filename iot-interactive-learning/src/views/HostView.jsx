@@ -5,7 +5,8 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useRoom } from '../context/RoomContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
-import { LessonSlideshow } from '../components/LessonContent';
+import { ResponsivePanel } from '../components/ResponsivePanel';
+import { ImageWithModal } from '../components/ImageWithModal';
 import { sensorQuizExplanation } from '../content/lessons';
 import CountdownTimer from '../components/CountdownTimer';
 
@@ -223,10 +224,10 @@ function HostProblem() {
   const showResults = isTimeUp || isAllAnswered;
 
   const options = [
-    { id: 'wifi', label: 'Wi-Fi Router (ตัวส่งเน็ต)' },
-    { id: 'sensor', label: 'Sensor (เซนเซอร์)' },
-    { id: 'motor', label: 'Motor (มอเตอร์)' },
-    { id: 'usb', label: 'USB Cable (สายเชื่อมต่อ)' }
+    { id: 'wifi', label: 'Wi-Fi Router (ตัวส่งเน็ต)', image: '/images/wifi.jpg' },
+    { id: 'sensor', label: 'Sensor (เซนเซอร์)', image: '/images/sensor.jpg' },
+    { id: 'motor', label: 'Motor (มอเตอร์)', image: '/images/motor.jpg' },
+    { id: 'usb', label: 'USB Cable (สายเชื่อมต่อ)', image: '/images/usb.jpg' }
   ];
 
   return (
@@ -251,7 +252,7 @@ function HostProblem() {
           </motion.div>
 
           <div className="flex-center" style={{ flex: 1 }}>
-            <img src="/images/esp32_board_1789207904514.jpg" alt="ESP32" style={{ width: '80%', maxHeight: 200, objectFit: 'cover', borderRadius: 16, border: '2px solid rgba(255,255,255,0.2)' }} />
+            <ImageWithModal src="/images/esp32_board_1789207904514.jpg" alt="ESP32" style={{ width: '80%', maxHeight: 200, objectFit: 'cover', borderRadius: 16, border: '2px solid rgba(255,255,255,0.2)' }} />
           </div>
           
           <h2 style={{ textAlign: 'center', color: 'var(--neon-blue)' }}>คำถาม: อุปกรณ์ใดทำหน้าที่เปรียบเสมือน "ตา หู จมูก" ให้กับบอร์ด?</h2>
@@ -273,11 +274,14 @@ function HostProblem() {
               const isCorrect = opt.id === 'sensor';
               return (
                 <div key={opt.id} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: '1.2rem', color: showResults && isCorrect ? 'var(--neon-green)' : 'white' }}>
-                      {opt.label} {showResults && isCorrect && '🎯'}
-                    </span>
-                    {showResults && <span style={{ fontSize: '1.2rem' }}>{count} โหวต ({pct}%)</span>}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    {opt.image && <ImageWithModal src={opt.image} alt={opt.label} style={{ width: '50px', height: '50px', objectFit: 'cover', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.2)' }} />}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', flex: 1 }}>
+                      <span style={{ fontSize: '1.2rem', color: showResults && isCorrect ? 'var(--neon-green)' : 'white' }}>
+                        {opt.label} {showResults && isCorrect && '🎯'}
+                      </span>
+                      {showResults && <span style={{ fontSize: '1.2rem' }}>{count} โหวต ({pct}%)</span>}
+                    </div>
                   </div>
                   {showResults && (
                     <div style={{ width: '100%', height: 16, background: 'rgba(255,255,255,0.1)', borderRadius: 8, overflow: 'hidden' }}>
@@ -865,7 +869,7 @@ export default function HostView() {
           aria-pressed={lessonMode}
           onClick={() => handleTabChange('lesson')}
         >
-          📖 เนื้อหา — นักเรียนเห็นหน้าเดียวกัน
+          📖 เนื้อหา
         </button>
         <button
           id="host-tab-activity"
