@@ -12,10 +12,13 @@
   --neon-green: #39ff14;
   --neon-purple: #b026ff;
   --neon-pink: #ff007f;
+  --neon-red: #ff4d4d;
+  --neon-yellow: #ffd93d;
   
   /* UI Colors */
   --card-bg: rgba(19, 27, 47, 0.5);
   --card-border: rgba(255, 255, 255, 0.08);
+  --border-light: rgba(255, 255, 255, 0.12);
   
   /* Shadows */
   --neumorph-shadow: 8px 8px 16px #05080d, -8px -8px 16px #151c27;

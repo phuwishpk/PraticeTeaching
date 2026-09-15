@@ -1,0 +1,119 @@
+.actuator-demo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  margin-top: 20px;
+  padding: 30px 20px;
+  background-color: rgba(0, 0, 0, 0.3);
+  border-radius: 16px;
+  border: 1px solid var(--border-light);
+  overflow-x: auto;
+}
+
+.actuator-caption {
+  margin: 0 0 10px 0;
+  font-size: 14px;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.actuator-flow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  width: 100%;
+}
+
+.actuator-layer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+  padding: 20px;
+  border-radius: 12px;
+  border: 2px dashed var(--layer-accent);
+  background-color: var(--layer-tint);
+  width: var(--layer-width);
+  flex-shrink: 0;
+}
+
+.actuator-layer-title {
+  color: var(--layer-accent);
+  font-weight: bold;
+  font-size: 14px;
+}
+
+/* The pulse animates along x, so on narrow screens the track is rotated rather than
+   re-animated: the same motion then reads top to bottom. */
+.actuator-wire {
+  position: relative;
+  width: 60px;
+  height: 4px;
+  flex-shrink: 0;
+}
+
+.actuator-wire-track {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 60px;
+  height: 4px;
+  overflow: hidden;
+  background-color: #4a5568;
+}
+
+.actuator-device-row {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+@media (max-width: 900px) {
+  .actuator-demo {
+    padding: 20px 12px;
+    gap: 14px;
+  }
+
+  .actuator-flow {
+    flex-direction: column;
+  }
+
+  .actuator-layer {
+    width: 100%;
+    max-width: 320px;
+    padding: 16px;
+  }
+
+  .actuator-wire {
+    width: 4px;
+    height: 56px;
+  }
+
+  .actuator-wire-track {
+    transform: translate(-50%, -50%) rotate(90deg);
+  }
+}
+
+@media (max-width: 380px) {
+  .actuator-device-row {
+    gap: 10px;
+  }
+}
+
+.actuator-inner-wire {
+  position: relative;
+  width: 40px;
+  height: 4px;
+  background-color: #4a5568;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+@media (max-width: 380px) {
+  .actuator-inner-wire {
+    width: 24px;
+  }
+}

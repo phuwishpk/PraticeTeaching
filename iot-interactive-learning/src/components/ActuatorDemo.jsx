@@ -1,9 +1,40 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import './ActuatorDemo.css';
+
+// One signal travelling between two layers. The pulse always animates along x; the
+// stylesheet rotates the track on narrow screens so the same motion reads downward.
+function Wire({ active, color }) {
+  return (
+    <div className="actuator-wire">
+      <div className="actuator-wire-track">
+        <AnimatePresence>
+          {active && (
+            <motion.div
+              initial={{ x: '-100%' }}
+              animate={{ x: '100%' }}
+              transition={{ duration: 0.5, ease: 'linear' }}
+              style={{ width: '100%', height: '100%', backgroundColor: color, boxShadow: `0 0 8px ${color}` }}
+            />
+          )}
+        </AnimatePresence>
+      </div>
+    </div>
+  );
+}
+
+function Layer({ title, accent, tint, width, children }) {
+  return (
+    <div className="actuator-layer" style={{ '--layer-accent': accent, '--layer-tint': tint, '--layer-width': width }}>
+      <span className="actuator-layer-title">{title}</span>
+      {children}
+    </div>
+  );
+}
 
 export default function ActuatorDemo() {
   const [isOn, setIsOn] = useState(false);
-  
+
   // States to manage the animation sequence
   const [signalAppToNetwork, setSignalAppToNetwork] = useState(false);
   const [signalNetworkToDevice, setSignalNetworkToDevice] = useState(false);
@@ -12,15 +43,15 @@ export default function ActuatorDemo() {
   const togglePower = () => {
     const newState = !isOn;
     setIsOn(newState);
-    
+
     // Start animation sequence
     setSignalAppToNetwork(true);
-    
+
     setTimeout(() => {
       setSignalAppToNetwork(false);
       setSignalNetworkToDevice(true);
     }, 500);
-    
+
     setTimeout(() => {
       setSignalNetworkToDevice(false);
       setDeviceIsOn(newState);
@@ -28,38 +59,14 @@ export default function ActuatorDemo() {
   };
 
   return (
-    <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      gap: '20px',
-      marginTop: '20px',
-      padding: '30px 20px',
-      backgroundColor: 'rgba(0,0,0,0.3)',
-      borderRadius: '16px',
-      border: '1px solid var(--border-light)',
-      overflowX: 'auto',
-    }}>
-      <p style={{ margin: '0 0 10px 0', fontSize: '14px', color: 'var(--text-secondary)', textAlign: 'center' }}>
+    <div className="actuator-demo">
+      <p className="actuator-caption">
         จำลองการสั่งงานผ่าน 3 Layers: กดปุ่มที่แอป → ส่งผ่านเครือข่าย → บอร์ดสั่งพัดลมทำงาน
       </p>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0', width: '100%', justifyContent: 'center', minWidth: '600px' }}>
-        
-        {/* Service Layer */}
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '15px',
-          padding: '20px',
-          borderRadius: '12px',
-          border: '2px dashed var(--neon-purple)',
-          backgroundColor: 'rgba(128, 0, 128, 0.1)',
-          width: '200px'
-        }}>
-          <span style={{ color: 'var(--neon-purple)', fontWeight: 'bold', fontSize: '14px' }}>Service Layer</span>
-          
+      <div className="actuator-flow">
+
+        <Layer title="Service Layer" accent="var(--neon-purple)" tint="rgba(128, 0, 128, 0.1)" width="200px">
           <div style={{
             width: '80px',
             height: '140px',
@@ -73,7 +80,7 @@ export default function ActuatorDemo() {
             gap: '15px'
           }}>
             <span style={{ fontSize: '24px' }}>📱</span>
-            <button 
+            <button
               onClick={togglePower}
               style={{
                 padding: '8px 12px',
@@ -90,92 +97,21 @@ export default function ActuatorDemo() {
               {isOn ? 'ปิดพัดลม' : 'เปิดพัดลม'}
             </button>
           </div>
-        </div>
+        </Layer>
 
-        {/* Wire App -> Network */}
-        <div style={{
-          position: 'relative',
-          width: '60px',
-          height: '4px',
-          backgroundColor: '#4a5568',
-          overflow: 'hidden'
-        }}>
-          <AnimatePresence>
-            {signalAppToNetwork && (
-              <motion.div 
-                initial={{ x: '-100%' }}
-                animate={{ x: '100%' }}
-                transition={{ duration: 0.5, ease: 'linear' }}
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  backgroundColor: 'var(--neon-purple)',
-                  boxShadow: '0 0 8px var(--neon-purple)'
-                }}
-              />
-            )}
-          </AnimatePresence>
-        </div>
+        <Wire active={signalAppToNetwork} color="var(--neon-purple)" />
 
-        {/* Network Layer */}
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '15px',
-          padding: '20px',
-          borderRadius: '12px',
-          border: '2px dashed var(--neon-green)',
-          backgroundColor: 'rgba(0, 255, 0, 0.05)',
-          width: '160px'
-        }}>
-          <span style={{ color: 'var(--neon-green)', fontWeight: 'bold', fontSize: '14px' }}>Network Layer</span>
+        <Layer title="Network Layer" accent="var(--neon-green)" tint="rgba(0, 255, 0, 0.05)" width="160px">
           <div style={{ fontSize: '48px', filter: (signalAppToNetwork || signalNetworkToDevice) ? 'drop-shadow(0 0 15px var(--neon-green))' : 'none', transition: 'filter 0.3s' }}>
             ☁️
           </div>
           <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Internet / Wi-Fi</span>
-        </div>
+        </Layer>
 
-        {/* Wire Network -> Device */}
-        <div style={{
-          position: 'relative',
-          width: '60px',
-          height: '4px',
-          backgroundColor: '#4a5568',
-          overflow: 'hidden'
-        }}>
-          <AnimatePresence>
-            {signalNetworkToDevice && (
-              <motion.div 
-                initial={{ x: '-100%' }}
-                animate={{ x: '100%' }}
-                transition={{ duration: 0.5, ease: 'linear' }}
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  backgroundColor: 'var(--neon-blue)',
-                  boxShadow: '0 0 8px var(--neon-blue)'
-                }}
-              />
-            )}
-          </AnimatePresence>
-        </div>
+        <Wire active={signalNetworkToDevice} color="var(--neon-blue)" />
 
-        {/* Device Layer */}
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '15px',
-          padding: '20px',
-          borderRadius: '12px',
-          border: '2px dashed var(--neon-blue)',
-          backgroundColor: 'rgba(0, 191, 255, 0.1)',
-          width: '280px'
-        }}>
-          <span style={{ color: 'var(--neon-blue)', fontWeight: 'bold', fontSize: '14px' }}>Device Layer</span>
-          
-          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+        <Layer title="Device Layer" accent="var(--neon-blue)" tint="rgba(0, 191, 255, 0.1)" width="280px">
+          <div className="actuator-device-row">
             {/* Board */}
             <div style={{
               width: '60px',
@@ -190,6 +126,7 @@ export default function ActuatorDemo() {
               color: '#fff',
               fontWeight: 'bold',
               fontSize: '12px',
+              flexShrink: 0,
               boxShadow: (signalNetworkToDevice || deviceIsOn) ? '0 0 10px var(--neon-blue)' : 'none',
               transition: 'box-shadow 0.3s'
             }}>
@@ -199,15 +136,9 @@ export default function ActuatorDemo() {
               </span>
             </div>
 
-            {/* Wire Board -> Actuator */}
-            <div style={{
-              position: 'relative',
-              width: '40px',
-              height: '4px',
-              backgroundColor: '#4a5568',
-              overflow: 'hidden'
-            }}>
-              <motion.div 
+            {/* Wire Board -> Actuator: stays horizontal, the board and fan sit side by side */}
+            <div className="actuator-inner-wire">
+              <motion.div
                 animate={{ x: deviceIsOn ? ['-100%', '100%'] : '0%' }}
                 transition={{ repeat: Infinity, duration: 0.5, ease: 'linear' }}
                 style={{
@@ -220,12 +151,7 @@ export default function ActuatorDemo() {
             </div>
 
             {/* Actuator */}
-            <div style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: '10px'
-            }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
               <div style={{
                 width: '80px',
                 height: '80px',
@@ -258,7 +184,7 @@ export default function ActuatorDemo() {
               <span style={{ color: 'var(--text-secondary)', fontSize: '12px', fontWeight: 'bold' }}>Actuator (พัดลม)</span>
             </div>
           </div>
-        </div>
+        </Layer>
 
       </div>
     </div>

@@ -1,3 +1,15 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <text y=".9em" font-size="90">📖</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="IoT Interactive Learning">
+  <rect width="64" height="64" rx="14" fill="#0a0f1a"/>
+  <!-- chip pins -->
+  <g stroke="#00f0ff" stroke-width="4" stroke-linecap="round">
+    <path d="M7 23h7M7 32h7M7 41h7M50 23h7M50 32h7M50 41h7"/>
+  </g>
+  <!-- controller body -->
+  <rect x="14" y="16" width="36" height="32" rx="7" fill="none" stroke="#00f0ff" stroke-width="4.5"/>
+  <!-- signal leaving the board -->
+  <g fill="none" stroke="#39ff14" stroke-width="3.5" stroke-linecap="round">
+    <path d="M22.1 29.1a14 14 0 0 1 19.8 0"/>
+    <path d="M26.3 33.3a8 8 0 0 1 11.4 0"/>
+  </g>
+  <circle cx="32" cy="39" r="3" fill="#39ff14"/>
 </svg>
