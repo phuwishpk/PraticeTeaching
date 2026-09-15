@@ -218,3 +218,58 @@ h1, h2, h3, h4, h5, h6 {
     font-size: var(--font-size-base) !important;
   }
 }
+
+/* Responsive Layout Utilities */
+.resp-row {
+  display: flex;
+  flex-direction: row;
+  gap: 1.5rem;
+}
+
+@media (max-width: 768px) {
+  .resp-row {
+    flex-direction: column;
+  }
+
+  .glass-panel {
+    width: 95% !important;
+    padding: 1.5rem 1rem !important;
+  }
+}
+
+/* Phase Specific Background Themes */
+.bg-phase-lobby {
+  background: radial-gradient(circle at 30% 50%, #0d1a3a 0%, #0a0f1a 100%) !important;
+}
+
+.bg-phase-architecture {
+  background: radial-gradient(circle at 80% 20%, rgba(0, 240, 255, 0.15) 0%, #0a0f1a 80%) !important;
+}
+
+.bg-phase-problem {
+  background: radial-gradient(circle at 50% 80%, rgba(255, 60, 60, 0.15) 0%, #0a0f1a 70%) !important;
+}
+
+.bg-phase-digital {
+  background: radial-gradient(circle at 20% 80%, rgba(57, 255, 20, 0.12) 0%, #0a0f1a 80%) !important;
+}
+
+.bg-phase-analog {
+  background: radial-gradient(circle at 70% 70%, rgba(255, 165, 0, 0.15) 0%, #0a0f1a 80%) !important;
+}
+
+.bg-phase-catalog {
+  background: radial-gradient(circle at 50% 50%, rgba(176, 38, 255, 0.15) 0%, #0a0f1a 100%) !important;
+}
+
+.bg-phase-quiz {
+  background: radial-gradient(circle at 10% 10%, rgba(255, 0, 127, 0.15) 0%, #0a0f1a 70%) !important;
+}
+
+.bg-phase-logic {
+  background: radial-gradient(circle at 90% 90%, rgba(138, 43, 226, 0.15) 0%, #0a0f1a 80%) !important;
+}
+
+.bg-phase-wrapup {
+  background: radial-gradient(circle at 50% 20%, rgba(255, 215, 0, 0.15) 0%, #0a0f1a 80%) !important;
+}

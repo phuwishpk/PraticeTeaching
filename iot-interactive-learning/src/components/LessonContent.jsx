@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { lessons, sensorQuizExplanation } from '../content/lessons';
+import { lessons } from '../content/lessons';
 import { SectionExplanation, LessonRecap } from './LessonGraphics';
 import './LessonContent.css';
 
@@ -51,9 +51,6 @@ export default function LessonContent({ phase, quizRevealed = false }) {
       </div>
       {lesson.code && <pre className="lesson-code" aria-label="ตัวอย่างรหัสลำลอง"><code>{lesson.code}</code></pre>}
       {/* Example, caution, and check sections removed as requested */}
-      {phase === 6 && (quizRevealed
-        ? <aside className="lesson-callout" aria-live="polite"><h2>เฉลยพร้อมเหตุผล</h2><p>{sensorQuizExplanation}</p></aside>
-        : <p className="lesson-muted">ลองตอบในกิจกรรมก่อน แล้วดูเหตุผลเมื่อครูเปิดเฉลย</p>)}
       {lesson.sources && <footer className="lesson-sources">อ่านเพิ่มเติมจากผู้พัฒนาอุปกรณ์: {lesson.sources.map(source => <a key={source.url} href={source.url} target="_blank" rel="noreferrer">{source.label}</a>)}</footer>}
       <LessonRecap lesson={lesson} />
     </article>
@@ -152,18 +149,13 @@ export function LessonSlideshow({ phase, quizRevealed = false, controlledSlide, 
     });
   });
 
-  if (lesson.code || phase === 6) {
+  if (lesson.code) {
     slides.push({
-      id: 'example', // Reusing 'example' ID so index doesn't break if someone hardcoded it
+      id: 'example',
       label: 'รหัสลำลอง/เพิ่มเติม',
       content: (
         <div className="lesson-slide-body">
-          {lesson.code && <pre className="lesson-code" aria-label="ตัวอย่างรหัสลำลอง"><code>{lesson.code}</code></pre>}
-          {phase === 6 && (
-            quizRevealed
-              ? <div className="lesson-slide-callout" style={{ marginTop: 16 }}><h2>✅ เฉลยพร้อมเหตุผล</h2><p>{sensorQuizExplanation}</p></div>
-              : <p className="lesson-muted" style={{ marginTop: 16 }}>รอครูเปิดเฉลย...</p>
-          )}
+          <pre className="lesson-code" aria-label="ตัวอย่างรหัสลำลอง"><code>{lesson.code}</code></pre>
         </div>
       ),
     });

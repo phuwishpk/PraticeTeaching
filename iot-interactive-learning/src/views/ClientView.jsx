@@ -195,7 +195,7 @@ function ClientLobby() {
   // ── Step 1 UI: ใส่ PIN ──────────────────────────────────────────────────────
   if (!pinVerified) {
     return (
-      <div className="flex-center full-screen" style={{ background: 'radial-gradient(circle at 30% 50%, #0d1a3a 0%, #0a0f1a 100%)' }}>
+      <div className="flex-center full-screen">
         <motion.div initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
           className="glass-panel"
           style={{ padding: '3rem 2.5rem', width: '90%', maxWidth: 420, display: 'flex', flexDirection: 'column', gap: '1.5rem', alignItems: 'center' }}>
@@ -227,7 +227,7 @@ function ClientLobby() {
 
   // ── Step 2 UI: กรอกชื่อ ─────────────────────────────────────────────────────
   return (
-    <div className="flex-center full-screen" style={{ background: 'radial-gradient(circle at 30% 50%, #0d1a3a 0%, #0a0f1a 100%)' }}>
+    <div className="flex-center full-screen">
       <motion.div initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
         className="glass-panel"
         style={{ padding: '3rem 2.5rem', width: '90%', maxWidth: 420, display: 'flex', flexDirection: 'column', gap: '1.5rem', alignItems: 'center' }}>
@@ -1129,7 +1129,7 @@ export default function ClientView() {
   const { roomState, connected } = useRoom();
   const [myName, setMyName] = useState(() => sessionStorage.getItem('student_name') || '');
   const isJoined = Boolean(myName && roomState.students?.some(s => s.name === myName));
-  const [tab, setTab] = useState(TAB_ACTIVITY);
+  const tab = isJoined && roomState.presentation?.mode === 'lesson' ? TAB_LESSON : TAB_ACTIVITY;
   const myScore = ((roomState.chapterScores && roomState.chapterScores[roomState.chapter]) || {})[myName] || 0;
 
   // Clear stale session if server restarted or student was removed
@@ -1142,13 +1142,6 @@ export default function ClientView() {
 
   const currentChapterFlow = CHAPTER_FLOW[roomState.chapter] || CHAPTER_FLOW[1];
   const currentStepData = currentChapterFlow[roomState.step] || currentChapterFlow[0];
-  // Auto-follow teacher's presentation mode
-  useEffect(() => {
-    if (!myName || !isJoined) return;
-    const mode = roomState.presentation?.mode;
-    if (mode === 'lesson') setTab(TAB_LESSON);
-    else if (mode === 'activity') setTab(TAB_ACTIVITY);
-  }, [roomState.presentation?.mode, myName, isJoined]);
 
   const renderScene = () => {
     if (!myName || !isJoined) return <ClientLobby />;
@@ -1179,8 +1172,24 @@ export default function ClientView() {
     }
   };
 
+  const getPhaseBgClass = (phase) => {
+    switch (phase) {
+      case 1: return 'bg-phase-lobby';
+      case 2: return 'bg-phase-architecture';
+      case 3: return 'bg-phase-problem';
+      case 4: return 'bg-phase-digital';
+      case 5: return 'bg-phase-analog';
+      case 6: return 'bg-phase-catalog';
+      case 7: return 'bg-phase-quiz';
+      case 8: return 'bg-phase-logic';
+      case 9:
+      case 10: return 'bg-phase-wrapup';
+      default: return 'bg-phase-lobby';
+    }
+  };
+
   return (
-    <div style={{
+    <div className={getPhaseBgClass(currentStepData.lessonId)} style={{
       display: 'flex',
       flexDirection: 'column',
       height: '100vh',
@@ -1204,44 +1213,20 @@ export default function ClientView() {
             📡 {myName} &nbsp;|&nbsp; 🏆 {myScore} pts
           </span>
 
-          {/* Tab switcher */}
-          <div style={{ display: 'flex', gap: 5 }}>
-            <button
-              id="client-tab-activity"
-              onClick={() => setTab(TAB_ACTIVITY)}
-              style={{
-                padding: '5px 14px',
-                borderRadius: 20,
-                border: tab === TAB_ACTIVITY
-                  ? '1.5px solid var(--neon-blue)'
-                  : '1.5px solid rgba(255,255,255,.14)',
-                background: tab === TAB_ACTIVITY ? 'rgba(0,240,255,.12)' : 'transparent',
-                color: tab === TAB_ACTIVITY ? 'var(--neon-blue)' : 'var(--text-secondary)',
-                font: '600 .78rem Outfit, sans-serif',
-                cursor: 'pointer',
-                transition: '.2s ease',
-              }}
-            >
-              ⚡ กิจกรรม
-            </button>
-            <button
-              id="client-tab-lesson"
-              onClick={() => setTab(TAB_LESSON)}
-              style={{
-                padding: '5px 14px',
-                borderRadius: 20,
-                border: tab === TAB_LESSON
-                  ? '1.5px solid var(--neon-purple)'
-                  : '1.5px solid rgba(255,255,255,.14)',
-                background: tab === TAB_LESSON ? 'rgba(176,38,255,.12)' : 'transparent',
-                color: tab === TAB_LESSON ? '#d8adff' : 'var(--text-secondary)',
-                font: '600 .78rem Outfit, sans-serif',
-                cursor: 'pointer',
-                transition: '.2s ease',
-              }}
-            >
-              📖 เนื้อหา
-            </button>
+          {/* Mode Badge (Controlled strictly by teacher) */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            padding: '4px 12px',
+            borderRadius: 20,
+            background: tab === TAB_ACTIVITY ? 'rgba(0,240,255,.1)' : 'rgba(176,38,255,.1)',
+            border: `1px solid ${tab === TAB_ACTIVITY ? 'rgba(0,240,255,.3)' : 'rgba(176,38,255,.3)'}`,
+            color: tab === TAB_ACTIVITY ? 'var(--neon-blue)' : '#d8adff',
+            fontSize: '.75rem',
+            fontWeight: '600',
+          }}>
+            {tab === TAB_ACTIVITY ? '🎮 กิจกรรม' : '📖 กำลังเรียนเนื้อหา'}
           </div>
         </div>
       )}
