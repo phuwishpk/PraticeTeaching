@@ -37,7 +37,7 @@ export function createRoomApi() {
       const localIp = Object.values(networkInterfaces()).flat().find(address => address?.family === 'IPv4' && !address.internal && /^(192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.)/.test(address.address))?.address;
       const origin = new URL(process.env.PUBLIC_ORIGIN || `http://${req.headers.host}`);
       if (!process.env.PUBLIC_ORIGIN && ['localhost', '127.0.0.1', '[::1]'].includes(origin.hostname) && localIp) origin.hostname = localIp;
-      return json(res, 200, { joinUrl: new URL('/client', origin).href });
+      return json(res, 200, { joinUrl: new URL('/', origin).href });
     }
     if (req.method !== 'POST' || path !== '/api/room/actions') return json(res, 404, { error: 'ไม่พบปลายทาง' });
     try {

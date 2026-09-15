@@ -1,3 +1,4 @@
+import { SignalActivityReview } from '../components/SignalGraphics';
 import { SensorCatalog } from '../components/LessonGraphics';
 import React, { useState, useRef, useEffect } from 'react';
 import { useRoom } from '../context/RoomContext';
@@ -486,6 +487,7 @@ function ClientDigital() {
           ⏰ หมดเวลา! คำตอบที่ถูกคือ {options.find(o => o.id === correctAnswer)?.label}
         </motion.div>
       )}
+      <SignalActivityReview kind="digital" revealed={showResults} />
     </div>
   );
 }
@@ -513,7 +515,7 @@ function ClientAnalog() {
 
   const options = [
     { id: 'binary', label: 'มีแค่สถานะเปิดกับปิด (0 กับ 1)', color: '#ffb86c' },
-    { id: 'continuous', label: 'มีค่าต่อเนื่อง เช่น แรงดันที่ค่อย ๆ เปลี่ยน', color: '#bd93f9' },
+    { id: 'continuous', label: 'มีค่าต่อเนื่อง เช่น แรงดันที่ค่อย ๆ เปลี่ยน', color: '#ffc46a' },
     { id: 'faster', label: 'ส่งข้อมูลได้เร็วกว่ามาก', color: '#ff79c6' },
     { id: 'less_wires', label: 'ใช้สายไฟน้อยกว่า', color: '#8be9fd' }
   ];
@@ -525,7 +527,7 @@ function ClientAnalog() {
         <CountdownTimer startTime={roomState.questionStartTime} duration={30} size={50} />
         <div>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>คำถาม</div>
-          <div style={{ fontWeight: 'bold', color: 'var(--neon-blue)', fontSize: '1rem' }}>สัญญาณ Analog แตกต่างจาก Digital อย่างไร?</div>
+          <div style={{ fontWeight: 'bold', color: '#ffd08a', fontSize: '1rem' }}>สัญญาณ Analog แตกต่างจาก Digital อย่างไร?</div>
           <div style={{ fontSize: '0.75rem', color: isTimeUp ? (totalVotes >= totalStudents ? 'var(--neon-green)' : 'var(--text-secondary)') : 'var(--neon-blue)' }}>
             {isTimeUp ? `โหวตแล้ว ${totalVotes} / ${totalStudents} คน` : 'กำลังเปิดรับคำตอบ... ⏳'}
           </div>
@@ -590,6 +592,7 @@ function ClientAnalog() {
           ⏰ หมดเวลา! คำตอบที่ถูกคือ {options.find(o => o.id === correctAnswer)?.label}
         </motion.div>
       )}
+      <SignalActivityReview kind="analog" revealed={showResults} />
     </div>
   );
 }

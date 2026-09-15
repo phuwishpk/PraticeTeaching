@@ -7,7 +7,7 @@ export function RoomProvider({ children }) {
   const [roomState, setRoomState] = useState(createRoomState);
   const [connected, setConnected] = useState(false);
   const [error, setError] = useState('');
-  const [joinUrl, setJoinUrl] = useState(`${window.location.origin}/client`);
+  const [joinUrl, setJoinUrl] = useState(`${window.location.origin}/`);
   const version = useRef({ instance: null, revision: -1 });
   const queue = useRef(Promise.resolve());
   const acceptSnapshot = useCallback(snapshot => {

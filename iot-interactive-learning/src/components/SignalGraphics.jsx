@@ -128,3 +128,12 @@ export default function SignalGraphic({ type }) {
   const [family, mode] = type.split(':');
   return family === 'digital' ? <DigitalSignal mode={mode} /> : <AnalogSignal mode={mode} />;
 }
+
+export function SignalActivityReview({ kind, revealed }) {
+  if (!revealed) return null;
+  return <section className="signal-activity-review" aria-label="ทดลองสัญญาณหลังสรุปผลโหวต">
+    <h2>ลองปรับสัญญาณ แล้วอธิบายสิ่งที่เห็น</h2>
+    <p>แบบจำลองนี้ให้ทดลองเพิ่มเติม ผลโหวตของคุณยังคงเดิม</p>
+    {kind === 'digital' ? <DigitalSignal /> : <AnalogSignal />}
+  </section>;
+}

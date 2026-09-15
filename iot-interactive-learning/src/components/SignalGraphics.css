@@ -95,3 +95,13 @@
   .signal-chart { padding: 4px; }
   .signal-chart text { font-size: 18px; }
 }
+.signal-activity-review { width: min(100%, 920px); min-width: 0; text-align: left; }
+.signal-activity-review > h2 { font-size: 1.2rem; line-height: 1.8; color: #e7eff7; }
+.signal-activity-review > p { font-size: .9rem; line-height: 1.8; color: #adbdcf; margin: 8px 0 20px; }
+.signal-analog-title { color: #ffd08a; text-shadow: 0 0 16px #ffbf5026; }
+[data-signal="analog"] .lesson-slide-section-title,
+[data-signal="analog"] .lesson-eyebrow,
+[data-signal="analog"] .lesson-slide-goals h2 { color: #ffd08a; }
+[data-signal="analog"] .lesson-slide-goals { border-left-color: #ffc46a; background: #ffc46a0c; }
+[data-signal="analog"] .lesson-nav-page-btn.active { color: #ffd08a; border-color: #ffd08a; background: #ffd08a18; box-shadow: 0 0 10px #ffd08a16; }
+[data-signal="analog"] .lesson-nav-arrow { color: #ffd08a; border-color: #ffd08a66; background: #ffd08a0c; }

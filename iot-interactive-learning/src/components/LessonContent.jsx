@@ -10,7 +10,7 @@ export default function LessonContent({ phase, quizRevealed = false }) {
   if (!lesson) return null;
 
   return (
-    <article className="lesson-content" aria-labelledby={`lesson-title-${phase}`} lang="th">
+    <article data-signal={phase === 4 ? 'digital' : phase === 5 ? 'analog' : undefined} className="lesson-content" aria-labelledby={`lesson-title-${phase}`} lang="th">
       <header className="lesson-header">
         <span className="lesson-eyebrow">IOT LAB · บทที่ {chapter} / 10</span>
         <h1 id={`lesson-title-${phase}`}>{lesson.title}</h1>
@@ -222,7 +222,7 @@ export function LessonSlideshow({ phase, quizRevealed = false, controlledSlide, 
   };
 
   return (
-    <div className="lesson-slideshow" lang="th">
+    <div className="lesson-slideshow" lang="th" data-signal={phase === 4 ? 'digital' : phase === 5 ? 'analog' : undefined}>
       {/* Slide content */}
       <div className="lesson-slideshow-stage">
         <AnimatePresence mode="wait" custom={direction}>

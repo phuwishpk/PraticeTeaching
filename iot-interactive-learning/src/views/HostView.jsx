@@ -1,3 +1,4 @@
+import { SignalActivityReview } from '../components/SignalGraphics';
 import { SensorCatalog } from '../components/LessonGraphics';
 import React, { useEffect, useState, useMemo } from 'react';
 import { useRoom } from '../context/RoomContext';
@@ -372,6 +373,7 @@ function HostDigital() {
         </div>
 
       </div>
+      <SignalActivityReview kind="digital" revealed={showResults} />
     </div>
   );
 }
@@ -405,20 +407,20 @@ function HostAnalog() {
     <div className="flex-center full-screen" style={{ flexDirection: 'column', gap: '2rem' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
         <CountdownTimer startTime={roomState.questionStartTime} duration={30} size={70} />
-        <h1 className="text-glow-blue" style={{ fontSize: '3rem', margin: 0 }}>สัญญาณค่าต่อเนื่อง (Analog)</h1>
+        <h1 className="signal-analog-title" style={{ fontSize: '3rem', margin: 0 }}>สัญญาณค่าต่อเนื่อง (Analog)</h1>
       </div>
       
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2rem', width: '95%', maxWidth: 1200, minHeight: '60vh', justifyContent: 'center' }}>
         
         {/* Left: Theory */}
         <div className="glass-panel" style={{ flex: 1, padding: '2.5rem', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-          <div style={{ padding: '2rem', border: '2px solid var(--neon-purple)', borderRadius: 16, background: 'rgba(188,19,254,0.05)' }}>
-            <h3 style={{ color: 'var(--neon-purple)', margin: '0 0 1rem 0', fontSize: '1.8rem' }}>2. สัญญาณ Analog</h3>
+          <div style={{ padding: '2rem', border: '2px solid #ffd08a', borderRadius: 16, background: 'rgba(255,196,106,0.06)' }}>
+            <h3 style={{ color: '#ffd08a', margin: '0 0 1rem 0', fontSize: '1.8rem' }}>2. สัญญาณ Analog</h3>
             <p style={{ color: 'white', fontSize: '1.2rem', margin: 0, lineHeight: 1.6 }}>
               สัญญาณแบบนี้เหมาะกับสิ่งที่เปลี่ยนแปลงตลอดเวลา เช่น ความสว่าง หรือ อุณหภูมิ
             </p>
           </div>
-          <h2 style={{ textAlign: 'center', color: 'var(--neon-purple)' }}>คำถาม: สัญญาณ Analog แตกต่างจาก Digital อย่างไร?</h2>
+          <h2 style={{ textAlign: 'center', color: '#ffd08a' }}>คำถาม: สัญญาณ Analog แตกต่างจาก Digital อย่างไร?</h2>
         </div>
 
         {/* Right: Activity */}
@@ -455,6 +457,7 @@ function HostAnalog() {
         </div>
 
       </div>
+      <SignalActivityReview kind="analog" revealed={showResults} />
     </div>
   );
 }
