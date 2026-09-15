@@ -12,13 +12,13 @@ export default function LessonContent({ phase, quizRevealed = false }) {
   return (
     <article data-signal={phase === 4 ? 'digital' : phase === 5 ? 'analog' : undefined} className="lesson-content" aria-labelledby={`lesson-title-${phase}`} lang="th">
       <header className="lesson-header">
-        <span className="lesson-eyebrow">IOT LAB · บทที่ {chapter} / 10</span>
+        <span className="lesson-eyebrow">IOT LAB · ส่วนที่ {chapter} / 10</span>
         <h1 id={`lesson-title-${phase}`}>{lesson.title}</h1>
         <p>{lesson.intro}</p>
       </header>
       {lesson.goals && (
         <section className="lesson-goals" aria-label="เป้าหมายการเรียนรู้">
-          <h2>เมื่อจบบทนี้ คุณจะ…</h2>
+          <h2>เมื่อจบเนื้อหานี้ คุณจะ…</h2>
           <ul>{lesson.goals.map(goal => <li key={goal}>{goal}</li>)}</ul>
         </section>
       )}
@@ -71,7 +71,7 @@ export function StudentLessonNotes({ phase, quizRevealed }) {
   const chapter = phase;
   return (
     <details className="student-lesson-notes" key={phase}>
-      <summary>📖 อ่านคำอธิบายบทที่ {chapter} เพิ่มเติม</summary>
+      <summary>📖 อ่านคำอธิบายส่วนที่ {chapter} เพิ่มเติม</summary>
       <LessonContent phase={phase} quizRevealed={quizRevealed} />
     </details>
   );
@@ -108,15 +108,15 @@ export function LessonSlideshow({ phase, quizRevealed = false, controlledSlide, 
   // Slide 0: title + intro + goals
   slides.push({
     id: 'intro',
-    label: 'บทนำ',
+    label: 'เริ่มต้น',
     content: (
       <div className="lesson-slide-body">
-        <span className="lesson-eyebrow">IOT LAB · บทที่ {chapter}</span>
+        <span className="lesson-eyebrow">IOT LAB · ส่วนที่ {chapter}</span>
         <h1 className="lesson-slide-title">{lesson.title}</h1>
         <p className="lesson-slide-intro">{lesson.intro}</p>
         {lesson.goals && (
           <div className="lesson-slide-goals">
-            <h2>🎯 เมื่อจบบทนี้ คุณจะ…</h2>
+            <h2>🎯 เมื่อจบเนื้อหานี้ คุณจะ…</h2>
             <ul>{lesson.goals.map(g => <li key={g}>{g}</li>)}</ul>
           </div>
         )}

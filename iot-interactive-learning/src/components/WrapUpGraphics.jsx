@@ -92,7 +92,7 @@ export function WrapUpOverview() {
 }
 
 export function WrapUpActivity() {
-  return <div className="wrap-activity" lang="th"><header><span>WRAP-UP · เชื่อมสิ่งที่เรียน</span><h2>แต่ละส่วนทำหน้าที่ต่างกัน</h2><p>ลองเปลี่ยนสภาพดิน แล้วตามดูข้อมูล คำสั่ง และผลที่ผู้ใช้เห็น</p></header><WrapUpOverview /><SignalComparison /><aside className="wrap-final-goal"><CircleCheck aria-hidden="true" /><p>เมื่อจบบทนี้ ควรบอกได้ว่าเซ็นเซอร์วัดอะไร บอร์ดตัดสินใจอย่างไร และ Output แต่ละตัวทำให้เกิดผลอะไร</p></aside></div>;
+  return <div className="wrap-activity" lang="th"><header><span>WRAP-UP · เชื่อมสิ่งที่เรียน</span><h2>แต่ละส่วนทำหน้าที่ต่างกัน</h2><p>ลองเปลี่ยนสภาพดิน แล้วตามดูข้อมูล คำสั่ง และผลที่ผู้ใช้เห็น</p></header><WrapUpOverview /><SignalComparison /><aside className="wrap-final-goal"><CircleCheck aria-hidden="true" /><p>เมื่อจบเนื้อหานี้ ควรบอกได้ว่าเซ็นเซอร์วัดอะไร บอร์ดตัดสินใจอย่างไร และ Output แต่ละตัวทำให้เกิดผลอะไร</p></aside></div>;
 }
 
 export default function WrapUpGraphic({ type }) {

@@ -43,7 +43,7 @@ function ClientLobby() {
       <div className="flex-center full-screen" style={{ flexDirection: 'column', gap: '2rem' }}>
         <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} style={{ fontSize: '5rem' }}>🎉</motion.div>
         <h2 className="text-glow-blue" style={{ fontSize: '2rem' }}>สวัสดี, {myName}!</h2>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '1.2rem' }}>รอคุณครูเริ่มบทเรียน...</p>
+        <p style={{ color: 'var(--text-secondary)', fontSize: '1.2rem' }}>รอคุณครูเริ่มเนื้อหา...</p>
 
         {/* เพื่อนในห้อง */}
         {roomState.students.length > 1 && (

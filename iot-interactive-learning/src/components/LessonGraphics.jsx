@@ -82,15 +82,15 @@ export function SectionExplanation({ section }) {
 }
 
 export function LessonRecap({ lesson }) {
-  return <section className="lesson-recap" aria-label="สรุปและจุดประสงค์การเรียนรู้ท้ายบท">
-    <span className="lesson-eyebrow">ทบทวนก่อนจบบท</span>
+  return <section className="lesson-recap" aria-label="สรุปและจุดประสงค์การเรียนรู้ท้ายเนื้อหา">
+    <span className="lesson-eyebrow">ทบทวนก่อนจบ</span>
     <h2 className="lesson-slide-section-title">{lesson.recap.title}</h2>
     {lesson.wrapOverview ? <WrapUpOverview /> : lesson.signalComparison ? <SignalComparison /> : <FlowGraphic steps={lesson.recap.diagram} label="ภาพรวมที่ควรจำ" />}
     {lesson.deviceIds && <div className="device-recap-grid">{lesson.deviceIds.map(id => {
       const device = devices[id];
       return <div className="device-recap-item" key={id}><DeviceIcon device={device} size={28} /><div><strong>{device.name}</strong><span>{device.subtitle}</span></div></div>;
     })}</div>}
-    <div className="lesson-outcomes"><h3>จุดประสงค์ของผู้เรียนเมื่อจบบทนี้</h3><p>ลองอธิบายด้วยคำของตัวเอง หากยังตอบไม่ได้ ให้ย้อนกลับไปดูหัวข้อที่เกี่ยวข้อง</p><ul>{lesson.goals.map(goal => <li key={goal}><CheckCircle2 size={20} aria-hidden="true" /><span>{goal}</span></li>)}</ul></div>
+    <div className="lesson-outcomes"><h3>จุดประสงค์ของผู้เรียนเมื่อจบเนื้อหานี้</h3><p>ลองอธิบายด้วยคำของตัวเอง หากยังตอบไม่ได้ ให้ย้อนกลับไปดูหัวข้อที่เกี่ยวข้อง</p><ul>{lesson.goals.map(goal => <li key={goal}><CheckCircle2 size={20} aria-hidden="true" /><span>{goal}</span></li>)}</ul></div>
   </section>;
 }
 

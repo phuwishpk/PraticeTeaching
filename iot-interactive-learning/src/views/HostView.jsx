@@ -5,6 +5,9 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useRoom } from '../context/RoomContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
+import ReactConfetti from 'react-confetti';
+import { useWindowSize } from 'react-use';
+import { LessonSlideshow } from '../components/LessonContent';
 import { ImageWithModal } from '../components/ImageWithModal';
 import { sensorQuizExplanation } from '../content/lessons';
 import CountdownTimer from '../components/CountdownTimer';
@@ -100,8 +103,8 @@ function HostArchitecture() {
   const showResults = isTimeUp || isAllAnswered;
 
   const items = [
-    { id: 'esp32', name: 'บอร์ด ESP32', icon: '🎛️', correct: 'device' },
-    { id: 'wifi', name: 'Wi-Fi Router', icon: '📶', correct: 'network' },
+    { id: 'esp32', name: 'บอร์ด ESP32', icon: '🎛️', image: '/images/esp32_board_1789207904514.jpg', correct: 'device' },
+    { id: 'wifi', name: 'Wi-Fi Router', icon: '📶', image: '/wifi_router_1789451961348.jpg', correct: 'network' },
     { id: 'cloud', name: 'Cloud Server', icon: '☁️', correct: 'service' }
   ];
   
@@ -126,10 +129,16 @@ function HostArchitecture() {
         {/* Left: Voting Control */}
         <div className="glass-panel flex-center" style={{ flex: 1, padding: '2rem', flexDirection: 'column', gap: '1.5rem' }}>
           <h2 style={{ color: 'var(--text-secondary)', margin: 0 }}>ส่งคำถามให้นักเรียน:</h2>
-          <motion.div key={currentItem} initial={{ scale: 0 }} animate={{ scale: 1 }}
-            style={{ fontSize: '8rem', filter: 'drop-shadow(0 0 20px rgba(0,240,255,0.5))' }}>
-            {activeItemData.icon}
-          </motion.div>
+          {activeItemData.image ? (
+            <div style={{ margin: '2rem 0' }}>
+              <ImageWithModal src={activeItemData.image} alt={activeItemData.name} style={{ width: '200px', height: '200px', objectFit: 'cover', borderRadius: '24px', boxShadow: '0 0 40px rgba(0, 240, 255, 0.3)' }} />
+            </div>
+          ) : (
+            <motion.div key={currentItem} initial={{ scale: 0 }} animate={{ scale: 1 }}
+              style={{ fontSize: '8rem', filter: 'drop-shadow(0 0 20px rgba(0,240,255,0.5))' }}>
+              {activeItemData.icon}
+            </motion.div>
+          )}
           <h2 style={{ margin: 0, color: 'var(--neon-blue)', fontSize: '2rem' }}>{activeItemData.name}</h2>
           
           <div style={{ marginTop: '1rem', color: showResults ? 'var(--text-secondary)' : 'var(--neon-blue)' }}>
@@ -666,27 +675,8 @@ function HostWrapUp() {
 // ─── Scene 10: Podium ──────────────────────────────────────────────────────
 // ─── Confetti Particles ──────────────────────────────────────────────────────
 function Confetti() {
-  const particles = useMemo(() => Array.from({ length: 50 }, (_, i) => ({
-    id: i,
-    x: Math.random() * 100,
-    delay: Math.random() * 2,
-    duration: 2 + Math.random() * 2,
-    color: ['#ffd700', '#ff4d4d', '#50fa7b', '#8be9fd', '#ff79c6', '#ffb86c'][Math.floor(Math.random() * 6)],
-    size: 6 + Math.random() * 8,
-    rotation: Math.random() * 360,
-  })), []);
-  return (
-    <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden', zIndex: 0 }}>
-      {particles.map(p => (
-        <motion.div key={p.id}
-          initial={{ y: -20, x: `${p.x}%`, opacity: 1, rotate: 0 }}
-          animate={{ y: '110vh', opacity: [1, 1, 0], rotate: p.rotation + 720 }}
-          transition={{ duration: p.duration, delay: p.delay, ease: 'easeIn', repeat: Infinity, repeatDelay: Math.random() * 3 }}
-          style={{ position: 'absolute', width: p.size, height: p.size * 0.6, background: p.color, borderRadius: 2 }}
-        />
-      ))}
-    </div>
-  );
+  const { width, height } = useWindowSize();
+  return <ReactConfetti width={width} height={height} numberOfPieces={400} gravity={0.15} style={{ zIndex: 9999, position: 'fixed', top: 0, left: 0 }} />;
 }
 
 function HostPodium() {
