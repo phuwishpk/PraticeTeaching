@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { Moon, Sun, House, Lightbulb, ArrowRight, CircleCheck } from 'lucide-react';
 import { useRoom } from '../context/RoomContext';
 import { problemActivity, isProblemOption } from '../content/problemActivity';
+import { answerProgress } from '../../shared/roomState';
+import { getStudentName } from '../session';
 import CountdownTimer from './CountdownTimer';
 import './ProblemActivity.css';
 
@@ -16,7 +18,7 @@ function PlanSteps({ option }) {
 export default function ProblemActivity({ audience = 'student' }) {
   const { roomState, voteProblem, error, connected } = useRoom();
   const teacher = audience === 'teacher';
-  const name = teacher ? null : sessionStorage.getItem('student_name');
+  const name = teacher ? null : getStudentName();
   const startTime = roomState.questionStartTime;
   const [expiredAt, setExpiredAt] = useState(() => Date.now() >= startTime + problemActivity.durationSeconds * 1000 ? startTime : null);
   const [submitting, setSubmitting] = useState(false);
@@ -27,11 +29,12 @@ export default function ProblemActivity({ audience = 'student' }) {
   }, [startTime]);
 
   const votes = Object.fromEntries(Object.entries(roomState.problemVotes || {}).filter(([, vote]) => isProblemOption(vote)));
-  const total = Object.keys(votes).length;
-  const students = roomState.students.length;
+  // Counted against the roster taken when the question opened, so a latecomer cannot
+  // drag the class back out of the reveal.
+  const { answered: total, total: students, allAnswered } = answerProgress(roomState, votes);
   const myVote = teacher ? undefined : votes[name];
   const expired = expiredAt === startTime;
-  const revealed = expired || (students > 0 && total >= students);
+  const revealed = expired || allAnswered;
   const answer = problemActivity.options.find(option => option.id === problemActivity.correctId);
 
   const submit = async id => {
@@ -41,7 +44,7 @@ export default function ProblemActivity({ audience = 'student' }) {
   };
 
   return <section className={`problem-activity ${teacher ? 'problem-teacher' : 'problem-student'}`} lang="th">
-    <header className="problem-heading"><div><span>กิจกรรมในห้องเรียน · Multiple Choice · วิเคราะห์โจทย์</span><h1>{problemActivity.title}</h1></div><CountdownTimer startTime={startTime} duration={problemActivity.durationSeconds} size={64} stopped={students > 0 && total >= students} /></header>
+    <header className="problem-heading"><div><span>กิจกรรมในห้องเรียน · Multiple Choice · วิเคราะห์โจทย์</span><h1>{problemActivity.title}</h1></div><CountdownTimer startTime={startTime} duration={problemActivity.durationSeconds} size={64} stopped={allAnswered} /></header>
     <div className="problem-scenario"><p>{problemActivity.scenario}</p><div className="problem-scene-pair">
       <div className="problem-night"><Moon aria-hidden="true" /><House aria-hidden="true" /><Lightbulb aria-hidden="true" /><strong>มืด → ไฟเปิด</strong></div>
       <div className="problem-day"><Sun aria-hidden="true" /><House aria-hidden="true" /><Lightbulb aria-hidden="true" /><strong>สว่าง → ไฟปิด</strong></div>

@@ -9,9 +9,9 @@ import { CHAPTER_FLOW, createRoomState } from '../shared/roomState.js';
 test('teacher and student pages render with the current chapter/step room state', async (t) => {
   // Model browser storage only for rendering; never touch an actual user's session.
   const entries = new Map();
-  const oldStorage = Object.getOwnPropertyDescriptor(globalThis, 'sessionStorage');
+  const oldStorage = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
   const oldWindow = Object.getOwnPropertyDescriptor(globalThis, 'window');
-  Object.defineProperty(globalThis, 'sessionStorage', { configurable: true, value: {
+  Object.defineProperty(globalThis, 'localStorage', { configurable: true, value: {
     getItem: key => entries.get(key) ?? null,
     setItem: (key, value) => entries.set(key, value),
     removeItem: key => entries.delete(key),
@@ -37,7 +37,7 @@ test('teacher and student pages render with the current chapter/step room state'
     const noop = () => {};
     const renderPage = Component => renderToStaticMarkup(React.createElement(MotionConfig, { isStatic: true }, React.createElement(Component)));
     const provide = roomState => setTestRoom({ roomState, connected: true, joinUrl: 'http://localhost:5175/',
-      setChapter: noop, setStep: noop, resetRoom: noop, setPresentation: noop,
+      setJoinOpen: noop, removeStudent: noop, setChapter: noop, setStep: noop, resetRoom: noop, setPresentation: noop,
       addFloatingEmoji: noop, sendFloatingEmoji: noop, setVoteItem: noop, submitVote: noop,
       voteProblem: noop, voteDigital: noop, voteAnalog: noop, voteQuiz: noop, voteLogic: noop,
       voteChoice: noop, setCatalogQuestion: noop, voteCatalog: noop, revealQuiz: noop,
@@ -108,7 +108,7 @@ test('teacher and student pages render with the current chapter/step room state'
     });
   } finally {
     await server.close();
-    if (oldStorage) Object.defineProperty(globalThis, 'sessionStorage', oldStorage); else delete globalThis.sessionStorage;
+    if (oldStorage) Object.defineProperty(globalThis, 'localStorage', oldStorage); else delete globalThis.localStorage;
     if (oldWindow) Object.defineProperty(globalThis, 'window', oldWindow); else delete globalThis.window;
   }
 });

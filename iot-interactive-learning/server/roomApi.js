@@ -1,6 +1,12 @@
-import { randomUUID } from 'node:crypto';
+import { randomUUID, timingSafeEqual } from 'node:crypto';
 import { networkInterfaces } from 'node:os';
-import { applyRoomAction, createRoomState } from '../shared/roomState.js';
+import { applyRoomAction, createRoomState, STUDENT_ACTIONS, studentKey } from '../shared/roomState.js';
+
+const safeEqual = (candidate, secret) => {
+  const left = Buffer.from(String(candidate ?? ''));
+  const right = Buffer.from(String(secret));
+  return left.length === right.length && timingSafeEqual(left, right);
+};
 
 export function createRoomApi() {
   let state = createRoomState();
@@ -8,7 +14,14 @@ export function createRoomApi() {
   const instance = randomUUID();
   const streams = new Set();
   const timers = new Set();
-  const snapshot = () => ({ instance, revision, state });
+  // serverNow lets each browser measure its own clock drift, so a phone set to the wrong
+  // time still sees — and is judged by — the same countdown as everybody else.
+  const snapshot = () => ({ instance, revision, state, serverNow: Date.now() });
+
+  // Student actions are attributed by token, never by the name in the request body.
+  const tokenByStudent = new Map(); // studentKey(name) -> token
+  const nameByToken = new Map();    // token -> display name
+
   let publishTimeout = null;
   const publish = next => {
     if (next === state) return;
@@ -41,6 +54,19 @@ export function createRoomApi() {
   }, 10000);
   cleanupRateLimit.unref();
 
+  async function readBody(req) {
+    let body = '';
+    for await (const chunk of req) {
+      body += chunk;
+      if (Buffer.byteLength(body) > 16384) {
+        const error = new Error('ข้อมูลมีขนาดใหญ่เกินไป');
+        error.status = 413;
+        throw error;
+      }
+    }
+    return JSON.parse(body);
+  }
+
   async function middleware(req, res, next = () => { res.writeHead(404); res.end(); }) {
     const path = req.url?.split('?')[0];
     if (!path?.startsWith('/api/room/')) return next();
@@ -58,7 +84,7 @@ export function createRoomApi() {
       return json(res, 200, { joinUrl: new URL('/', origin).href });
     }
     if (req.method !== 'POST' || path !== '/api/room/actions') return json(res, 404, { error: 'ไม่พบปลายทาง' });
-    
+
     // Rate Limiting
     const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
     const now = Date.now();
@@ -73,16 +99,47 @@ export function createRoomApi() {
     }
 
     try {
-      let body = '';
-      for await (const chunk of req) {
-        body += chunk;
-        if (Buffer.byteLength(body) > 16384) return json(res, 413, { error: 'ข้อมูลมีขนาดใหญ่เกินไป' });
-      }
-      const action = JSON.parse(body);
+      const action = await readBody(req);
       if (!action || typeof action.type !== 'string' || (action.payload !== undefined && (!action.payload || typeof action.payload !== 'object'))) throw new Error('ข้อมูลคำสั่งไม่ถูกต้อง');
       if (action.type === 'expireEmoji') throw new Error('ไม่พบคำสั่งนี้');
       action.payload = { ...action.payload, id: randomUUID(), x: Math.random() * 90 };
+
+      if (action.type === 'join') {
+        const key = studentKey(action.payload.name);
+        const issued = tokenByStudent.get(key);
+        const seated = state.students.some(student => studentKey(student.name) === key);
+        // Returning to a seat needs the token that was handed out for it; taking a free
+        // name needs nothing. That keeps a reopened tab working without letting anyone
+        // answer under a classmate's name.
+        if (seated && !(issued && safeEqual(req.headers['x-student-token'], issued))) {
+          return json(res, 409, { error: 'ชื่อนี้มีผู้ใช้แล้ว กรุณาเพิ่มชื่อหรือเลขที่ หรือแจ้งคุณครูให้คืนชื่อนี้ให้คุณ' });
+        }
+        publish(applyRoomAction(state, action));
+        const student = state.students.find(entry => studentKey(entry.name) === key);
+        const token = issued || randomUUID();
+        tokenByStudent.set(key, token);
+        nameByToken.set(token, student.name);
+        // The seat keeps the spelling it was first created with, so "ann" rejoining "Ann" is told which name its answers are filed under.
+        return json(res, 200, { ...snapshot(), studentToken: token, studentName: student.name });
+      }
+
+      if (STUDENT_ACTIONS.has(action.type)) {
+        const name = nameByToken.get(req.headers['x-student-token']);
+        if (!name) return json(res, 401, { error: 'กรุณาเข้าห้องเรียนอีกครั้ง' });
+        action.payload.name = name;
+      }
+
       publish(applyRoomAction(state, action));
+      if (action.type === 'removeStudent') {
+        const key = studentKey(action.payload.name);
+        const token = tokenByStudent.get(key);
+        tokenByStudent.delete(key);
+        if (token) nameByToken.delete(token);
+      }
+      if (action.type === 'reset') {
+        tokenByStudent.clear();
+        nameByToken.clear();
+      }
       json(res, 200, snapshot());
       if (action.type === 'emoji') {
         const timer = setTimeout(() => {
@@ -93,7 +150,7 @@ export function createRoomApi() {
         timers.add(timer);
       }
     } catch (error) {
-      json(res, 400, { error: error instanceof SyntaxError ? 'ข้อมูลคำสั่งไม่ถูกต้อง' : error.message });
+      json(res, error.status || 400, { error: error instanceof SyntaxError ? 'ข้อมูลคำสั่งไม่ถูกต้อง' : error.message });
     }
   }
   return {
@@ -105,6 +162,8 @@ export function createRoomApi() {
       for (const res of streams) res.end();
       streams.clear();
       rateLimitMap.clear();
+      tokenByStudent.clear();
+      nameByToken.clear();
     },
   };
 }

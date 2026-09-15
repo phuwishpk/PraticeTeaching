@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { CircleCheck } from 'lucide-react';
 import { useRoom } from '../context/RoomContext';
 import { classroomChoiceActivities } from '../content/classroomChoiceActivities';
+import { answerProgress } from '../../shared/roomState';
+import { getStudentName } from '../session';
 import CountdownTimer from './CountdownTimer';
 import './ClassroomChoiceActivity.css';
 
@@ -9,13 +11,13 @@ export default function ClassroomChoiceActivity({ activityId, audience = 'studen
   const { roomState, voteChoice, connected, error } = useRoom();
   const activity = classroomChoiceActivities[activityId];
   const teacher = audience === 'teacher';
-  const name = teacher ? null : sessionStorage.getItem('student_name');
+  const name = teacher ? null : getStudentName();
   const startTime = roomState.questionStartTime;
   const votes = roomState.choiceVotes?.[activityId] || {};
-  const totalVotes = Object.keys(votes).length;
-  const totalStudents = roomState.students.length;
+  // Counted against the roster taken when the question opened, so a latecomer cannot
+  // drag the class back out of the reveal.
+  const { answered: totalVotes, total: totalStudents, allAnswered } = answerProgress(roomState, votes);
   const myVote = teacher ? null : votes[name];
-  const allAnswered = totalStudents > 0 && totalVotes >= totalStudents;
   const [expiredAt, setExpiredAt] = useState(() => Date.now() >= startTime + activity.durationSeconds * 1000 ? startTime : null);
   const [submitting, setSubmitting] = useState(false);
 

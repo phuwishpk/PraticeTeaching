@@ -1,28 +1,22 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { problemActivity } from '../src/content/problemActivity.js';
-import { CHAPTER_FLOW, createRoomState, applyRoomAction } from '../shared/roomState.js';
+import { act, openActivity } from './roomHarness.js';
 
 test('problem scoring awards points only for the plan that measures light', () => {
   for (const option of problemActivity.options) {
-    const state = {
-      ...createRoomState(),
-      chapter: 1,
-      step: CHAPTER_FLOW[1].findIndex(({ id }) => id === 'problem'),
-    };
-    const next = applyRoomAction(state, { type: 'problemVote', payload: { name: 'Learner', option: option.id } });
+    const next = act(openActivity('problem'), 'problemVote', { name: 'Learner', option: option.id });
     assert.equal(next.problemVotes.Learner, option.id);
     assert.equal((next.chapterScores[1].Learner || 0) > 0, option.id === problemActivity.correctId);
   }
 });
 
 test('duplicate or changed answers cannot replace a submitted plan or earn points twice', () => {
-  const action = { type: 'problemVote', payload: { name: 'Learner', option: problemActivity.correctId } };
-  const submitted = applyRoomAction(createRoomState(), action);
-  assert.equal(applyRoomAction(submitted, action), submitted);
-  assert.equal(applyRoomAction(submitted, { ...action, payload: { name: 'Learner', option: 'motion_plan' } }), submitted);
+  const submitted = act(openActivity('problem'), 'problemVote', { name: 'Learner', option: problemActivity.correctId });
+  assert.equal(act(submitted, 'problemVote', { name: 'Learner', option: problemActivity.correctId }), submitted);
+  assert.equal(act(submitted, 'problemVote', { name: 'Learner', option: 'motion_plan' }), submitted);
 });
 
 test('the retired generic Sensor answer is rejected', () => {
-  assert.throws(() => applyRoomAction(createRoomState(), { type: 'problemVote', payload: { name: 'Learner', option: 'sensor' } }));
+  assert.throws(() => act(openActivity('problem'), 'problemVote', { name: 'Learner', option: 'sensor' }));
 });

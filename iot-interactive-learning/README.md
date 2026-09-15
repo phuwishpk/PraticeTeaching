@@ -1,16 +1,29 @@
-# React + Vite
+# IoT Interactive Learning
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+ห้องเรียน IoT แบบสด: ครูควบคุมเนื้อหาและกิจกรรมจากหน้าจอเดียว นักเรียนเข้าร่วมด้วย PIN 4 หลักจากมือถือ
 
-Currently, two official plugins are available:
+## เริ่มใช้งาน
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```bash
+npm install
+npm run dev      # โหมดพัฒนา
+npm run build && node app.js   # โหมดใช้งานจริง
+```
 
-## React Compiler
+- นักเรียนเข้าที่ `/` แล้วกรอก PIN ที่แสดงบนจอครู (หรือสแกน QR)
+- ครูเข้าที่ `/host` ได้โดยตรง
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## กติกาของห้องเรียน
 
-## Expanding the Oxlint configuration
+- **เข้าห้องได้เฉพาะตอนอยู่หน้า Lobby** พอครูเริ่มสอน ประตูจะปิดอัตโนมัติ ครูเปิดรับเพิ่มได้จากหน้า Lobby
+- **ตอบได้ครั้งเดียวต่อคำถาม** และเฉพาะช่วงที่ครูเปิดกิจกรรมนั้นอยู่ หมดเวลาแล้วเซิร์ฟเวอร์จะปฏิเสธ
+- **คะแนนลดตามเวลา** เต็ม 1000 ลดวินาทีละ 50 ต่ำสุด 500
+- **อันดับบน Podium** เรียงตามคะแนนรวม ถ้าเท่ากันจึงตัดสินด้วยเวลารวมและเวลาที่ดีที่สุดของแต่ละคน
+- นักเรียนที่ปิดแท็บกลับเข้ามาได้ด้วยชื่อเดิม ถ้าเครื่องหาย ครูกดชื่อในหน้า Lobby เพื่อคืนชื่อนั้นให้ได้
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+## เทสต์
+
+```bash
+npm test
+npm run lint
+```

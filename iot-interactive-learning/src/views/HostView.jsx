@@ -4,7 +4,8 @@ import { SignalActivityReview } from '../components/SignalGraphics';
 import { SensorCatalog } from '../components/LessonGraphics';
 import React, { useEffect, useState, useMemo } from 'react';
 import { useRoom } from '../context/RoomContext';
-import { CHAPTER_FLOW } from '../../shared/roomState';
+import { CHAPTER_FLOW, answerProgress, rankStudents } from '../../shared/roomState';
+import { formatDuration } from '../format';
 import { motion, AnimatePresence } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
 import ReactConfetti from 'react-confetti';
@@ -42,7 +43,7 @@ function FloatingEmojis({ emojis }) {
 
 // ─── Scene 1: Lobby ───────────────────────────────────────────────────────────
 function HostLobby() {
-  const { roomState, setPhase, joinUrl } = useRoom();
+  const { roomState, joinUrl, setJoinOpen, removeStudent } = useRoom();
   const qrUrl = `${joinUrl}?pin=${roomState.pin}`;
   
   return (
@@ -66,16 +67,30 @@ function HostLobby() {
 
         <div style={{ flex: 1, borderLeft: '1px solid rgba(255,255,255,0.1)', paddingLeft: '3rem', display: 'flex', flexDirection: 'column' }}>
           <h2 style={{ color: 'var(--neon-purple)' }}>นักเรียนที่เข้าร่วมแล้ว: {roomState.students.length} คน</h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
+            <span style={{ color: roomState.joinOpen ? 'var(--neon-green)' : '#ffb86c', fontSize: '0.9rem' }}>
+              {roomState.joinOpen ? '🔓 เปิดรับนักเรียนเข้าห้อง' : '🔒 ปิดรับนักเรียนใหม่'}
+            </span>
+            <button type="button" className="neu-button" onClick={() => setJoinOpen(!roomState.joinOpen)}
+              style={{ padding: '4px 12px', fontSize: '0.8rem' }}>
+              {roomState.joinOpen ? 'ปิดรับ' : 'เปิดรับอีกครั้ง'}
+            </button>
+          </div>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.78rem', margin: '0.5rem 0 0 0' }}>
+            กดชื่อเพื่อคืนชื่อนั้นให้นักเรียนที่เครื่องหลุด แล้วให้เขากรอกชื่อเดิมเข้ามาใหม่
+          </p>
           <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexWrap: 'wrap', gap: '1rem', alignContent: 'flex-start', marginTop: '1rem' }}>
             <AnimatePresence>
               {roomState.students.length === 0 && (
                 <p style={{ color: 'var(--text-secondary)' }}>รอเพื่อนๆ สักครู่...</p>
               )}
               {roomState.students.map((student) => (
-                <motion.div key={student.id} initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-                  style={{ background: 'rgba(255,255,255,0.05)', padding: '0.8rem 1.5rem', borderRadius: 20, border: '1px solid rgba(255,255,255,0.1)' }}>
+                <motion.button type="button" key={student.id} initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                  title={`คืนชื่อ "${student.name}" ให้ว่าง`}
+                  onClick={() => { if (window.confirm(`เอา "${student.name}" ออกจากห้อง เพื่อให้เขากรอกชื่อเดิมเข้ามาใหม่?`)) removeStudent(student.name); }}
+                  style={{ background: 'rgba(255,255,255,0.05)', color: 'inherit', font: 'inherit', cursor: 'pointer', padding: '0.8rem 1.5rem', borderRadius: 20, border: '1px solid rgba(255,255,255,0.1)' }}>
                   🧑‍🔬 {student.name}
-                </motion.div>
+                </motion.button>
               ))}
             </AnimatePresence>
           </div>
@@ -95,15 +110,14 @@ function HostArchitecture() {
   
   useEffect(() => {
     setIsTimeUp(false);
-    const remaining = 30000 - (Date.now() - roomState.questionStartTime);
+    const remaining = (roomState.questionDurationMs ?? 30000) - (Date.now() - roomState.questionStartTime);
     if (remaining <= 0) { setIsTimeUp(true); return; }
     const timer = setTimeout(() => setIsTimeUp(true), remaining);
     return () => clearTimeout(timer);
   }, [roomState.questionStartTime, currentItem]);
 
   const getPercent = (layer) => totalVotes === 0 ? 0 : Math.round((Object.values(votes).filter(v => v === layer).length / totalVotes) * 100);
-  const totalStudents = roomState.students.length;
-  const isAllAnswered = totalStudents > 0 && totalVotes >= totalStudents;
+  const { total: totalStudents, allAnswered: isAllAnswered } = answerProgress(roomState, votes);
   const showResults = isTimeUp || isAllAnswered;
 
   const items = [
@@ -124,7 +138,7 @@ function HostArchitecture() {
   return (
     <div className="flex-center full-screen" style={{ flexDirection: 'column', gap: '2rem' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-        <CountdownTimer startTime={roomState.questionStartTime} duration={30} size={70} stopped={isAllAnswered} />
+        <CountdownTimer startTime={roomState.questionStartTime} duration={(roomState.questionDurationMs ?? 30000) / 1000} size={70} stopped={isAllAnswered} />
         <h1 className="text-glow-blue" style={{ fontSize: '3rem', margin: 0 }}>โหวต: อุปกรณ์นี้อยู่ชั้นไหน?</h1>
       </div>
       
@@ -231,14 +245,13 @@ function HostDigital() {
   
   useEffect(() => {
     setIsTimeUp(false);
-    const remaining = 30000 - (Date.now() - roomState.questionStartTime);
+    const remaining = (roomState.questionDurationMs ?? 30000) - (Date.now() - roomState.questionStartTime);
     if (remaining <= 0) { setIsTimeUp(true); return; }
     const timer = setTimeout(() => setIsTimeUp(true), remaining);
     return () => clearTimeout(timer);
   }, [roomState.questionStartTime]);
 
-  const totalStudents = roomState.students.length;
-  const isAllAnswered = totalStudents > 0 && totalVotes >= totalStudents;
+  const { total: totalStudents, allAnswered: isAllAnswered } = answerProgress(roomState, votes);
   const showResults = isTimeUp || isAllAnswered;
 
   const options = [
@@ -251,7 +264,7 @@ function HostDigital() {
   return (
     <div className="flex-center full-screen" style={{ flexDirection: 'column', gap: '2rem' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-        <CountdownTimer startTime={roomState.questionStartTime} duration={30} size={70} stopped={isAllAnswered} />
+        <CountdownTimer startTime={roomState.questionStartTime} duration={(roomState.questionDurationMs ?? 30000) / 1000} size={70} stopped={isAllAnswered} />
         <h1 className="text-glow-blue" style={{ fontSize: '3rem', margin: 0 }}>สัญญาณภาษาเครื่อง (Digital)</h1>
       </div>
       
@@ -317,14 +330,13 @@ function HostAnalog() {
   
   useEffect(() => {
     setIsTimeUp(false);
-    const remaining = 30000 - (Date.now() - roomState.questionStartTime);
+    const remaining = (roomState.questionDurationMs ?? 30000) - (Date.now() - roomState.questionStartTime);
     if (remaining <= 0) { setIsTimeUp(true); return; }
     const timer = setTimeout(() => setIsTimeUp(true), remaining);
     return () => clearTimeout(timer);
   }, [roomState.questionStartTime]);
 
-  const totalStudents = roomState.students.length;
-  const isAllAnswered = totalStudents > 0 && totalVotes >= totalStudents;
+  const { total: totalStudents, allAnswered: isAllAnswered } = answerProgress(roomState, votes);
   const showResults = isTimeUp || isAllAnswered;
 
   const options = [
@@ -337,7 +349,7 @@ function HostAnalog() {
   return (
     <div className="flex-center full-screen" style={{ flexDirection: 'column', gap: '2rem' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-        <CountdownTimer startTime={roomState.questionStartTime} duration={30} size={70} stopped={isAllAnswered} />
+        <CountdownTimer startTime={roomState.questionStartTime} duration={(roomState.questionDurationMs ?? 30000) / 1000} size={70} stopped={isAllAnswered} />
         <h1 className="signal-analog-title" style={{ fontSize: '3rem', margin: 0 }}>สัญญาณค่าต่อเนื่อง (Analog)</h1>
       </div>
       
@@ -405,15 +417,13 @@ function HostCatalog() {
   
   useEffect(() => {
     setIsTimeUp(false);
-    const remaining = 30000 - (Date.now() - roomState.questionStartTime);
+    const remaining = (roomState.questionDurationMs ?? 30000) - (Date.now() - roomState.questionStartTime);
     if (remaining <= 0) { setIsTimeUp(true); return; }
     const timer = setTimeout(() => setIsTimeUp(true), remaining);
     return () => clearTimeout(timer);
   }, [roomState.questionStartTime, qIndex]);
 
-  const totalStudents = roomState.students.length;
-  const totalVotesCount = Object.keys(votes).length;
-  const isAllAnswered = totalStudents > 0 && totalVotesCount >= totalStudents;
+  const { answered: totalVotesCount, total: totalStudents, allAnswered: isAllAnswered } = answerProgress(roomState, votes);
   const isRevealed = isTimeUp || isAllAnswered;
   const currentQ = sensorCatalogQuestions[qIndex];
 
@@ -433,7 +443,7 @@ function HostCatalog() {
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', justifyContent: 'center' }}>
-        <CountdownTimer startTime={roomState.questionStartTime} duration={30} size={70} stopped={isAllAnswered} />
+        <CountdownTimer startTime={roomState.questionStartTime} duration={(roomState.questionDurationMs ?? 30000) / 1000} size={70} stopped={isAllAnswered} />
         <h1 className="text-glow-blue" style={{ fontSize: '2.2rem', margin: 0, textAlign: 'center', maxWidth: '800px', lineHeight: '1.4' }}>
           {currentQ.prompt}
         </h1>
@@ -479,7 +489,7 @@ function HostQuiz() {
   
   useEffect(() => {
     setIsTimeUp(false);
-    const remaining = 30000 - (Date.now() - roomState.questionStartTime);
+    const remaining = (roomState.questionDurationMs ?? 30000) - (Date.now() - roomState.questionStartTime);
     if (remaining <= 0) { setIsTimeUp(true); return; }
     const timer = setTimeout(() => setIsTimeUp(true), remaining);
     return () => clearTimeout(timer);
@@ -493,14 +503,13 @@ function HostQuiz() {
   ];
 
   const total = Object.keys(votes).length || 1; // prevent div/0
-  const totalStudents = roomState.students.length;
-  const isAllAnswered = totalStudents > 0 && Object.keys(votes).length >= totalStudents;
+  const { total: totalStudents, allAnswered: isAllAnswered } = answerProgress(roomState, votes);
   const isRevealed = roomState.quizRevealed || isTimeUp || isAllAnswered;
 
   return (
     <div className="flex-center full-screen" style={{ flexDirection: 'column', gap: '2rem' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', justifyContent: 'center' }}>
-        <CountdownTimer startTime={roomState.questionStartTime} duration={30} size={70} stopped={isAllAnswered || roomState.quizRevealed} />
+        <CountdownTimer startTime={roomState.questionStartTime} duration={(roomState.questionDurationMs ?? 30000) / 1000} size={70} stopped={isAllAnswered || roomState.quizRevealed} />
         <h1 className="text-glow-blue" style={{ fontSize: '2.5rem', margin: 0, textAlign: 'center' }}>
           "อยากทำระบบเปิดไฟหน้าบ้านอัตโนมัติตอนกลางคืน ต้องใช้เซนเซอร์อะไร?"
         </h1>
@@ -559,7 +568,7 @@ function HostLogic() {
   
   useEffect(() => {
     setIsTimeUp(false);
-    const remaining = 30000 - (Date.now() - roomState.questionStartTime);
+    const remaining = (roomState.questionDurationMs ?? 30000) - (Date.now() - roomState.questionStartTime);
     if (remaining <= 0) { setIsTimeUp(true); return; }
     const timer = setTimeout(() => setIsTimeUp(true), remaining);
     return () => clearTimeout(timer);
@@ -573,14 +582,13 @@ function HostLogic() {
   ];
 
   const total = Object.keys(votes).length || 1;
-  const totalStudents = roomState.students.length;
-  const isAllAnswered = totalStudents > 0 && Object.keys(votes).length >= totalStudents;
+  const { total: totalStudents, allAnswered: isAllAnswered } = answerProgress(roomState, votes);
   const showResults = isTimeUp || isAllAnswered;
 
   return (
     <div className="flex-center full-screen" style={{ flexDirection: 'column', gap: '2rem' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', justifyContent: 'center' }}>
-        <CountdownTimer startTime={roomState.questionStartTime} duration={30} size={70} stopped={isAllAnswered} />
+        <CountdownTimer startTime={roomState.questionStartTime} duration={(roomState.questionDurationMs ?? 30000) / 1000} size={70} stopped={isAllAnswered} />
         <h1 className="text-glow-blue" style={{ fontSize: '3rem', margin: 0 }}>ประกอบร่าง Logic (ตรรกะ)</h1>
       </div>
       
@@ -649,23 +657,26 @@ function Confetti() {
 function HostPodium() {
   const { roomState } = useRoom();
   const students = roomState.students || [];
-  const scores = roomState.scores || {};
   const [revealStep, setRevealStep] = useState(0);
 
-  const sortedStudents = [...students].sort((a, b) => (scores[b.name] || 0) - (scores[a.name] || 0));
+  // Same ranking the learners' own screens show: points first, then how fast those
+  // points were earned, so an equal score is never settled by who joined first.
+  const sortedStudents = rankStudents(roomState);
   const top3 = sortedStudents.slice(0, 3);
   const rest = sortedStudents.slice(3);
+  const hasStudents = students.length > 0;
 
-  // Dramatic reveal: 3rd → 2nd → 1st
+  // Dramatic reveal: 3rd → 2nd → 1st. Keyed off "anyone at all" rather than the head
+  // count, so a learner arriving mid-ceremony cannot restart the animation.
   useEffect(() => {
-    if (students.length === 0) return;
+    if (!hasStudents) return;
     const timers = [
       setTimeout(() => setRevealStep(1), 500),   // reveal 3rd
       setTimeout(() => setRevealStep(2), 1800),  // reveal 2nd
       setTimeout(() => setRevealStep(3), 3200),  // reveal 1st + confetti
     ];
     return () => timers.forEach(clearTimeout);
-  }, [students.length]);
+  }, [hasStudents]);
 
   const podiumConfig = [
     // [displayOrder, podiumIndex, height, gradient, delay]
@@ -692,7 +703,7 @@ function HostPodium() {
             {podiumConfig.map((cfg, i) => {
               const student = top3[cfg.place - 1];
               const isRevealed = revealStep >= cfg.revealAt;
-              const score = student ? (scores[student.name] || 0) : 0;
+              const score = student?.score || 0;
 
               return (
                 <div key={cfg.place} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', width: cfg.place === 1 ? 200 : 160 }}>
@@ -711,6 +722,9 @@ function HostPodium() {
                         </div>
                         <div style={{ color: 'var(--neon-blue)', fontWeight: 800, fontSize: cfg.place === 1 ? '1.8rem' : '1.3rem' }}>
                           {score} pts
+                        </div>
+                        <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
+                          ตอบถูก {student.correctCount} ข้อ · {formatDuration(student.correctCount ? student.totalTimeMs : null)}
                         </div>
                       </motion.div>
                     )}
@@ -753,7 +767,9 @@ function HostPodium() {
                     style={{ display: 'flex', justifyContent: 'space-between', padding: '0.6rem 1.2rem', background: 'rgba(255,255,255,0.05)', borderRadius: 12 }}
                   >
                     <span style={{ color: 'var(--text-secondary)' }}>{i + 4}. {s.name}</span>
-                    <span style={{ color: 'var(--neon-blue)', fontWeight: 'bold' }}>{scores[s.name] || 0} pts</span>
+                    <span style={{ color: 'var(--neon-blue)', fontWeight: 'bold' }}>
+                      {s.score} pts <span style={{ color: 'var(--text-secondary)', fontWeight: 400 }}>· {formatDuration(s.correctCount ? s.totalTimeMs : null)}</span>
+                    </span>
                   </motion.div>
                 ))}
               </div>
@@ -866,7 +882,7 @@ export default function HostView() {
             </button>
           ))}
         </nav>
-        <button title="ล้างข้อมูลห้องเรียนและเริ่มใหม่" onClick={resetRoom} style={{ background: 'transparent', border: '1px solid rgba(255,0,100,0.4)', color: '#ff6b6b', borderRadius: 8, padding: '5px 10px', cursor: 'pointer', fontSize: '0.75rem' }}>
+        <button title="ล้างข้อมูลห้องเรียนและเริ่มใหม่" onClick={() => { if (window.confirm('ล้างคะแนน คำตอบ และรายชื่อนักเรียนทั้งหมด แล้วสร้าง PIN ใหม่?')) resetRoom(); }} style={{ background: 'transparent', border: '1px solid rgba(255,0,100,0.4)', color: '#ff6b6b', borderRadius: 8, padding: '5px 10px', cursor: 'pointer', fontSize: '0.75rem' }}>
           🔄 เริ่มห้องใหม่
         </button>
       </div>

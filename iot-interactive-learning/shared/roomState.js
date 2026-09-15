@@ -7,6 +7,27 @@ export const initialPresentation = (mode = 'lesson') => ({
   mode, slide: 0, demoValue: 50, expanded: false, answerRevealed: false,
 });
 
+export const QUESTION_DURATION_MS = 30000;
+
+// Activities that state their own pace in the lesson content keep it; the server must run
+// the same clock the learners are watching, or it would cut them off mid-question.
+function questionDurationMs(state) {
+  const step = CHAPTER_FLOW[state.chapter]?.[state.step];
+  const seconds = step?.id === 'problem'
+    ? problemActivity.durationSeconds
+    : classroomChoiceActivities[step?.id]?.durationSeconds;
+  return seconds ? seconds * 1000 : QUESTION_DURATION_MS;
+}
+
+// Phones stay a little out of step with the server even after RoomContext corrects the
+// clock offset, so an answer is only refused once it is late by more than this window.
+const LATE_ANSWER_GRACE_MS = 2000;
+
+// roomApi resolves the sender of these from their student token, so payload.name cannot be forged.
+export const STUDENT_ACTIONS = new Set([
+  'problemVote', 'choiceVote', 'digitalVote', 'analogVote', 'catalogVote',
+  'architectureVote', 'quizVote', 'logicVote', 'emoji', 'sense',
+]);
 
 export const CHAPTER_FLOW = {
   1: [
@@ -35,34 +56,153 @@ export const CHAPTER_FLOW = {
 export function createRoomState() {
   return {
     pin: String(Math.floor(1000 + Math.random() * 9000)), chapter: 1, step: 0, presentation: initialPresentation('activity'),
-    students: [], senses: { eyes: false, ears: false, hands: false },
+    students: [], joinOpen: true, senses: { eyes: false, ears: false, hands: false },
     problemVotes: {}, digitalVotes: {}, analogVotes: {},
     choiceVotes: { roles: {}, wrapup: {}, ideation: {} },
     floatingEmojis: [], quizVotes: {}, quizRevealed: false,
     logicVotes: {}, architectureVotes: { esp32: {}, wifi: {}, cloud: {} },
     catalogCurrentQuestion: 1, catalogVotes: { 1: {}, 2: {}, 3: {}, 4: {} },
     currentVoteItem: 'esp32', canvasImages: [],
-    chapterScores: { 1: {}, 2: {}, 3: {} }, questionStartTime: Date.now(),
+    chapterScores: { 1: {}, 2: {}, 3: {} },
+    // Every graded answer, so the podium can break ties on time instead of join order.
+    answers: { 1: {}, 2: {}, 3: {} },
+    questionKey: null, questionStartTime: Date.now(), questionDurationMs: QUESTION_DURATION_MS,
+    questionStarts: {}, questionRoster: [],
   };
 }
 
 function requireValue(condition, message = 'ข้อมูลคำสั่งไม่ถูกต้อง') {
   if (!condition) throw new Error(message);
 }
+
 function validName(name) {
-  requireValue(typeof name === 'string' && name.trim().length > 0 && name.length <= 20, 'กรุณากรอกชื่อไม่เกิน 20 ตัวอักษร');
+  requireValue(typeof name === 'string', 'กรุณากรอกชื่อไม่เกิน 20 ตัวอักษร');
   const cleanName = name.trim();
+  requireValue(cleanName.length > 0 && cleanName.length <= 20, 'กรุณากรอกชื่อไม่เกิน 20 ตัวอักษร');
   const dangerous = ['__proto__', 'constructor', 'prototype'];
   requireValue(!dangerous.includes(cleanName.toLowerCase()), 'ชื่อนี้ไม่สามารถใช้งานได้');
   return cleanName;
 }
 
-function calculateScore(startTime) {
-  if (!startTime) return 500;
-  const elapsed = (Date.now() - startTime) / 1000; // วินาที
+// "Ann", "ann" and "an  n" are the same learner coming back, not three seats in the room.
+export function studentKey(name) {
+  return validName(name).toLocaleLowerCase('th').replace(/\s+/g, ' ');
+}
+
+export function findStudent(state, name) {
+  const key = studentKey(name);
+  return (state.students || []).find(student => studentKey(student.name) === key);
+}
+
+// Only a learner the room already knows may answer, and only under their own name.
+function requireStudent(state, name) {
+  const student = findStudent(state, name);
+  requireValue(student, 'ยังไม่ได้เข้าห้องเรียน กรุณาเข้าร่วมห้องอีกครั้ง');
+  return student.name;
+}
+
+function calculateScore(elapsedMs) {
   // คะแนนเต็ม 1000, ลดลงวินาทีละ 50 คะแนน, ต่ำสุด 500
-  const score = Math.max(500, Math.floor(1000 - (elapsed * 50)));
-  return score;
+  return Math.max(500, Math.floor(1000 - (elapsedMs / 1000) * 50));
+}
+
+// Identifies the one question students may answer right now. Sub-questions get their own
+// key so moving between them restarts the clock, while re-opening the same question does not.
+export function currentQuestionKey(state) {
+  const step = CHAPTER_FLOW[state.chapter]?.[state.step];
+  if (!step || step.type !== 'activity') return null;
+  const base = `c${state.chapter}:s${state.step}:${step.id}`;
+  if (step.id === 'architecture') return `${base}:${state.currentVoteItem}`;
+  if (step.id === 'sensors') return `${base}:q${state.catalogCurrentQuestion}`;
+  return base;
+}
+
+function openQuestion(state, key) {
+  if (!key) return state.questionKey === null ? state : { ...state, questionKey: null, questionRoster: [] };
+  // A question that has been opened before keeps its original clock and roster, so flipping
+  // between the lesson and activity tabs cannot hand latecomers a fresh 30 seconds.
+  if (state.questionKey === key) return state;
+  const started = state.questionStarts[key]
+    || { startedAt: Date.now(), durationMs: questionDurationMs(state), roster: state.students.map(({ name }) => name) };
+  return {
+    ...state, questionKey: key, questionStartTime: started.startedAt,
+    questionDurationMs: started.durationMs, questionRoster: started.roster,
+    questionStarts: { ...state.questionStarts, [key]: started },
+  };
+}
+
+const syncQuestion = state =>
+  openQuestion(state, state.presentation.mode === 'activity' ? currentQuestionKey(state) : null);
+
+// Answers are accepted only while the teacher is showing that exact question and it is still running.
+function openAnswerWindow(state, activityId) {
+  const step = CHAPTER_FLOW[state.chapter]?.[state.step];
+  requireValue(step?.type === 'activity' && step.id === activityId, 'กิจกรรมนี้ยังไม่เปิดให้ตอบ');
+  requireValue(state.questionKey && state.questionKey === currentQuestionKey(state), 'กิจกรรมนี้ยังไม่เปิดให้ตอบ');
+  const elapsedMs = Math.max(0, Date.now() - state.questionStartTime);
+  requireValue(elapsedMs <= state.questionDurationMs + LATE_ANSWER_GRACE_MS, 'หมดเวลาตอบคำถามนี้แล้ว');
+  return { questionKey: state.questionKey, elapsedMs };
+}
+
+// Writes the running total and the per-question record together so the two cannot drift apart.
+function recordAnswer(state, { name, questionKey, elapsedMs, correct }) {
+  const score = correct ? calculateScore(elapsedMs) : 0;
+  const chapterAnswers = state.answers[state.chapter] || {};
+  const chapterScores = state.chapterScores[state.chapter] || {};
+  return {
+    answers: {
+      ...state.answers,
+      [state.chapter]: {
+        ...chapterAnswers,
+        [name]: { ...chapterAnswers[name], [questionKey]: { correct, elapsedMs, score } },
+      },
+    },
+    chapterScores: {
+      ...state.chapterScores,
+      [state.chapter]: { ...chapterScores, [name]: (chapterScores[name] || 0) + score },
+    },
+  };
+}
+
+// Progress is measured against the roster captured when the question opened, so somebody
+// joining halfway through cannot pull a revealed answer back off the screen. Anyone who did
+// answer is counted either way, so a latecomer's vote never reads as more than 100%.
+export function answerProgress(state, votes = {}) {
+  const roster = state.questionRoster?.length ? state.questionRoster : (state.students || []).map(({ name }) => name);
+  const counted = new Set([...roster, ...Object.keys(votes)]);
+  const answered = [...counted].filter(name => votes[name] !== undefined).length;
+  return { answered, total: counted.size, allAnswered: counted.size > 0 && answered >= counted.size };
+}
+
+const compareTime = (left, right) => {
+  const a = left ?? Number.POSITIVE_INFINITY;
+  const b = right ?? Number.POSITIVE_INFINITY;
+  return a === b ? 0 : a - b;
+};
+
+// Ranks on points first, then on how quickly those points were earned — the totals, then the
+// single best answer — so equal scores are separated by time instead of by who joined first.
+export function rankStudents(state, chapter = state.chapter) {
+  const chapterAnswers = state.answers?.[chapter] || {};
+  return (state.students || [])
+    .map(student => {
+      const entries = Object.values(chapterAnswers[student.name] || {});
+      const correct = entries.filter(entry => entry.correct);
+      return {
+        ...student,
+        score: entries.reduce((total, entry) => total + entry.score, 0),
+        answeredCount: entries.length,
+        correctCount: correct.length,
+        totalTimeMs: correct.reduce((total, entry) => total + entry.elapsedMs, 0),
+        bestTimeMs: correct.length ? Math.min(...correct.map(entry => entry.elapsedMs)) : null,
+      };
+    })
+    .sort((a, b) =>
+      b.score - a.score
+      || b.correctCount - a.correctCount
+      || compareTime(a.correctCount ? a.totalTimeMs : null, b.correctCount ? b.totalTimeMs : null)
+      || compareTime(a.bestTimeMs, b.bestTimeMs)
+      || a.name.localeCompare(b.name, 'th'));
 }
 
 // The server applies each action to its latest state, so simultaneous votes cannot
@@ -72,13 +212,31 @@ export function applyRoomAction(state, action) {
   switch (type) {
     case 'changeChapter': {
       requireValue([1, 2, 3].includes(p.chapter));
-      return { ...state, chapter: p.chapter, step: 0, presentation: initialPresentation('activity'), questionStartTime: Date.now() };
+      return syncQuestion({
+        ...state, chapter: p.chapter, step: 0, joinOpen: CHAPTER_FLOW[p.chapter][0].type === 'lobby',
+        presentation: initialPresentation('activity'),
+      });
     }
     case 'changeStep': {
-      const maxStep = CHAPTER_FLOW[state.chapter].length - 1;
-      requireValue(p.step >= 0 && p.step <= maxStep);
-      const stepType = CHAPTER_FLOW[state.chapter][p.step].type;
-      return { ...state, step: p.step, presentation: initialPresentation(stepType === 'activity' ? 'lesson' : 'activity'), questionStartTime: Date.now() };
+      const steps = CHAPTER_FLOW[state.chapter];
+      requireValue(Number.isInteger(p.step) && p.step >= 0 && p.step < steps.length);
+      const stepType = steps[p.step].type;
+      // Leaving the lobby closes the door: the lesson has started, so no new names may appear.
+      return syncQuestion({
+        ...state, step: p.step, joinOpen: stepType === 'lobby',
+        presentation: initialPresentation(stepType === 'activity' ? 'lesson' : 'activity'),
+      });
+    }
+    case 'setJoinOpen':
+      requireValue(typeof p.open === 'boolean');
+      return { ...state, joinOpen: p.open };
+    case 'removeStudent': {
+      // Frees a seat so a learner who lost their device can take their own name back.
+      // Their answers stay recorded, so returning does not reopen questions they already did.
+      const key = studentKey(p.name);
+      const students = state.students.filter(student => studentKey(student.name) !== key);
+      if (students.length === state.students.length) return state;
+      return { ...state, students, questionRoster: state.questionRoster.filter(name => studentKey(name) !== key) };
     }
     case 'presentation': {
       if (p.chapter !== state.chapter || p.step !== state.step) return state;
@@ -103,10 +261,7 @@ export function applyRoomAction(state, action) {
       for (const key of ['expanded', 'answerRevealed']) {
         if (key in p) { requireValue(typeof p[key] === 'boolean'); patch[key] = p[key]; }
       }
-      
-      const newState = { ...state, presentation: { ...state.presentation, ...patch } };
-      if (p.mode === 'activity') newState.questionStartTime = Date.now();
-      return newState;
+      return syncQuestion({ ...state, presentation: { ...state.presentation, ...patch } });
     }
     case 'verifyPin': {
       requireValue(p.pin === state.pin, 'รหัส PIN ไม่ถูกต้อง');
@@ -115,147 +270,125 @@ export function applyRoomAction(state, action) {
     case 'join': {
       requireValue(p.pin === state.pin, 'รหัส PIN ไม่ถูกต้อง');
       const name = validName(p.name);
-      requireValue(!state.students.some(student => student.name === name), 'ชื่อนี้มีผู้ใช้แล้ว กรุณาเพิ่มชื่อหรือเลขที่');
+      // Coming back after a closed tab is not a new seat, so rejoining stays allowed after the
+      // door closes. roomApi has already matched this learner's token before we get here.
+      if (findStudent(state, name)) return state;
+      requireValue(state.joinOpen, 'คุณครูปิดรับเข้าห้องแล้ว กรุณาแจ้งคุณครูเพื่อเปิดรับอีกครั้ง');
       return { ...state, students: [...state.students, { id: p.id, name }] };
     }
     case 'problemVote': {
-      const name = validName(p.name);
+      const name = requireStudent(state, p.name);
       requireValue(isProblemOption(p.option));
       if (isProblemOption(state.problemVotes[name])) return state;
-      let newScores = { ...state.chapterScores };
-      let chapScores = { ...(newScores[state.chapter] || {}) };
-      if (p.option === problemActivity.correctId) {
-        chapScores[name] = (chapScores[name] || 0) + calculateScore(state.questionStartTime);
-      }
-      newScores[state.chapter] = chapScores;
-      return { ...state, problemVotes: { ...state.problemVotes, [name]: p.option }, chapterScores: newScores };
+      const window = openAnswerWindow(state, 'problem');
+      return {
+        ...state,
+        problemVotes: { ...state.problemVotes, [name]: p.option },
+        ...recordAnswer(state, { ...window, name, correct: p.option === problemActivity.correctId }),
+      };
     }
     case 'choiceVote': {
-      const name = validName(p.name);
+      const name = requireStudent(state, p.name);
       requireValue(Object.hasOwn(classroomChoiceActivities, p.activityId));
       requireValue(isClassroomChoice(p.activityId, p.option));
       const activityVotes = state.choiceVotes?.[p.activityId] || {};
       if (activityVotes[name]) return state;
-
-      const activity = classroomChoiceActivities[p.activityId];
-      const newScores = { ...state.chapterScores };
-      const chapterScores = { ...(newScores[state.chapter] || {}) };
-      if (p.option === activity.correctId) {
-        chapterScores[name] = (chapterScores[name] || 0) + calculateScore(state.questionStartTime);
-      }
-      newScores[state.chapter] = chapterScores;
+      const window = openAnswerWindow(state, p.activityId);
       return {
         ...state,
-        choiceVotes: {
-          ...state.choiceVotes,
-          [p.activityId]: { ...activityVotes, [name]: p.option },
-        },
-        chapterScores: newScores,
+        choiceVotes: { ...state.choiceVotes, [p.activityId]: { ...activityVotes, [name]: p.option } },
+        ...recordAnswer(state, { ...window, name, correct: p.option === classroomChoiceActivities[p.activityId].correctId }),
       };
     }
     case 'digitalVote': {
-      const name = validName(p.name);
+      const name = requireStudent(state, p.name);
       requireValue(['2_states', '10_states', 'infinite', 'none'].includes(p.option));
-      let newScores = { ...state.chapterScores };
-      let chapScores = { ...(newScores[state.chapter] || {}) };
-      if (p.option === '2_states' && !state.digitalVotes[name]) {
-        chapScores[name] = (chapScores[name] || 0) + calculateScore(state.questionStartTime);
-      }
-      newScores[state.chapter] = chapScores;
-      return { ...state, digitalVotes: { ...state.digitalVotes, [name]: p.option }, chapterScores: newScores };
+      if (state.digitalVotes[name] !== undefined) return state;
+      const window = openAnswerWindow(state, 'digital');
+      return {
+        ...state,
+        digitalVotes: { ...state.digitalVotes, [name]: p.option },
+        ...recordAnswer(state, { ...window, name, correct: p.option === '2_states' }),
+      };
     }
     case 'analogVote': {
-      const name = validName(p.name);
+      const name = requireStudent(state, p.name);
       requireValue(['continuous', 'binary', 'faster', 'less_wires'].includes(p.option));
-      let newScores = { ...state.chapterScores };
-      let chapScores = { ...(newScores[state.chapter] || {}) };
-      if (p.option === 'continuous' && !state.analogVotes[name]) {
-        chapScores[name] = (chapScores[name] || 0) + calculateScore(state.questionStartTime);
-      }
-      newScores[state.chapter] = chapScores;
-      return { ...state, analogVotes: { ...state.analogVotes, [name]: p.option }, chapterScores: newScores };
+      if (state.analogVotes[name] !== undefined) return state;
+      const window = openAnswerWindow(state, 'analog');
+      return {
+        ...state,
+        analogVotes: { ...state.analogVotes, [name]: p.option },
+        ...recordAnswer(state, { ...window, name, correct: p.option === 'continuous' }),
+      };
     }
     case 'voteItem':
       requireValue(['esp32', 'wifi', 'cloud'].includes(p.item));
-      return { ...state, currentVoteItem: p.item, questionStartTime: Date.now() };
+      return syncQuestion({ ...state, currentVoteItem: p.item });
     case 'setCatalogQuestion':
       requireValue(Number.isInteger(p.question) && p.question >= 1 && p.question <= 4);
-      return { ...state, catalogCurrentQuestion: p.question, questionStartTime: Date.now() };
+      return syncQuestion({ ...state, catalogCurrentQuestion: p.question });
     case 'catalogVote': {
-      const name = validName(p.name);
+      const name = requireStudent(state, p.name);
       requireValue(isSensorCatalogOption(p.option));
-      
       const qIndex = state.catalogCurrentQuestion;
-      const isCorrect = p.option === sensorCatalogQuestions[qIndex].correct;
-      
-      let newScores = { ...state.chapterScores };
-      let chapScores = { ...(newScores[state.chapter] || {}) };
-      if (isCorrect && !state.catalogVotes[qIndex][name]) {
-        chapScores[name] = (chapScores[name] || 0) + calculateScore(state.questionStartTime);
-      }
-      newScores[state.chapter] = chapScores;
-      
-      return { 
-        ...state, 
-        catalogVotes: { 
-          ...state.catalogVotes, 
-          [qIndex]: { ...state.catalogVotes[qIndex], [name]: p.option } 
-        }, 
-        chapterScores: newScores 
+      if (state.catalogVotes[qIndex][name] !== undefined) return state;
+      const window = openAnswerWindow(state, 'sensors');
+      return {
+        ...state,
+        catalogVotes: { ...state.catalogVotes, [qIndex]: { ...state.catalogVotes[qIndex], [name]: p.option } },
+        ...recordAnswer(state, { ...window, name, correct: p.option === sensorCatalogQuestions[qIndex].correct }),
       };
     }
     case 'architectureVote': {
-      const name = validName(p.name);
+      const name = requireStudent(state, p.name);
       requireValue(['esp32', 'wifi', 'cloud'].includes(p.item) && ['device', 'network', 'service'].includes(p.layer));
-      
-      let newScores = { ...state.chapterScores };
-      let chapScores = { ...(newScores[state.chapter] || {}) };
+      requireValue(p.item === state.currentVoteItem, 'กิจกรรมนี้ยังไม่เปิดให้ตอบ');
+      if (state.architectureVotes[p.item][name] !== undefined) return state;
+      const window = openAnswerWindow(state, 'architecture');
       // เช็คว่าตอบถูกไหม (esp32->device, wifi->network, cloud->service)
       const correctMap = { esp32: 'device', wifi: 'network', cloud: 'service' };
-      if (p.layer === correctMap[p.item] && !state.architectureVotes[p.item][name]) {
-        chapScores[name] = (chapScores[name] || 0) + calculateScore(state.questionStartTime);
-      }
-      newScores[state.chapter] = chapScores;
-      
-      return { ...state, architectureVotes: { ...state.architectureVotes, [p.item]: { ...state.architectureVotes[p.item], [name]: p.layer } }, chapterScores: newScores };
+      return {
+        ...state,
+        architectureVotes: { ...state.architectureVotes, [p.item]: { ...state.architectureVotes[p.item], [name]: p.layer } },
+        ...recordAnswer(state, { ...window, name, correct: p.layer === correctMap[p.item] }),
+      };
     }
-
     case 'emoji':
+      requireStudent(state, p.name);
       requireValue(['👍', '💡', '❤️', '🔥', '🎉', '👏'].includes(p.emoji));
       return { ...state, floatingEmojis: [...state.floatingEmojis, { id: p.id, emoji: p.emoji, name: p.name || '', x: p.x }].slice(-30) };
     case 'expireEmoji':
       return { ...state, floatingEmojis: state.floatingEmojis.filter(e => e.id !== p.id) };
     case 'quizVote': {
-      const name = validName(p.name);
+      // No chapter step shows this quiz, so openAnswerWindow refuses it — the endpoint cannot
+      // be used to award points for a question nobody was asked.
+      const name = requireStudent(state, p.name);
       requireValue(['ldr', 'dht', 'pir', 'soil'].includes(p.option));
-      if (state.quizRevealed) return state;
-      
-      let newScores = { ...state.chapterScores };
-      let chapScores = { ...(newScores[state.chapter] || {}) };
-      if (p.option === 'ldr' && !state.quizVotes[name]) {
-        chapScores[name] = (chapScores[name] || 0) + calculateScore(state.questionStartTime);
-      }
-      newScores[state.chapter] = chapScores;
-      
-      return { ...state, quizVotes: { ...state.quizVotes, [name]: p.option }, chapterScores: newScores };
+      if (state.quizRevealed || state.quizVotes[name] !== undefined) return state;
+      const window = openAnswerWindow(state, 'quiz');
+      return {
+        ...state,
+        quizVotes: { ...state.quizVotes, [name]: p.option },
+        ...recordAnswer(state, { ...window, name, correct: p.option === 'ldr' }),
+      };
     }
     case 'quizReveal':
       requireValue(typeof p.reveal === 'boolean');
       return { ...state, quizRevealed: p.reveal };
     case 'logicVote': {
-      const name = validName(p.name);
+      const name = requireStudent(state, p.name);
       requireValue(['dark', 'dry', 'motion', 'hot'].includes(p.option));
-      
-      let newScores = { ...state.chapterScores };
-      let chapScores = { ...(newScores[state.chapter] || {}) };
-      if (p.option === 'dry' && !state.logicVotes[name]) {
-        chapScores[name] = (chapScores[name] || 0) + calculateScore(state.questionStartTime);
-      }
-      newScores[state.chapter] = chapScores;
-      
-      return { ...state, logicVotes: { ...state.logicVotes, [name]: p.option }, chapterScores: newScores };
+      if (state.logicVotes[name] !== undefined) return state;
+      const window = openAnswerWindow(state, 'logic');
+      return {
+        ...state,
+        logicVotes: { ...state.logicVotes, [name]: p.option },
+        ...recordAnswer(state, { ...window, name, correct: p.option === 'dry' }),
+      };
     }
     case 'sense':
+      requireStudent(state, p.name);
       requireValue(['eyes', 'ears', 'hands'].includes(p.sense));
       return { ...state, senses: { ...state.senses, [p.sense]: true } };
     case 'reset': return createRoomState();

@@ -6,7 +6,9 @@ import { Rocket, User, Cpu, Wifi, Cloud, AlertTriangle, Target, Trophy, Medal, B
 import { ImageWithModal } from '../components/ImageWithModal';
 import React, { useState, useRef, useEffect } from 'react';
 import { useRoom } from '../context/RoomContext';
-import { CHAPTER_FLOW } from '../../shared/roomState';
+import { CHAPTER_FLOW, answerProgress, rankStudents } from '../../shared/roomState';
+import { clearStudent, getStudentName } from '../session';
+import { formatDuration } from '../format';
 import { motion, AnimatePresence } from 'framer-motion';
 import { StudentLessonNotes, LessonSlideshow } from '../components/LessonContent';
 import { sensorQuizExplanation } from '../content/lessons';
@@ -42,7 +44,7 @@ function ClientLobby() {
   const [joinError, setJoinError] = useState('');
   const [isCheckingPin, setIsCheckingPin] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
-  const [localName, setLocalName] = useState(() => sessionStorage.getItem('student_name') || '');
+  const [localName, setLocalName] = useState(getStudentName);
 
   const isJoined = Boolean(localName && roomState.students?.some(s => s.name === localName));
 
@@ -70,7 +72,7 @@ function ClientLobby() {
   useEffect(() => {
     if (connected && localName && roomState.students && !isJoined) {
       console.warn('[ClientLobby] Session expired or student not in room. Resetting session.');
-      sessionStorage.removeItem('student_name');
+      clearStudent();
       setLocalName('');
     }
   }, [connected, localName, roomState.students, isJoined]);
@@ -117,7 +119,7 @@ function ClientLobby() {
         <button
           type="button"
           onClick={() => {
-            sessionStorage.removeItem('student_name');
+            clearStudent();
             setLocalName('');
             window.location.reload();
           }}
@@ -181,8 +183,7 @@ function ClientLobby() {
     try {
       const res = await joinRoom(cleanName, pin.trim());
       if (res?.ok) {
-        sessionStorage.setItem('student_name', cleanName);
-        setLocalName(cleanName);
+        setLocalName(res.name || cleanName);
         window.location.reload();
       } else {
         setJoinError(res?.error || '❌ ไม่สามารถเข้าร่วมห้องได้');
@@ -235,6 +236,12 @@ function ClientLobby() {
         style={{ padding: '3rem 2.5rem', width: '90%', maxWidth: 420, display: 'flex', flexDirection: 'column', gap: '1.5rem', alignItems: 'center' }}>
         <div style={{ fontSize: '4rem' }}>🚀</div>
         <h2 className="text-glow-blue" style={{ fontSize: '2rem', textAlign: 'center', margin: 0 }}>Welcome to IoT Lab</h2>
+        {!roomState.joinOpen && (
+          <p role="alert" style={{ color: '#ffb86c', fontSize: '0.85rem', margin: 0, textAlign: 'center', lineHeight: 1.6 }}>
+            ⏳ คาบเรียนเริ่มไปแล้ว คุณครูปิดรับนักเรียนใหม่<br />
+            ถ้าเคยเข้าห้องนี้แล้ว ให้กรอกชื่อเดิมเพื่อกลับเข้าห้อง
+          </p>
+        )}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <p style={{ color: 'var(--neon-green)', fontSize: '0.9rem', margin: 0 }}>✅ PIN: {pin} ถูกต้อง</p>
           <button
@@ -269,24 +276,22 @@ function ClientLobby() {
 // ─── Scene 2: 3-Layer Architecture (Polling) ──────────────────────────────────
 function ClientArchitecture() {
   const { roomState, submitVote } = useRoom();
-  const myName = sessionStorage.getItem('student_name');
+  const myName = getStudentName();
   const [isTimeUp, setIsTimeUp] = useState(false);
   
   const currentItem = roomState.currentVoteItem;
   const allVotes = roomState.architectureVotes?.[currentItem] || {};
   const myVote = allVotes[myName];
-  const totalVotes = Object.keys(allVotes).length;
-  const totalStudents = roomState.students.length;
+  const { answered: totalVotes, total: totalStudents, allAnswered: isAllAnswered } = answerProgress(roomState, allVotes);
 
   const correctMap = { esp32: 'device', wifi: 'network', cloud: 'service' };
   const correctAnswer = correctMap[currentItem];
-  const isAllAnswered = totalStudents > 0 && totalVotes >= totalStudents;
   const showResults = isTimeUp || isAllAnswered;
 
   // Track timer expiry
   useEffect(() => {
     setIsTimeUp(false);
-    const timer = setTimeout(() => setIsTimeUp(true), 30000 - (Date.now() - roomState.questionStartTime));
+    const timer = setTimeout(() => setIsTimeUp(true), (roomState.questionDurationMs ?? 30000) - (Date.now() - roomState.questionStartTime));
     return () => clearTimeout(timer);
   }, [roomState.questionStartTime]);
 
@@ -308,7 +313,7 @@ function ClientArchitecture() {
       
       {/* อุปกรณ์ที่กำลังโหวต */}
       <div className="glass-panel" style={{ padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-        <CountdownTimer startTime={roomState.questionStartTime} duration={30} size={50} stopped={isAllAnswered} />
+        <CountdownTimer startTime={roomState.questionStartTime} duration={(roomState.questionDurationMs ?? 30000) / 1000} size={50} stopped={isAllAnswered} />
         <motion.div key={currentItem} initial={{ scale: 0 }} animate={{ scale: 1 }} style={{ fontSize: '3rem' }}>
           {activeItem.icon}
         </motion.div>
@@ -396,21 +401,19 @@ function ClientProblem() {
 
 function ClientDigital() {
   const { roomState, voteDigital } = useRoom();
-  const myName = sessionStorage.getItem('student_name');
+  const myName = getStudentName();
   const [isTimeUp, setIsTimeUp] = useState(false);
   
   const allVotes = roomState.digitalVotes || {};
   const myVote = allVotes[myName];
-  const totalVotes = Object.keys(allVotes).length;
-  const totalStudents = roomState.students.length;
+  const { answered: totalVotes, total: totalStudents, allAnswered: isAllAnswered } = answerProgress(roomState, allVotes);
 
   const correctAnswer = '2_states';
-  const isAllAnswered = totalStudents > 0 && totalVotes >= totalStudents;
   const showResults = isTimeUp || isAllAnswered;
 
   useEffect(() => {
     setIsTimeUp(false);
-    const timer = setTimeout(() => setIsTimeUp(true), 30000 - (Date.now() - roomState.questionStartTime));
+    const timer = setTimeout(() => setIsTimeUp(true), (roomState.questionDurationMs ?? 30000) - (Date.now() - roomState.questionStartTime));
     return () => clearTimeout(timer);
   }, [roomState.questionStartTime]);
 
@@ -425,7 +428,7 @@ function ClientDigital() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1.5rem', maxWidth: 440, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
       
       <div className="glass-panel" style={{ padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-        <CountdownTimer startTime={roomState.questionStartTime} duration={30} size={50} stopped={isAllAnswered} />
+        <CountdownTimer startTime={roomState.questionStartTime} duration={(roomState.questionDurationMs ?? 30000) / 1000} size={50} stopped={isAllAnswered} />
         <div>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>คำถาม</div>
           <div style={{ fontWeight: 'bold', color: 'var(--neon-blue)', fontSize: '1rem' }}>สัญญาณ Digital มีกี่สถานะ?</div>
@@ -503,21 +506,19 @@ function ClientDigital() {
 // ─── Scene 5: Analog Signal ────────────────────────────────────────────────
 function ClientAnalog() {
   const { roomState, voteAnalog } = useRoom();
-  const myName = sessionStorage.getItem('student_name');
+  const myName = getStudentName();
   const [isTimeUp, setIsTimeUp] = useState(false);
   
   const allVotes = roomState.analogVotes || {};
   const myVote = allVotes[myName];
-  const totalVotes = Object.keys(allVotes).length;
-  const totalStudents = roomState.students.length;
+  const { answered: totalVotes, total: totalStudents, allAnswered: isAllAnswered } = answerProgress(roomState, allVotes);
 
   const correctAnswer = 'continuous';
-  const isAllAnswered = totalStudents > 0 && totalVotes >= totalStudents;
   const showResults = isTimeUp || isAllAnswered;
 
   useEffect(() => {
     setIsTimeUp(false);
-    const timer = setTimeout(() => setIsTimeUp(true), 30000 - (Date.now() - roomState.questionStartTime));
+    const timer = setTimeout(() => setIsTimeUp(true), (roomState.questionDurationMs ?? 30000) - (Date.now() - roomState.questionStartTime));
     return () => clearTimeout(timer);
   }, [roomState.questionStartTime]);
 
@@ -532,7 +533,7 @@ function ClientAnalog() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1.5rem', maxWidth: 440, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
       
       <div className="glass-panel" style={{ padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-        <CountdownTimer startTime={roomState.questionStartTime} duration={30} size={50} stopped={isAllAnswered} />
+        <CountdownTimer startTime={roomState.questionStartTime} duration={(roomState.questionDurationMs ?? 30000) / 1000} size={50} stopped={isAllAnswered} />
         <div>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>คำถาม</div>
           <div style={{ fontWeight: 'bold', color: '#ffd08a', fontSize: '1rem' }}>สัญญาณ Analog แตกต่างจาก Digital อย่างไร?</div>
@@ -610,22 +611,20 @@ function ClientAnalog() {
 // ─── Scene 6: Sensor Catalog ────────────────────────────────────────────────
 function ClientCatalog() {
   const { roomState, voteCatalog } = useRoom();
-  const myName = sessionStorage.getItem('student_name');
+  const myName = getStudentName();
   const [isTimeUp, setIsTimeUp] = useState(false);
   
   const qIndex = roomState.catalogCurrentQuestion || 1;
   const allVotes = roomState.catalogVotes?.[qIndex] || {};
   const myVote = allVotes[myName];
-  const totalVotes = Object.keys(allVotes).length;
-  const totalStudents = roomState.students.length;
+  const { answered: totalVotes, total: totalStudents, allAnswered: isAllAnswered } = answerProgress(roomState, allVotes);
 
   const correctAnswer = sensorCatalogQuestions[qIndex].correct;
-  const isAllAnswered = totalStudents > 0 && totalVotes >= totalStudents;
   const showResults = isTimeUp || isAllAnswered;
 
   useEffect(() => {
     setIsTimeUp(false);
-    const timer = setTimeout(() => setIsTimeUp(true), 30000 - (Date.now() - roomState.questionStartTime));
+    const timer = setTimeout(() => setIsTimeUp(true), (roomState.questionDurationMs ?? 30000) - (Date.now() - roomState.questionStartTime));
     return () => clearTimeout(timer);
   }, [roomState.questionStartTime, qIndex]);
 
@@ -635,7 +634,7 @@ function ClientCatalog() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1.5rem', maxWidth: 440, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
       
       <div className="glass-panel" style={{ padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-        <CountdownTimer startTime={roomState.questionStartTime} duration={30} size={50} stopped={isAllAnswered} />
+        <CountdownTimer startTime={roomState.questionStartTime} duration={(roomState.questionDurationMs ?? 30000) / 1000} size={50} stopped={isAllAnswered} />
         <div>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>คำถามที่ {qIndex} / 4</div>
           <div style={{ fontWeight: 'bold', color: 'var(--neon-blue)', fontSize: '1rem', lineHeight: '1.3' }}>{currentQ.prompt}</div>
@@ -726,11 +725,10 @@ function ClientCatalog() {
 // ─── Scene 7: Sensor Quiz ──────────────────────────────────────────────────
 function ClientQuiz() {
   const { roomState, voteQuiz } = useRoom();
-  const myName = sessionStorage.getItem('student_name');
+  const myName = getStudentName();
   const myVote = roomState.quizVotes?.[myName];
   const allVotes = roomState.quizVotes || {};
-  const totalVoted = Object.keys(allVotes).length;
-  const totalStudents = roomState.students.length;
+  const { answered: totalVoted, total: totalStudents, allAnswered: isAllAnswered } = answerProgress(roomState, allVotes);
   const [isTimeUp, setIsTimeUp] = useState(false);
 
   const options = [
@@ -740,12 +738,11 @@ function ClientQuiz() {
     { id: 'soil', label: 'ความชื้นดิน',               emoji: '🌱', color: '#50fa7b' },
   ];
   const isRevealed = roomState.quizRevealed;
-  const isAllAnswered = totalStudents > 0 && totalVoted >= totalStudents;
   const showResults = isTimeUp || isRevealed || isAllAnswered;
 
   useEffect(() => {
     setIsTimeUp(false);
-    const remaining = 30000 - (Date.now() - roomState.questionStartTime);
+    const remaining = (roomState.questionDurationMs ?? 30000) - (Date.now() - roomState.questionStartTime);
     if (remaining <= 0) { setIsTimeUp(true); return; }
     const timer = setTimeout(() => setIsTimeUp(true), remaining);
     return () => clearTimeout(timer);
@@ -755,7 +752,7 @@ function ClientQuiz() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1.5rem', maxWidth: 440, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
       
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem' }}>
-        <CountdownTimer startTime={roomState.questionStartTime} duration={30} size={45} stopped={isAllAnswered || isRevealed} />
+        <CountdownTimer startTime={roomState.questionStartTime} duration={(roomState.questionDurationMs ?? 30000) / 1000} size={45} stopped={isAllAnswered || isRevealed} />
         <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
           โจทย์อยู่บนหน้าจอครู! เลือกเซนเซอร์ที่เหมาะสมที่สุด
         </span>
@@ -836,20 +833,18 @@ function ClientQuiz() {
 // ─── Scene 8: Logic Building ────────────────────────────────────────────────
 function ClientLogic() {
   const { roomState, voteLogic } = useRoom();
-  const myName = sessionStorage.getItem('student_name');
+  const myName = getStudentName();
   const myVote = roomState.logicVotes?.[myName];
   const allVotes = roomState.logicVotes || {};
-  const totalVoted = Object.keys(allVotes).length;
-  const totalStudents = roomState.students.length;
+  const { answered: totalVoted, total: totalStudents, allAnswered: isAllAnswered } = answerProgress(roomState, allVotes);
   const [isTimeUp, setIsTimeUp] = useState(false);
 
   const correctId = 'dry';
-  const isAllAnswered = totalStudents > 0 && totalVoted >= totalStudents;
   const showResults = isTimeUp || isAllAnswered;
 
   useEffect(() => {
     setIsTimeUp(false);
-    const remaining = 30000 - (Date.now() - roomState.questionStartTime);
+    const remaining = (roomState.questionDurationMs ?? 30000) - (Date.now() - roomState.questionStartTime);
     if (remaining <= 0) { setIsTimeUp(true); return; }
     const timer = setTimeout(() => setIsTimeUp(true), remaining);
     return () => clearTimeout(timer);
@@ -867,7 +862,7 @@ function ClientLogic() {
       
       {/* Timer + Code preview */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-        <CountdownTimer startTime={roomState.questionStartTime} duration={30} size={50} stopped={isAllAnswered} />
+        <CountdownTimer startTime={roomState.questionStartTime} duration={(roomState.questionDurationMs ?? 30000) / 1000} size={50} stopped={isAllAnswered} />
         <div style={{ flex: 1, background: 'rgba(0,0,0,0.35)', padding: '1rem', borderRadius: 10, borderLeft: '4px solid var(--neon-purple)', fontFamily: 'monospace', fontSize: '0.95rem', color: '#ffb86c', lineHeight: 1.8 }}>
         IF ( <span style={{ color: 'var(--neon-blue)', borderBottom: myVote ? `2px solid var(--neon-blue)` : '2px dashed rgba(0,240,255,0.4)' }}>
           {myVote ? conditions.find(c => c.id === myVote)?.label : '\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0'}
@@ -946,12 +941,12 @@ function ClientLogic() {
 // ─── Scene 9 & 10: Conclusion & Podium ──────────────────────────────────────
 function ClientWrapUp() {
   const { roomState, addFloatingEmoji } = useRoom();
-  const myName = sessionStorage.getItem('student_name');
-  const scores = (roomState.chapterScores && roomState.chapterScores[roomState.chapter]) || {};
+  const myName = getStudentName();
   const students = roomState.students || [];
-  const sortedStudents = [...students].sort((a, b) => (scores[b.name] || 0) - (scores[a.name] || 0));
+  const sortedStudents = rankStudents(roomState);
   const myRank = sortedStudents.findIndex(s => s.name === myName) + 1;
-  const myScore = scores[myName] || 0;
+  const me = sortedStudents.find(s => s.name === myName);
+  const myScore = me?.score || 0;
   const medals = ['', '🥇', '🥈', '🥉'];
   
   return (
@@ -965,6 +960,11 @@ function ClientWrapUp() {
           <div style={{ fontSize: '3rem' }}>{medals[myRank] || '🏅'}</div>
           <div style={{ color: 'var(--neon-blue)', fontSize: '2rem', fontWeight: 800 }}>{myScore} pts</div>
           <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>อันดับที่ {myRank} จาก {students.length} คน</div>
+          {me?.correctCount > 0 && (
+            <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
+              ตอบถูก {me.correctCount} ข้อ · รวมเวลา {formatDuration(me.totalTimeMs)} · เร็วสุด {formatDuration(me.bestTimeMs)}
+            </div>
+          )}
         </motion.div>
 
         {/* Top 3 mini leaderboard */}
@@ -974,7 +974,9 @@ function ClientWrapUp() {
               <span style={{ color: s.name === myName ? 'var(--neon-blue)' : 'var(--text-secondary)', fontSize: '0.85rem' }}>
                 {medals[i + 1] || `${i + 1}.`} {s.name}
               </span>
-              <span style={{ color: 'var(--neon-blue)', fontWeight: 'bold', fontSize: '0.85rem' }}>{scores[s.name] || 0}</span>
+              <span style={{ color: 'var(--neon-blue)', fontWeight: 'bold', fontSize: '0.85rem' }}>
+                {s.score} <span style={{ color: 'var(--text-secondary)', fontWeight: 400 }}>· {formatDuration(s.correctCount ? s.totalTimeMs : null)}</span>
+              </span>
             </div>
           ))}
         </div>
@@ -999,7 +1001,7 @@ const TAB_LESSON   = 'lesson';
 
 export default function ClientView() {
   const { roomState, connected } = useRoom();
-  const [myName, setMyName] = useState(() => sessionStorage.getItem('student_name') || '');
+  const [myName, setMyName] = useState(getStudentName);
   const isJoined = Boolean(myName && roomState.students?.some(s => s.name === myName));
   const tab = isJoined && roomState.presentation?.mode === 'lesson' ? TAB_LESSON : TAB_ACTIVITY;
   const myScore = ((roomState.chapterScores && roomState.chapterScores[roomState.chapter]) || {})[myName] || 0;
@@ -1007,7 +1009,7 @@ export default function ClientView() {
   // Clear stale session if server restarted or student was removed
   useEffect(() => {
     if (connected && myName && roomState.students && !isJoined) {
-      sessionStorage.removeItem('student_name');
+      clearStudent();
       setMyName('');
     }
   }, [connected, myName, roomState.students, isJoined]);

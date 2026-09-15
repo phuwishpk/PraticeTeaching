@@ -1,7 +1,22 @@
 import { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { createRoomState } from '../../shared/roomState';
+import { clearStudent, getStudentToken, saveStudent } from '../session';
 
 const RoomContext = createContext();
+
+// The countdown a learner sees has to be the countdown the server enforces, so every
+// snapshot is translated out of the server's clock and into this browser's.
+function toLocalClock(snapshot) {
+  const offset = typeof snapshot.serverNow === 'number' ? Date.now() - snapshot.serverNow : 0;
+  return { ...snapshot.state, questionStartTime: snapshot.state.questionStartTime + offset };
+}
+
+function authHeaders() {
+  const headers = { 'Content-Type': 'application/json' };
+  const student = getStudentToken();
+  if (student) headers['x-student-token'] = student;
+  return headers;
+}
 
 export function RoomProvider({ children }) {
   const [roomState, setRoomState] = useState(createRoomState);
@@ -15,13 +30,13 @@ export function RoomProvider({ children }) {
     // If server restarted (new instance), force page reload to get fresh PIN
     if (current.instance !== null && snapshot.instance !== current.instance) {
       console.warn('[RoomContext] Server restarted — reloading page to sync PIN...');
-      sessionStorage.removeItem('student_name');
+      clearStudent();
       window.location.reload();
       return;
     }
     if (snapshot.instance !== current.instance || snapshot.revision >= current.revision) {
       version.current = { instance: snapshot.instance, revision: snapshot.revision };
-      setRoomState(snapshot.state);
+      setRoomState(toLocalClock(snapshot));
     }
   }, []);
 
@@ -41,7 +56,7 @@ export function RoomProvider({ children }) {
     const request = queue.current.then(async () => {
       try {
         const response = await fetch('/api/room/actions', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          method: 'POST', headers: authHeaders(),
           body: JSON.stringify({ type, payload }), signal: AbortSignal.timeout(8000),
         });
         const result = await response.json();
@@ -61,21 +76,25 @@ export function RoomProvider({ children }) {
   const setChapter = useCallback(chapter => dispatch('changeChapter', { chapter }), [dispatch]);
   const setStep = useCallback(step => dispatch('changeStep', { step }), [dispatch]);
   const setPresentation = useCallback(patch => dispatch('presentation', { chapter: roomState.chapter, step: roomState.step, ...patch }), [dispatch, roomState.chapter, roomState.step]);
+  const setJoinOpen = useCallback(open => dispatch('setJoinOpen', { open }), [dispatch]);
+  const removeStudent = useCallback(name => dispatch('removeStudent', { name }), [dispatch]);
   const joinRoom = useCallback(async (name, pin) => {
     try {
       const response = await fetch('/api/room/actions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders(),
         body: JSON.stringify({ type: 'join', payload: { name, pin } }),
       });
       const result = await response.json();
       if (!response.ok) {
         return { ok: false, error: result.error || 'ไม่สามารถเข้าร่วมห้องได้' };
       }
+      // Keep the spelling the room filed the answers under, not the one just typed.
+      saveStudent(result.studentName || name, result.studentToken);
       acceptSnapshot(result);
       setError('');
-      return { ok: true };
-    } catch (err) {
+      return { ok: true, name: result.studentName || name };
+    } catch {
       return { ok: false, error: 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้' };
     }
   }, [acceptSnapshot]);
@@ -97,7 +116,8 @@ export function RoomProvider({ children }) {
   const voteChoice = useCallback((activityId, option, name) => dispatch('choiceVote', { activityId, option, name }), [dispatch]);
 
   return (
-    <RoomContext.Provider value={{ roomState, connected, error, joinUrl, setChapter, setStep, setPresentation, joinRoom,
+    <RoomContext.Provider value={{ roomState, connected, error, joinUrl,
+      setChapter, setStep, setPresentation, setJoinOpen, removeStudent, joinRoom,
       setVoteItem, submitVote, sendFloatingEmoji,
       addFloatingEmoji, voteQuiz, revealQuiz, voteLogic, activateSense, resetRoom,
       voteProblem, voteDigital, voteAnalog, voteChoice, setCatalogQuestion, voteCatalog }}>

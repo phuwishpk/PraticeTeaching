@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { lessons } from '../src/content/lessons.js';
 import { CHAPTER_FLOW, applyRoomAction, createRoomState } from '../shared/roomState.js';
+import { act, openActivity } from './roomHarness.js';
 
 test('chapter one builds knowledge before asking learners to solve a problem', () => {
   assert.deepEqual(
@@ -56,11 +57,8 @@ test('opening a podium displays the activity view immediately', () => {
 });
 
 test('the sensor review scores the four sensors taught in chapter one', () => {
-  let state = { ...createRoomState(), catalogCurrentQuestion: 4 };
-  state = applyRoomAction(state, { type: 'catalogVote', payload: { name: 'Learner', option: 'soil' } });
+  let state = act(openActivity('sensors'), 'setCatalogQuestion', { question: 4 });
+  state = act(state, 'catalogVote', { name: 'Learner', option: 'soil' });
   assert.ok(state.chapterScores[1].Learner > 0);
-  assert.throws(() => applyRoomAction(state, {
-    type: 'catalogVote',
-    payload: { name: 'Another learner', option: 'ultrasonic' },
-  }));
+  assert.throws(() => act(state, 'catalogVote', { name: 'Learner', option: 'ultrasonic' }));
 });
