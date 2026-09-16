@@ -889,14 +889,17 @@ export default function HostView() {
 
       {/* Mode tab bar */}
       <div className="lesson-mode-bar" role="group" aria-label="รูปแบบการสอน" style={{ flexShrink: 0 }}>
-        <button
-          id="host-tab-lesson"
-          className="lesson-mode-button"
-          aria-pressed={lessonMode}
-          onClick={() => handleTabChange('lesson')}
-        >
-          📖 เนื้อหา
-        </button>
+        {/* The lobby is where the class gathers — there is no lesson to show there yet. */}
+        {currentStepData.type !== 'lobby' && (
+          <button
+            id="host-tab-lesson"
+            className="lesson-mode-button"
+            aria-pressed={lessonMode}
+            onClick={() => handleTabChange('lesson')}
+          >
+            📖 เนื้อหา
+          </button>
+        )}
         <button
           id="host-tab-activity"
           className="lesson-mode-button"

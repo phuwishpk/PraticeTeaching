@@ -84,6 +84,8 @@ test('teacher and student pages render with the current chapter/step room state'
             const teacher = renderPage(Host);
             assert.ok(teacher.includes('Host Dashboard'));
             assert.ok(teacher.includes(mode === 'lesson' ? 'lesson-slideshow-stage' : 'host-activity'));
+            // The lobby has no lesson behind it, so the teacher is not offered that tab there.
+            assert.equal(teacher.includes('host-tab-lesson'), steps[step].type !== 'lobby');
             const student = renderPage(Client);
             assert.ok(student.length > 500);
             assert.ok(!student.includes('Unknown Activity'));
