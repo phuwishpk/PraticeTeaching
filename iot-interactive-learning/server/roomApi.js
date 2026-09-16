@@ -42,6 +42,9 @@ const parseOrigin = value => {
 
 const isFresh = entry => entry && Date.now() - entry.savedAt <= ROOM_MAX_AGE_MS;
 
+const RECONNECT_BASE_MS = 2000;
+const RECONNECT_JITTER_MS = 3000;
+
 // Roughly one broadcast's worth of slack before a connection is considered hopeless.
 const MAX_STREAM_BACKLOG = 1024 * 1024;
 
@@ -250,7 +253,11 @@ export function createRoomApi({ persistPath = null } = {}) {
     if (!path?.startsWith('/api/room/')) return next();
     if (req.method === 'GET' && path === '/api/room/events') {
       res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache, no-transform', Connection: 'keep-alive', 'X-Accel-Buffering': 'no' });
-      res.write(`retry: 1000\ndata: ${JSON.stringify(snapshot())}\n\n`);
+      // Reconnect delay, staggered per connection. A reverse proxy that drops long-lived
+      // connections drops all of them at once, and a fixed one second delay had the whole
+      // class marching back in lockstep — each reconnect costing the proxy another worker
+      // and the server another full snapshot.
+      res.write(`retry: ${RECONNECT_BASE_MS + Math.floor(Math.random() * RECONNECT_JITTER_MS)}\ndata: ${JSON.stringify(snapshot())}\n\n`);
       streams.add(res);
       res.on('close', () => streams.delete(res));
       res.on('error', () => streams.delete(res));

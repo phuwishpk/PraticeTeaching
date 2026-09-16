@@ -9,24 +9,46 @@ import { formatDuration } from '../format';
 import { motion, AnimatePresence } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
 import ReactConfetti from 'react-confetti';
-import { useWindowSize } from 'react-use';
 import { LessonSlideshow } from '../components/LessonContent';
 import { ImageWithModal } from '../components/ImageWithModal';
 import { lessons, sensorQuizExplanation } from '../content/lessons';
 import { sensorCatalogOptions, sensorCatalogQuestions } from '../content/sensorCatalogActivity';
 import CountdownTimer from '../components/CountdownTimer';
 
+// react-use was a 2 MB dependency pulled in for this one hook, and it drags nano-css in
+// with it — cost the learners pay on every page load for a confetti canvas the teacher sees.
+function useWindowSize() {
+  const [size, setSize] = useState(() => ({ width: window.innerWidth, height: window.innerHeight }));
+  useEffect(() => {
+    const onResize = () => setSize({ width: window.innerWidth, height: window.innerHeight });
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+  return size;
+}
+
 // ─── Floating Emojis Overlay ──────────────────────────────────────────────────
-function FloatingEmojis({ emojis }) {
+// The sideways drift has to be the same on every render. Rolling it fresh each time handed
+// framer-motion a new destination for every emoji on screen, so all of them restarted from
+// wherever they were — several times a second, on the machine driving the projector.
+function driftOf(id = '') {
+  let hash = 0;
+  for (let index = 0; index < id.length; index++) hash = (hash * 31 + id.charCodeAt(index)) | 0;
+  return (Math.abs(hash) % 100) - 50;
+}
+
+// Memoised because the room broadcasts far more often than the emoji list changes, and
+// roomState.floatingEmojis keeps its identity until an emoji is actually added or expires.
+const FloatingEmojis = React.memo(function FloatingEmojis({ emojis }) {
   return (
     <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 9999 }}>
       <AnimatePresence>
         {emojis.map(e => (
           <motion.div key={e.id}
-            initial={{ y: window.innerHeight, x: e.x, opacity: 1, scale: 0.5 }}
-            animate={{ y: -100, x: e.x + (Math.random() * 100 - 50), opacity: 0, scale: 1.5 }}
+            initial={{ y: 0, opacity: 1, scale: 0.5 }}
+            animate={{ y: '-100vh', x: driftOf(e.id), opacity: 0, scale: 1.5 }}
             transition={{ duration: 3, ease: 'easeOut' }}
-            style={{ position: 'absolute', fontSize: '3rem' }}>
+            style={{ position: 'absolute', bottom: 0, left: `${e.x}%`, fontSize: '3rem' }}>
             <div style={{ position: 'relative' }}>
               {e.emoji}
               <span style={{ position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)', fontSize: '1rem', color: '#fff', background: 'rgba(0,0,0,0.5)', padding: '2px 8px', borderRadius: 10, whiteSpace: 'nowrap' }}>
@@ -39,7 +61,7 @@ function FloatingEmojis({ emojis }) {
 
     </div>
   );
-}
+});
 
 // ─── Scene 1: Lobby ───────────────────────────────────────────────────────────
 function HostLobby() {
