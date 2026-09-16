@@ -2,6 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { once } from 'node:events';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { CHAPTER_FLOW } from '../shared/roomState.js';
 import { createRoomApi } from '../server/roomApi.js';
 
@@ -9,8 +12,8 @@ const ROLES_STEP = CHAPTER_FLOW[1].findIndex(({ id }) => id === 'roles');
 
 // Boots the real middleware over a real socket, so the checks under test are the ones a
 // browser actually meets: headers, status codes and the broadcast snapshot.
-async function withRoom(run) {
-  const api = createRoomApi();
+async function withRoom(run, options) {
+  const api = createRoomApi(options);
   const server = createServer((req, res) => api.middleware(req, res));
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   const base = `http://127.0.0.1:${server.address().port}`;
@@ -74,3 +77,42 @@ test('the teacher screen drives the room without signing in', () => withRoom(asy
   assert.equal((await post('changeStep', { step: ROLES_STEP })).status, 200);
   assert.equal((await snapshot()).state.step, ROLES_STEP);
 }));
+
+test('a restart in the middle of a lesson does not end the lesson', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'room-'));
+  const persistPath = join(dir, 'room.json');
+  const carried = {};
+
+  try {
+    await withRoom(async ({ post, snapshot }) => {
+      const { pin } = (await snapshot()).state;
+      const joined = await (await post('join', { pin, name: 'Ann' })).json();
+      Object.assign(carried, { pin, token: joined.studentToken, instance: joined.instance });
+      await openRoles(post);
+      await post('choiceVote', { activityId: 'roles', option: 'controller' }, { 'x-student-token': joined.studentToken });
+      carried.score = (await snapshot()).state.chapterScores[1].Ann;
+      assert.ok(carried.score > 0);
+    }, { persistPath });
+
+    // The process is gone; everything the room knew has to come back off disk.
+    await withRoom(async ({ post, snapshot }) => {
+      const back = await snapshot();
+      assert.equal(back.state.pin, carried.pin, 'the PIN on the board must still work');
+      assert.deepEqual(back.state.students.map(({ name }) => name), ['Ann']);
+      assert.equal(back.state.chapterScores[1].Ann, carried.score, 'scores must survive');
+      // Same instance id, so the browsers still in the room neither reload nor lose their seat.
+      assert.equal(back.instance, carried.instance);
+
+      // The learner's saved token still identifies them, and their answer still stands.
+      const rejoin = await post('join', { pin: carried.pin, name: 'Ann' }, { 'x-student-token': carried.token });
+      assert.equal(rejoin.status, 200);
+      await openRoles(post);
+      await post('choiceVote', { activityId: 'roles', option: 'sensor' }, { 'x-student-token': carried.token });
+      const after = await snapshot();
+      assert.equal(after.state.choiceVotes.roles.Ann, 'controller', 'a restart must not reopen an answered question');
+      assert.equal(after.state.chapterScores[1].Ann, carried.score);
+    }, { persistPath });
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

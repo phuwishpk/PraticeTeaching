@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# สถานะห้องเรียนที่เซิร์ฟเวอร์บันทึกไว้ระหว่างสอน
+.room-state.json
+.room-state.json.tmp

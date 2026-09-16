@@ -3,9 +3,20 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 
+// Every device photo used to arrive full size even when it was drawn 48px wide, which is
+// what saturated the classroom wi-fi. The page now shows a 256px copy and only fetches the
+// large one when somebody actually taps to zoom.
+const thumbnailOf = src =>
+  typeof src === 'string' && src.startsWith('/images/') && !src.startsWith('/images/thumb/')
+    ? src.replace('/images/', '/images/thumb/')
+    : src;
+
 export function ImageWithModal({ src, alt, style, className }) {
   const [isOpen, setIsOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  // If a thumbnail is missing, fall back to the full image rather than showing nothing.
+  const [thumbFailed, setThumbFailed] = useState(false);
+  const preview = thumbFailed ? src : thumbnailOf(src);
 
   useEffect(() => {
     setMounted(true);
@@ -87,15 +98,18 @@ export function ImageWithModal({ src, alt, style, className }) {
 
   return (
     <>
-      <img 
-        src={src} 
-        alt={alt} 
-        style={{ ...style, cursor: 'zoom-in' }} 
-        className={className} 
+      <img
+        src={preview}
+        alt={alt}
+        loading="lazy"
+        decoding="async"
+        style={{ ...style, cursor: 'zoom-in' }}
+        className={className}
+        onError={() => setThumbFailed(true)}
         onClick={(e) => {
           e.stopPropagation();
           setIsOpen(true);
-        }} 
+        }}
       />
       {mounted ? createPortal(modalContent, document.body) : null}
     </>

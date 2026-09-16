@@ -174,6 +174,34 @@ export function answerProgress(state, votes = {}) {
   return { answered, total: counted.size, allAnswered: counted.size > 0 && answered >= counted.size };
 }
 
+// One row per learner for the chapter being taught. The room keeps every answer so it can
+// rank on time, but those records grow with students x questions and the whole state goes
+// out to every phone on every tap — which is what makes a full class unusable. Only this
+// summary travels.
+function summariseAnswers(state, chapter) {
+  const chapterAnswers = state.answers?.[chapter] || {};
+  return (state.students || []).map(student => {
+    const entries = Object.values(chapterAnswers[student.name] || {});
+    const correct = entries.filter(entry => entry.correct);
+    return {
+      id: student.id,
+      name: student.name,
+      score: entries.reduce((total, entry) => total + entry.score, 0),
+      answeredCount: entries.length,
+      correctCount: correct.length,
+      totalTimeMs: correct.reduce((total, entry) => total + entry.elapsedMs, 0),
+      bestTimeMs: correct.length ? Math.min(...correct.map(entry => entry.elapsedMs)) : null,
+    };
+  });
+}
+
+// What actually goes down the wire. answers and questionStarts are server bookkeeping:
+// no screen reads them, and together they were half of every broadcast.
+export function broadcastState(state) {
+  const { answers: _answers, questionStarts: _starts, ...shared } = state;
+  return { ...shared, standings: summariseAnswers(state, state.chapter) };
+}
+
 const compareTime = (left, right) => {
   const a = left ?? Number.POSITIVE_INFINITY;
   const b = right ?? Number.POSITIVE_INFINITY;
@@ -183,20 +211,10 @@ const compareTime = (left, right) => {
 // Ranks on points first, then on how quickly those points were earned — the totals, then the
 // single best answer — so equal scores are separated by time instead of by who joined first.
 export function rankStudents(state, chapter = state.chapter) {
-  const chapterAnswers = state.answers?.[chapter] || {};
-  return (state.students || [])
-    .map(student => {
-      const entries = Object.values(chapterAnswers[student.name] || {});
-      const correct = entries.filter(entry => entry.correct);
-      return {
-        ...student,
-        score: entries.reduce((total, entry) => total + entry.score, 0),
-        answeredCount: entries.length,
-        correctCount: correct.length,
-        totalTimeMs: correct.reduce((total, entry) => total + entry.elapsedMs, 0),
-        bestTimeMs: correct.length ? Math.min(...correct.map(entry => entry.elapsedMs)) : null,
-      };
-    })
+  const rows = chapter === state.chapter && state.standings
+    ? state.standings
+    : summariseAnswers(state, chapter);
+  return [...rows]
     .sort((a, b) =>
       b.score - a.score
       || b.correctCount - a.correctCount
@@ -270,9 +288,17 @@ export function applyRoomAction(state, action) {
     case 'join': {
       requireValue(p.pin === state.pin, 'รหัส PIN ไม่ถูกต้อง');
       const name = validName(p.name);
-      // Coming back after a closed tab is not a new seat, so rejoining stays allowed after the
-      // door closes. roomApi has already matched this learner's token before we get here.
-      if (findStudent(state, name)) return state;
+      const seated = findStudent(state, name);
+      if (seated) {
+        // roomApi decides which of these it is. Without a takeover the seat is untouched —
+        // the same learner simply reopened their tab. With one, the seat gets a fresh id,
+        // which is how the screen that used to hold it finds out it has been replaced.
+        if (!p.takeover) return state;
+        return {
+          ...state,
+          students: state.students.map(student => (student === seated ? { ...student, id: p.id } : student)),
+        };
+      }
       requireValue(state.joinOpen, 'คุณครูปิดรับเข้าห้องแล้ว กรุณาแจ้งคุณครูเพื่อเปิดรับอีกครั้ง');
       return { ...state, students: [...state.students, { id: p.id, name }] };
     }

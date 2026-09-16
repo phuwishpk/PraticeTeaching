@@ -651,7 +651,7 @@ function HostLogic() {
 // ─── Confetti Particles ──────────────────────────────────────────────────────
 function Confetti() {
   const { width, height } = useWindowSize();
-  return <ReactConfetti width={width} height={height} numberOfPieces={400} gravity={0.15} style={{ zIndex: 9999, position: 'fixed', top: 0, left: 0 }} />;
+  return <ReactConfetti width={width} height={height} numberOfPieces={400} gravity={0.15} recycle={false} style={{ zIndex: 9999, position: 'fixed', top: 0, left: 0 }} />;
 }
 
 function HostPodium() {
@@ -858,7 +858,15 @@ export default function HostView() {
 
       {/* Navbar */}
       <div className="glass-panel host-navbar" style={{ margin: '10px 14px 0', padding: '10px 18px', display: 'flex', alignItems: 'center', gap: '10px', zIndex: 100, flexShrink: 0 }}>
-        <h2 className="text-glow-blue" style={{ marginRight: 'auto', fontSize: '1.2rem' }}>🖥️ Host Dashboard</h2>
+        <h2 className="text-glow-blue" style={{ fontSize: '1.2rem' }}>🖥️ Host Dashboard</h2>
+        <div title={roomState.joinOpen ? 'กำลังเปิดรับนักเรียนเข้าห้อง' : 'ปิดรับนักเรียนใหม่ — กดขั้น "เข้าห้องเรียน" เพื่อเปิดอีกครั้ง'}
+          style={{ marginRight: 'auto', display: 'flex', alignItems: 'center', gap: 8, padding: '4px 12px', borderRadius: 10,
+            background: 'rgba(0,240,255,.08)', border: '1px solid rgba(0,240,255,.25)' }}>
+          <span style={{ color: 'var(--text-secondary)', fontSize: '.75rem' }}>PIN</span>
+          <span style={{ color: 'var(--neon-blue)', fontWeight: 800, fontSize: '1.05rem', letterSpacing: '.12em' }}>{roomState.pin}</span>
+          <span style={{ fontSize: '.85rem' }}>{roomState.joinOpen ? '🔓' : '🔒'}</span>
+          <span style={{ color: 'var(--text-secondary)', fontSize: '.75rem' }}>{roomState.students.length} คน</span>
+        </div>
         {/* Chapter Dropdown */}
         <select 
           className="neu-button" 

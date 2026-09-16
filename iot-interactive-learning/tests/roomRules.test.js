@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { STUDENT_ACTIONS, answerProgress, createRoomState, rankStudents } from '../shared/roomState.js';
+import { STUDENT_ACTIONS, answerProgress, broadcastState, createRoomState, rankStudents } from '../shared/roomState.js';
 import { act, age, joinAll, openActivity } from './roomHarness.js';
 import { problemActivity } from '../src/content/problemActivity.js';
 import { classroomChoiceActivities } from '../src/content/classroomChoiceActivities.js';
@@ -19,6 +19,23 @@ test('the podium separates equal scores by how fast they were earned, not by who
   assert.equal(first.name, 'Ann');
   // The running total the learners' own screens read must agree with the ranking.
   assert.equal(first.score, state.chapterScores[state.chapter].Ann);
+});
+
+test('the broadcast carries the standings, not the bookkeeping behind them', () => {
+  let state = openActivity('roles', ['Bee', 'Ann']);
+  state = act(age(state, 12000), 'choiceVote', { ...ROLES, name: 'Ann' });
+  state = act(age(state, 8000), 'choiceVote', { ...ROLES, name: 'Bee' });
+
+  const sent = broadcastState(state);
+  assert.equal(sent.answers, undefined, 'per-question records must not go to every phone');
+  assert.equal(sent.questionStarts, undefined, 'question bookkeeping must not go to every phone');
+  assert.ok(JSON.stringify(sent).length < JSON.stringify(state).length);
+
+  // A screen reading the broadcast must reach the same podium as the room itself.
+  assert.deepEqual(
+    rankStudents(sent).map(({ name, score, totalTimeMs }) => [name, score, totalTimeMs]),
+    rankStudents(state).map(({ name, score, totalTimeMs }) => [name, score, totalTimeMs]),
+  );
 });
 
 test('a name the room does not know cannot answer or score', () => {

@@ -1,0 +1,39 @@
+.countdown {
+  position: relative;
+  flex-shrink: 0;
+}
+
+/* The ring is interpolated by the compositor between the four updates a second the
+   component makes, instead of being re-rendered on every animation frame. */
+.countdown-progress {
+  transition: stroke-dashoffset 0.25s linear, stroke 0.3s ease;
+}
+
+.countdown-face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.countdown-value {
+  font-weight: 800;
+  line-height: 1;
+  animation: countdown-tick 0.25s ease-out;
+}
+
+.countdown-unit {
+  margin-top: 2px;
+}
+
+@keyframes countdown-tick {
+  from { transform: scale(1.25); opacity: 0.4; }
+  to   { transform: scale(1); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .countdown-progress { transition: none; }
+  .countdown-value { animation: none; }
+}
