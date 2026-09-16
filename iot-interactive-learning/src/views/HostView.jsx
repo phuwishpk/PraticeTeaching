@@ -785,8 +785,8 @@ function HostPodium() {
 const STEP_LABELS = {
   lobby: 'เข้าห้องเรียน',
   architecture: 'ภาพรวมระบบ IoT',
-  roles: 'หน้าที่อุปกรณ์',
-  sensors: 'รู้จักเซ็นเซอร์',
+  roles: 'Output',
+  sensors: 'Input',
   problem: 'วิเคราะห์โจทย์',
   digital: 'Digital: 0 และ 1',
   analog: 'Analog และ ADC',
