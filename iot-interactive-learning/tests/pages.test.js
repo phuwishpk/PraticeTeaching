@@ -36,11 +36,13 @@ test('teacher and student pages render with the current chapter/step room state'
   } });
     const noop = () => {};
     const renderPage = Component => renderToStaticMarkup(React.createElement(MotionConfig, { isStatic: true }, React.createElement(Component)));
-    const provide = roomState => setTestRoom({ roomState, connected: true, joinUrl: 'http://localhost:5175/',
-      setJoinOpen: noop, removeStudent: noop, setChapter: noop, setStep: noop, resetRoom: noop, setPresentation: noop,
+    const provide = (roomState, extra = {}) => setTestRoom({ roomState, connected: true, joinUrl: 'http://localhost:5175/',
+      setJoinOpen: noop, removeStudent: noop, restoreRoom: noop, listRooms: async () => [],
+      setChapter: noop, setStep: noop, resetRoom: noop, setPresentation: noop,
       addFloatingEmoji: noop, sendFloatingEmoji: noop, setVoteItem: noop, submitVote: noop,
       voteProblem: noop, voteDigital: noop, voteAnalog: noop, voteQuiz: noop, voteLogic: noop,
       voteChoice: noop, setCatalogQuestion: noop, voteCatalog: noop, revealQuiz: noop,
+      ...extra,
     });
     await t.test('new visitors see the PIN form even when the teacher is showing a lesson', () => {
       provide({ ...createRoomState(), step: 1, presentation: { mode: 'lesson', slide: 0 } });
@@ -92,6 +94,17 @@ test('teacher and student pages render with the current chapter/step room state'
           }
         }
       }
+    });
+    await t.test('a teacher who drops off the network is told, and how to get back', () => {
+      const room = { ...createRoomState(), students: [{ id: 'test', name: 'Test learner' }] };
+      provide(room);
+      assert.ok(!renderPage(Host).includes('ขาดการเชื่อมต่อกับห้องเรียน'));
+
+      provide(room, { connected: false });
+      const offline = renderPage(Host);
+      assert.ok(offline.includes('ขาดการเชื่อมต่อกับห้องเรียน'));
+      assert.ok(offline.includes('โหลดใหม่'), 'and a way to recover');
+      assert.ok(offline.includes('นักเรียนไม่หลุด'), 'reassuring the teacher the room survives');
     });
     await t.test('every classroom activity gives students multiple choices', () => {
       entries.set('student_name', 'Test learner');

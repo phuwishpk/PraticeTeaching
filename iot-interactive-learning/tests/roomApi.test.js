@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
+import { connect } from 'node:net';
 import { once } from 'node:events';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -30,10 +31,13 @@ async function withRoom(run, options) {
     return JSON.parse(new TextDecoder().decode(value).split('data: ')[1]);
   };
 
+  const rooms = () => fetch(`${base}/api/room/rooms`).then(response => response.json()).then(data => data.rooms);
+
   try {
-    await run({ post, snapshot });
+    await run({ post, snapshot, rooms, base });
   } finally {
     api.close();
+    server.closeAllConnections();
     server.close();
     await once(server, 'close');
   }
@@ -59,18 +63,71 @@ test('an answer is filed under whoever holds the token, not the name in the requ
   assert.deepEqual((await snapshot()).state.choiceVotes.roles, { Ann: 'controller' });
 }));
 
-test('a reopened tab reclaims its seat, a stranger typing the same name does not', () => withRoom(async ({ post, snapshot }) => {
+test('a reopened tab keeps its seat without disturbing anything', () => withRoom(async ({ post, snapshot }) => {
   const { pin } = (await snapshot()).state;
-  const { studentToken } = await (await post('join', { pin, name: 'Ann' })).json();
-
+  const first = await (await post('join', { pin, name: 'Ann' })).json();
   await post('changeStep', { step: ROLES_STEP });
-  assert.equal((await post('join', { pin, name: 'Bee' })).status, 400); // door closed behind the lesson
-  assert.equal((await post('join', { pin, name: 'ann' })).status, 409); // same name, no proof
 
-  const back = await post('join', { pin, name: 'ann' }, { 'x-student-token': studentToken });
-  assert.equal(back.status, 200);
-  assert.equal((await back.json()).studentName, 'Ann');
+  const again = await post('join', { pin, name: 'ann' }, { 'x-student-token': first.studentToken });
+  assert.equal(again.status, 200);
+  const back = await again.json();
+  assert.equal(back.studentName, 'Ann');
+  assert.equal(back.studentToken, first.studentToken, 'the same device keeps the token it had');
+  assert.equal(back.studentId, first.studentId, 'and the seat is left exactly as it was');
   assert.equal((await snapshot()).state.students.length, 1);
+}));
+
+test('a learner whose device lost its session takes their own name back', () => withRoom(async ({ post, snapshot }) => {
+  const { pin } = (await snapshot()).state;
+  const first = await (await post('join', { pin, name: 'Ann' })).json();
+  await openRoles(post);
+  await post('choiceVote', { activityId: 'roles', option: 'controller' }, { 'x-student-token': first.studentToken });
+  const scored = (await snapshot()).state.chapterScores[1].Ann;
+  assert.ok(scored > 0);
+
+  // Same name, no token — a phone that was wiped, or a different device entirely. The door
+  // is shut by now, and that must not stand in the way of somebody reclaiming their seat.
+  const retaken = await post('join', { pin, name: 'Ann' });
+  assert.equal(retaken.status, 200);
+  const seat = await retaken.json();
+  assert.notEqual(seat.studentToken, first.studentToken);
+  assert.notEqual(seat.studentId, first.studentId, 'a new seat id is what tells the old screen it was replaced');
+
+  const room = (await snapshot()).state;
+  assert.equal(room.students.length, 1, 'taking the name back must not create a second seat');
+  assert.equal(room.chapterScores[1].Ann, scored, 'their score comes back with them');
+
+  // The screen that used to hold the seat can no longer act as Ann.
+  assert.equal((await post('emoji', { emoji: '🔥' }, { 'x-student-token': first.studentToken })).status, 401);
+  assert.equal((await post('emoji', { emoji: '🔥' }, { 'x-student-token': seat.studentToken })).status, 200);
+}));
+
+test('the teacher can remove a learner without leaving the lesson', () => withRoom(async ({ post, snapshot }) => {
+  const { pin } = (await snapshot()).state;
+  const ann = await (await post('join', { pin, name: 'Ann' })).json();
+  await post('join', { pin, name: 'Bee' });
+  await openRoles(post);
+  await post('choiceVote', { activityId: 'roles', option: 'controller' }, { 'x-student-token': ann.studentToken });
+  const scored = (await snapshot()).state.chapterScores[1].Ann;
+
+  // Removing happens from wherever the teacher is; the class is not sent back to the lobby.
+  assert.equal((await post('removeStudent', { name: 'Ann' })).status, 200);
+  const room = (await snapshot()).state;
+  assert.deepEqual(room.students.map(({ name }) => name), ['Bee']);
+  assert.equal(room.step, ROLES_STEP, 'the lesson stays where it was');
+  assert.equal(room.chapterScores[1].Ann, scored, 'their score is kept in case they come back');
+
+  // Their screen can no longer act, and the closed door keeps them out until the teacher says so.
+  assert.equal((await post('emoji', { emoji: '🔥' }, { 'x-student-token': ann.studentToken })).status, 401);
+  assert.equal((await post('join', { pin, name: 'Ann' })).status, 400);
+
+  await post('setJoinOpen', { open: true });
+  const readmitted = await post('join', { pin, name: 'Ann' });
+  assert.equal(readmitted.status, 200);
+  const back = (await snapshot()).state;
+  assert.equal(back.students.length, 2);
+  assert.equal(back.chapterScores[1].Ann, scored, 'and it is still theirs when they return');
+  assert.equal(back.choiceVotes.roles.Ann, 'controller', 'a removal must not let them answer again');
 }));
 
 test('the teacher screen drives the room without signing in', () => withRoom(async ({ post, snapshot }) => {
@@ -116,3 +173,106 @@ test('a restart in the middle of a lesson does not end the lesson', async () => 
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('finishing a lesson files the room away instead of destroying it', () => withRoom(async ({ post, snapshot, rooms }) => {
+  const { pin: firstPin } = (await snapshot()).state;
+  const ann = await (await post('join', { pin: firstPin, name: 'Ann' })).json();
+  await openRoles(post);
+  await post('choiceVote', { activityId: 'roles', option: 'controller' }, { 'x-student-token': ann.studentToken });
+  const scored = (await snapshot()).state.chapterScores[1].Ann;
+
+  await post('reset');
+  const fresh = (await snapshot()).state;
+  assert.notEqual(fresh.pin, firstPin);
+  assert.deepEqual(fresh.students, [], 'the new room starts empty');
+
+  const filed = await rooms();
+  assert.equal(filed.length, 1, 'the class that just finished is still there');
+  assert.equal(filed[0].pin, firstPin);
+  assert.equal(filed[0].students, 1);
+
+  // Going back picks the room up whole: same PIN, same register, same scores.
+  assert.equal((await post('restoreRoom', { roomId: filed[0].id })).status, 200);
+  const back = (await snapshot()).state;
+  assert.equal(back.pin, firstPin);
+  assert.deepEqual(back.students.map(({ name }) => name), ['Ann']);
+  assert.equal(back.chapterScores[1].Ann, scored);
+
+  // Ann's device never had to do anything: the token it still holds is valid again.
+  assert.equal((await post('emoji', { emoji: '🔥' }, { 'x-student-token': ann.studentToken })).status, 200);
+}));
+
+test('the room being put down is kept too, so the teacher can go either way', () => withRoom(async ({ post, snapshot, rooms }) => {
+  const first = (await snapshot()).state.pin;
+  await post('join', { pin: first, name: 'Ann' });
+  await post('reset');
+
+  const second = (await snapshot()).state.pin;
+  await post('join', { pin: second, name: 'Bee' });
+
+  const [older] = await rooms();
+  await post('restoreRoom', { roomId: older.id });
+  assert.equal((await snapshot()).state.pin, first);
+
+  const filedNow = await rooms();
+  assert.deepEqual(filedNow.map(room => room.pin), [second], 'the room we just left is waiting');
+  await post('restoreRoom', { roomId: filedNow[0].id });
+  assert.equal((await snapshot()).state.pin, second, 'and can be picked back up');
+}));
+
+test('a room that is gone says so rather than silently doing nothing', () => withRoom(async ({ post }) => {
+  const missing = await post('restoreRoom', { roomId: 'ไม่มีอยู่จริง' });
+  assert.equal(missing.status, 404);
+  assert.match((await missing.json()).error, /ไม่พบห้องเรียนนี้/);
+}));
+
+test('an empty room is not worth filing away', () => withRoom(async ({ post, rooms }) => {
+  await post('reset');
+  assert.deepEqual(await rooms(), []);
+}));
+
+// A request that throws used to become an unhandled rejection, and Node ends the process
+// for those — one malformed header dropped every learner in the room at once.
+test('a malformed request cannot take the room down with it', async () => {
+  const api = createRoomApi();
+  const server = createServer((req, res) => api.middleware(req, res));
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  const port = server.address().port;
+
+  const raw = request => new Promise(resolve => {
+    const socket = connect(port, '127.0.0.1');
+    let received = '';
+    socket.on('error', () => resolve(''));
+    socket.on('data', chunk => { received += chunk; });
+    socket.on('close', () => resolve(received.split('\r\n')[0]));
+    socket.write(request);
+    setTimeout(() => socket.destroy(), 300);
+  });
+
+  try {
+    assert.match(await raw('GET /api/room/info HTTP/1.1\r\nHost: a b c\r\n\r\n'), /200/, 'a broken Host is answered, not fatal');
+    assert.match(await raw('GET /api/room/info HTTP/1.0\r\n\r\n'), /200/, 'and so is no Host at all');
+    // Still serving afterwards is the part that matters.
+    assert.match(await raw('GET /api/room/info HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n'), /200/);
+  } finally {
+    api.close();
+    server.closeAllConnections();
+    server.close();
+    await once(server, 'close');
+  }
+});
+
+test('a phone that vanishes mid-broadcast does not cut the others off', () => withRoom(async ({ post, snapshot, base }) => {
+  const dropped = [];
+  for (let i = 0; i < 5; i++) {
+    const socket = connect(new URL(base).port, '127.0.0.1');
+    socket.on('error', () => {});
+    socket.write('GET /api/room/events HTTP/1.1\r\nHost: x\r\n\r\n');
+    dropped.push(socket);
+  }
+  await new Promise(resolve => setTimeout(resolve, 200));
+  for (const socket of dropped) socket.destroy(); // walked out of wi-fi, no goodbye
+
+  for (let i = 0; i < 6; i++) assert.equal((await post('changeStep', { step: i % 3 })).status, 200);
+  assert.equal((await snapshot()).state.step, 2, 'the room is still broadcasting');
+}));

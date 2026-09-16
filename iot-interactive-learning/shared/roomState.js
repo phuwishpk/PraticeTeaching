@@ -19,9 +19,11 @@ function questionDurationMs(state) {
   return seconds ? seconds * 1000 : QUESTION_DURATION_MS;
 }
 
-// Phones stay a little out of step with the server even after RoomContext corrects the
-// clock offset, so an answer is only refused once it is late by more than this window.
-const LATE_ANSWER_GRACE_MS = 2000;
+// A tap made in good time can still spend seconds crawling over school wi-fi, and being
+// told "หมดเวลา" for their network is the one unfairness learners actually notice. The
+// window is wide enough to cover that, and answering this late earns the floor score
+// anyway, so there is little to gain by exploiting it.
+const LATE_ANSWER_GRACE_MS = 5000;
 
 // roomApi resolves the sender of these from their student token, so payload.name cannot be forged.
 export const STUDENT_ACTIONS = new Set([

@@ -81,7 +81,9 @@ test('reopening the activity tab keeps the countdown that was already running', 
   state = act(state, 'presentation', { chapter, step, mode: 'lesson' });
   state = act(state, 'presentation', { chapter, step, mode: 'activity' });
   assert.equal(state.questionStartTime, questionStartTime);
-  assert.throws(() => act(age(state, 10000), 'choiceVote', { ...ROLES, name: 'Ann' }), /หมดเวลา/);
+  // Well past the window, not balanced on its edge, so the result cannot depend on how
+  // long this test itself took to run.
+  assert.throws(() => act(age(state, 30000), 'choiceVote', { ...ROLES, name: 'Ann' }), /หมดเวลา/);
 });
 
 test('leaving the lobby closes the door, but a learner coming back keeps their seat', () => {

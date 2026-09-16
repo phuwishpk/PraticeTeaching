@@ -7,7 +7,7 @@ import { ImageWithModal } from '../components/ImageWithModal';
 import React, { useState, useRef, useEffect } from 'react';
 import { useRoom } from '../context/RoomContext';
 import { CHAPTER_FLOW, answerProgress, rankStudents } from '../../shared/roomState';
-import { clearStudent, getStudentName } from '../session';
+import { clearStudent, getStudentId, getStudentName, markExit, readExit } from '../session';
 import { formatDuration } from '../format';
 import { motion, AnimatePresence } from 'framer-motion';
 import { StudentLessonNotes, LessonSlideshow } from '../components/LessonContent';
@@ -45,8 +45,11 @@ function ClientLobby() {
   const [isCheckingPin, setIsCheckingPin] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
   const [localName, setLocalName] = useState(getStudentName);
+  const [exitReason] = useState(readExit);
 
-  const isJoined = Boolean(localName && roomState.students?.some(s => s.name === localName));
+  const mySeat = roomState.students?.find(s => s.name === localName);
+  const myId = getStudentId();
+  const isJoined = Boolean(localName && mySeat && (!myId || mySeat.id === myId));
 
   // Auto verify PIN if present in URL (?pin=XXXX)
   useEffect(() => {
@@ -71,9 +74,12 @@ function ClientLobby() {
   // If connected, ensure localName is actually registered on server; otherwise clear stale session
   useEffect(() => {
     if (connected && localName && roomState.students && !isJoined) {
-      console.warn('[ClientLobby] Session expired or student not in room. Resetting session.');
+      // The name still being in the room means somebody else is now sitting in it;
+      // the name being gone means the seat was removed.
+      markExit(roomState.students.some(s => s.name === localName) ? 'taken-over' : 'removed');
       clearStudent();
       setLocalName('');
+      window.location.reload();
     }
   }, [connected, localName, roomState.students, isJoined]);
 
@@ -202,7 +208,19 @@ function ClientLobby() {
         <motion.div initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
           className="glass-panel"
           style={{ padding: '3rem 2.5rem', width: '90%', maxWidth: 420, display: 'flex', flexDirection: 'column', gap: '1.5rem', alignItems: 'center' }}>
-          <div style={{ fontSize: '4rem' }}>🔐</div>
+          {exitReason === 'taken-over' && (
+          <p role="alert" style={{ color: '#ff6b6b', fontSize: '.9rem', margin: 0, textAlign: 'center', lineHeight: 1.7 }}>
+            ⚠️ มีการเข้าใช้ชื่อของคุณจากเครื่องอื่น<br />
+            <span style={{ color: 'var(--text-secondary)', fontSize: '.85rem' }}>ถ้าไม่ใช่คุณ ให้กรอกชื่อเดิมเข้ามาใหม่เพื่อเอาที่นั่งคืน</span>
+          </p>
+        )}
+        {exitReason === 'removed' && (
+          <p role="alert" style={{ color: '#ffb86c', fontSize: '.9rem', margin: 0, textAlign: 'center', lineHeight: 1.7 }}>
+            🚪 คุณออกจากห้องเรียนแล้ว<br />
+            <span style={{ color: 'var(--text-secondary)', fontSize: '.85rem' }}>คุณครูนำคุณออก หรือเริ่มห้องใหม่ — ถ้าต้องกลับเข้าห้อง ให้แจ้งคุณครูเปิดรับก่อน</span>
+          </p>
+        )}
+        <div style={{ fontSize: '4rem' }}>🔐</div>
           <h2 className="text-glow-blue" style={{ fontSize: '2rem', textAlign: 'center', margin: 0 }}>ใส่รหัสเข้าห้องเรียน</h2>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', textAlign: 'center', margin: 0 }}>
             กรอก PIN 4 หลักจากหน้าจอคุณครู
@@ -1002,15 +1020,20 @@ const TAB_LESSON   = 'lesson';
 export default function ClientView() {
   const { roomState, connected } = useRoom();
   const [myName, setMyName] = useState(getStudentName);
-  const isJoined = Boolean(myName && roomState.students?.some(s => s.name === myName));
+  const mySeat = roomState.students?.find(s => s.name === myName);
+  const myId = getStudentId();
+  const isJoined = Boolean(myName && mySeat && (!myId || mySeat.id === myId));
   const tab = isJoined && roomState.presentation?.mode === 'lesson' ? TAB_LESSON : TAB_ACTIVITY;
   const myScore = ((roomState.chapterScores && roomState.chapterScores[roomState.chapter]) || {})[myName] || 0;
 
-  // Clear stale session if server restarted or student was removed
+  // Clear stale session if the room was reset, the teacher freed the name, or another
+  // device claimed this seat.
   useEffect(() => {
     if (connected && myName && roomState.students && !isJoined) {
+      markExit(roomState.students.some(s => s.name === myName) ? 'taken-over' : 'removed');
       clearStudent();
       setMyName('');
+      window.location.reload();
     }
   }, [connected, myName, roomState.students, isJoined]);
 

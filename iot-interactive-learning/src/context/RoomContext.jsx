@@ -11,6 +11,11 @@ function toLocalClock(snapshot) {
   return { ...snapshot.state, questionStartTime: snapshot.state.questionStartTime + offset };
 }
 
+// Only the teacher's navigation depends on arriving in order — a slider dragged across a
+// slide, a step pressed twice. An answer does not, and queueing one behind a stalled emoji
+// on bad wi-fi is how a learner misses the deadline holding a phone that looks fine.
+const ORDERED_ACTIONS = new Set(['presentation', 'changeStep', 'changeChapter', 'voteItem', 'setCatalogQuestion']);
+
 function authHeaders() {
   const headers = { 'Content-Type': 'application/json' };
   const student = getStudentToken();
@@ -29,8 +34,7 @@ export function RoomProvider({ children }) {
     const current = version.current;
     // If server restarted (new instance), force page reload to get fresh PIN
     if (current.instance !== null && snapshot.instance !== current.instance) {
-      console.warn('[RoomContext] Server restarted — reloading page to sync PIN...');
-      clearStudent();
+      console.warn('[RoomContext] Room changed — reloading to pick up the new one...');
       window.location.reload();
       return;
     }
@@ -52,15 +56,22 @@ export function RoomProvider({ children }) {
   }, [acceptSnapshot]);
 
   const dispatch = useCallback((type, payload = {}) => {
-    // Serializing a client's actions preserves slider and navigation order.
-    const request = queue.current.then(async () => {
+    const send = async () => {
       try {
         const response = await fetch('/api/room/actions', {
           method: 'POST', headers: authHeaders(),
           body: JSON.stringify({ type, payload }), signal: AbortSignal.timeout(8000),
         });
         const result = await response.json();
-        if (!response.ok) throw new Error(result.error || 'ส่งคำสั่งไม่สำเร็จ');
+        if (!response.ok) {
+          // The room no longer recognises this token — the seat was taken or the room was
+          // reset. Drop the stale session rather than leaving a screen that cannot answer.
+          if (response.status === 401) {
+            clearStudent();
+            window.location.reload();
+          }
+          throw new Error(result.error || 'ส่งคำสั่งไม่สำเร็จ');
+        }
         acceptSnapshot(result);
         setError('');
         return true;
@@ -68,7 +79,9 @@ export function RoomProvider({ children }) {
         setError(err.name === 'TypeError' || err.name === 'TimeoutError' ? 'ส่งคำสั่งไม่สำเร็จ ตรวจสอบการเชื่อมต่อแล้วลองอีกครั้ง' : err.message);
         return false;
       }
-    });
+    };
+    if (!ORDERED_ACTIONS.has(type)) return send();
+    const request = queue.current.then(send);
     queue.current = request;
     return request;
   }, [acceptSnapshot]);
@@ -78,6 +91,11 @@ export function RoomProvider({ children }) {
   const setPresentation = useCallback(patch => dispatch('presentation', { chapter: roomState.chapter, step: roomState.step, ...patch }), [dispatch, roomState.chapter, roomState.step]);
   const setJoinOpen = useCallback(open => dispatch('setJoinOpen', { open }), [dispatch]);
   const removeStudent = useCallback(name => dispatch('removeStudent', { name }), [dispatch]);
+  const restoreRoom = useCallback(roomId => dispatch('restoreRoom', { roomId }), [dispatch]);
+  const listRooms = useCallback(
+    () => fetch('/api/room/rooms').then(response => response.json()).then(data => data.rooms ?? []).catch(() => []),
+    [],
+  );
   const joinRoom = useCallback(async (name, pin) => {
     try {
       const response = await fetch('/api/room/actions', {
@@ -90,7 +108,7 @@ export function RoomProvider({ children }) {
         return { ok: false, error: result.error || 'ไม่สามารถเข้าร่วมห้องได้' };
       }
       // Keep the spelling the room filed the answers under, not the one just typed.
-      saveStudent(result.studentName || name, result.studentToken);
+      saveStudent(result.studentName || name, result.studentToken, result.studentId);
       acceptSnapshot(result);
       setError('');
       return { ok: true, name: result.studentName || name };
@@ -117,7 +135,7 @@ export function RoomProvider({ children }) {
 
   return (
     <RoomContext.Provider value={{ roomState, connected, error, joinUrl,
-      setChapter, setStep, setPresentation, setJoinOpen, removeStudent, joinRoom,
+      setChapter, setStep, setPresentation, setJoinOpen, removeStudent, restoreRoom, listRooms, joinRoom,
       setVoteItem, submitVote, sendFloatingEmoji,
       addFloatingEmoji, voteQuiz, revealQuiz, voteLogic, activateSense, resetRoom,
       voteProblem, voteDigital, voteAnalog, voteChoice, setCatalogQuestion, voteCatalog }}>

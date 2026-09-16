@@ -77,7 +77,7 @@ function HostLobby() {
             </button>
           </div>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.78rem', margin: '0.5rem 0 0 0' }}>
-            กดชื่อเพื่อคืนชื่อนั้นให้นักเรียนที่เครื่องหลุด แล้วให้เขากรอกชื่อเดิมเข้ามาใหม่
+            กดชื่อเพื่อนำนักเรียนคนนั้นออกจากห้อง (ทำได้จากแถบ PIN ด้านบนทุกขั้นตอนเช่นกัน)
           </p>
           <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexWrap: 'wrap', gap: '1rem', alignContent: 'flex-start', marginTop: '1rem' }}>
             <AnimatePresence>
@@ -86,8 +86,8 @@ function HostLobby() {
               )}
               {roomState.students.map((student) => (
                 <motion.button type="button" key={student.id} initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-                  title={`คืนชื่อ "${student.name}" ให้ว่าง`}
-                  onClick={() => { if (window.confirm(`เอา "${student.name}" ออกจากห้อง เพื่อให้เขากรอกชื่อเดิมเข้ามาใหม่?`)) removeStudent(student.name); }}
+                  title={`นำ "${student.name}" ออกจากห้อง`}
+                  onClick={() => { if (window.confirm(`นำ "${student.name}" ออกจากห้อง?\n\nคะแนนและคำตอบจะยังถูกเก็บไว้`)) removeStudent(student.name); }}
                   style={{ background: 'rgba(255,255,255,0.05)', color: 'inherit', font: 'inherit', cursor: 'pointer', padding: '0.8rem 1.5rem', borderRadius: 20, border: '1px solid rgba(255,255,255,0.1)' }}>
                   🧑‍🔬 {student.name}
                 </motion.button>
@@ -816,14 +816,161 @@ function HostLessonSlideshow({ chapter, step, quizRevealed }) {
   );
 }
 
+// The PIN, the door and the register in one place the teacher can reach from any step —
+// sending the whole class back to the lobby just to remove one name interrupts the lesson.
+const roomClock = savedAt => new Date(savedAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+
+function RoomRoster() {
+  const { roomState, setJoinOpen, removeStudent, restoreRoom, listRooms } = useRoom();
+  const [open, setOpen] = useState(false);
+  const [rooms, setRooms] = useState([]);
+  const students = rankStudents(roomState);
+
+  // Read when the panel opens, and again whenever the room itself changes.
+  useEffect(() => {
+    if (!open) return;
+    let live = true;
+    listRooms().then(found => { if (live) setRooms(found); });
+    return () => { live = false; };
+  }, [open, listRooms, roomState.pin]);
+
+  const kick = student => {
+    if (!window.confirm(`นำ "${student.name}" ออกจากห้อง?\n\nคะแนนและคำตอบของเขาจะยังถูกเก็บไว้ ถ้ากลับเข้ามาด้วยชื่อเดิมจะได้คืนทั้งหมด`)) return;
+    removeStudent(student.name);
+  };
+
+  return (
+    <div style={{ position: 'relative', marginRight: 'auto' }}>
+      <button type="button" onClick={() => setOpen(value => !value)}
+        aria-expanded={open}
+        title="ดูรายชื่อนักเรียน เปิด/ปิดรับเข้าห้อง และนำนักเรียนออก"
+        style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 12px', borderRadius: 10, cursor: 'pointer',
+          background: 'rgba(0,240,255,.08)', border: '1px solid rgba(0,240,255,.25)', font: 'inherit' }}>
+        <span style={{ color: 'var(--text-secondary)', fontSize: '.75rem' }}>PIN</span>
+        <span style={{ color: 'var(--neon-blue)', fontWeight: 800, fontSize: '1.05rem', letterSpacing: '.12em' }}>{roomState.pin}</span>
+        <span style={{ fontSize: '.85rem' }}>{roomState.joinOpen ? '🔓' : '🔒'}</span>
+        <span style={{ color: 'var(--text-secondary)', fontSize: '.75rem' }}>{roomState.students.length} คน ▾</span>
+      </button>
+
+      {open && (
+        <>
+          <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 200 }} />
+          <div className="glass-panel" style={{ position: 'absolute', top: 'calc(100% + 8px)', left: 0, zIndex: 201,
+            width: 320, maxHeight: '60vh', display: 'flex', flexDirection: 'column', padding: 14, gap: 10 }}>
+
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+              <span style={{ color: roomState.joinOpen ? 'var(--neon-green)' : '#ffb86c', fontSize: '.85rem' }}>
+                {roomState.joinOpen ? '🔓 เปิดรับนักเรียน' : '🔒 ปิดรับนักเรียนใหม่'}
+              </span>
+              <button type="button" className="neu-button" onClick={() => setJoinOpen(!roomState.joinOpen)}
+                style={{ padding: '4px 12px', fontSize: '.78rem' }}>
+                {roomState.joinOpen ? 'ปิดรับ' : 'เปิดรับ'}
+              </button>
+            </div>
+
+            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {students.length === 0 && (
+                <p style={{ color: 'var(--text-secondary)', fontSize: '.85rem', margin: 0 }}>ยังไม่มีนักเรียนในห้อง</p>
+              )}
+              {students.map(student => (
+                <div key={student.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px',
+                  borderRadius: 10, background: 'rgba(255,255,255,.04)' }}>
+                  <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '.88rem' }}>
+                    🧑‍🔬 {student.name}
+                  </span>
+                  <span style={{ color: 'var(--neon-blue)', fontSize: '.78rem', fontWeight: 700 }}>{student.score}</span>
+                  <button type="button" onClick={() => kick(student)} aria-label={`นำ ${student.name} ออกจากห้อง`}
+                    title={`นำ ${student.name} ออกจากห้อง`}
+                    style={{ background: 'transparent', border: '1px solid rgba(255,0,100,.35)', color: '#ff6b6b',
+                      borderRadius: 8, padding: '2px 8px', cursor: 'pointer', font: 'inherit', fontSize: '.78rem' }}>
+                    เตะออก
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <p style={{ color: 'var(--text-secondary)', fontSize: '.72rem', margin: 0, lineHeight: 1.6 }}>
+              นักเรียนที่ถูกนำออกจะเห็นข้อความบนจอทันที คะแนนยังเก็บไว้ ถ้าจะให้กลับเข้ามาต้องกด "เปิดรับ" ก่อน
+            </p>
+
+            {rooms.length > 0 && (
+              <div style={{ borderTop: '1px solid rgba(255,255,255,.1)', paddingTop: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <span style={{ color: 'var(--text-secondary)', fontSize: '.78rem' }}>ห้องก่อนหน้า (เก็บไว้ 1 วัน)</span>
+                {rooms.map(room => (
+                  <div key={room.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px',
+                    borderRadius: 10, background: 'rgba(176,38,255,.08)', border: '1px solid rgba(176,38,255,.2)' }}>
+                    <span style={{ flex: 1, minWidth: 0, fontSize: '.82rem' }}>
+                      PIN {room.pin} · {room.students} คน
+                      <span style={{ color: 'var(--text-secondary)' }}> · {roomClock(room.savedAt)}</span>
+                    </span>
+                    <button type="button"
+                      onClick={() => {
+                        if (!window.confirm(`กลับเข้าห้อง PIN ${room.pin} (${room.students} คน)?\n\nห้องปัจจุบันจะถูกเก็บไว้ให้กลับมาได้เหมือนกัน`)) return;
+                        setOpen(false);
+                        restoreRoom(room.id);
+                      }}
+                      style={{ background: 'transparent', border: '1px solid rgba(176,38,255,.45)', color: '#d8adff',
+                        borderRadius: 8, padding: '2px 10px', cursor: 'pointer', font: 'inherit', fontSize: '.78rem' }}>
+                      กลับเข้าห้อง
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// Reloading to recover is something the teacher just asked for, so the are-you-sure guard
+// below must not interrupt it.
+let reloadingOnPurpose = false;
+
+function ConnectionBanner() {
+  const { connected, error } = useRoom();
+
+  if (!connected) {
+    return (
+      <div role="alert" style={{ flexShrink: 0, margin: '8px 14px 0', padding: '10px 16px', borderRadius: 10,
+        background: 'rgba(255,77,77,.12)', border: '1px solid rgba(255,77,77,.45)', color: '#ff9b9b',
+        display: 'flex', alignItems: 'center', gap: 10, fontSize: '.9rem' }}>
+        <span style={{ fontSize: '1.1rem' }}>🔌</span>
+        <span style={{ flex: 1 }}>
+          <strong>ขาดการเชื่อมต่อกับห้องเรียน</strong> — กำลังต่อใหม่อัตโนมัติ คำสั่งที่กดตอนนี้จะยังไม่ถึงนักเรียน
+          <br />
+          <span style={{ color: 'var(--text-secondary)', fontSize: '.82rem' }}>
+            ห้องยังอยู่ครบบนเซิร์ฟเวอร์ ถ้ารอแล้วไม่กลับมา ให้โหลดหน้านี้ใหม่ได้เลย นักเรียนไม่หลุด
+          </span>
+        </span>
+        <button type="button" className="neu-button"
+          onClick={() => { reloadingOnPurpose = true; window.location.reload(); }}
+          style={{ padding: '6px 14px', fontSize: '.82rem', whiteSpace: 'nowrap' }}>
+          โหลดใหม่
+        </button>
+      </div>
+    );
+  }
+
+  if (!error) return null;
+  return (
+    <div role="alert" style={{ flexShrink: 0, margin: '8px 14px 0', padding: '8px 16px', borderRadius: 10,
+      background: 'rgba(255,184,108,.1)', border: '1px solid rgba(255,184,108,.4)', color: '#ffb86c', fontSize: '.85rem' }}>
+      ⚠️ {error}
+    </div>
+  );
+}
+
 export default function HostView() {
-  const { roomState, setChapter, setStep, resetRoom, setPresentation } = useRoom();
+  const { roomState, setChapter, setStep, resetRoom, setPresentation, connected } = useRoom();
   const currentChapterFlow = CHAPTER_FLOW[roomState.chapter];
   const currentStepData = currentChapterFlow[roomState.step];
   const [pendingChapter, setPendingChapter] = useState(null);
 
   useEffect(() => {
     const handleBeforeUnload = (e) => {
+      if (reloadingOnPurpose) return;
       if (roomState.students.length > 0) {
         e.preventDefault();
         e.returnValue = 'มีนักเรียนอยู่ในห้อง คุณแน่ใจหรือไม่ที่จะออกจากระบบ?';
@@ -855,18 +1002,17 @@ export default function HostView() {
   return (
     <div className="host-learning-shell" style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
       <FloatingEmojis emojis={roomState.floatingEmojis} />
+      <ConnectionBanner />
 
       {/* Navbar */}
       <div className="glass-panel host-navbar" style={{ margin: '10px 14px 0', padding: '10px 18px', display: 'flex', alignItems: 'center', gap: '10px', zIndex: 100, flexShrink: 0 }}>
         <h2 className="text-glow-blue" style={{ fontSize: '1.2rem' }}>🖥️ Host Dashboard</h2>
-        <div title={roomState.joinOpen ? 'กำลังเปิดรับนักเรียนเข้าห้อง' : 'ปิดรับนักเรียนใหม่ — กดขั้น "เข้าห้องเรียน" เพื่อเปิดอีกครั้ง'}
-          style={{ marginRight: 'auto', display: 'flex', alignItems: 'center', gap: 8, padding: '4px 12px', borderRadius: 10,
-            background: 'rgba(0,240,255,.08)', border: '1px solid rgba(0,240,255,.25)' }}>
-          <span style={{ color: 'var(--text-secondary)', fontSize: '.75rem' }}>PIN</span>
-          <span style={{ color: 'var(--neon-blue)', fontWeight: 800, fontSize: '1.05rem', letterSpacing: '.12em' }}>{roomState.pin}</span>
-          <span style={{ fontSize: '.85rem' }}>{roomState.joinOpen ? '🔓' : '🔒'}</span>
-          <span style={{ color: 'var(--text-secondary)', fontSize: '.75rem' }}>{roomState.students.length} คน</span>
-        </div>
+        <RoomRoster />
+        <span title={connected ? 'เชื่อมต่อกับห้องเรียนอยู่' : 'ขาดการเชื่อมต่อ'}
+          aria-label={connected ? 'เชื่อมต่ออยู่' : 'ขาดการเชื่อมต่อ'}
+          style={{ width: 9, height: 9, borderRadius: '50%', flexShrink: 0,
+            background: connected ? 'var(--neon-green)' : '#ff4d4d',
+            boxShadow: `0 0 8px ${connected ? 'var(--neon-green)' : '#ff4d4d'}` }} />
         {/* Chapter Dropdown */}
         <select 
           className="neu-button" 

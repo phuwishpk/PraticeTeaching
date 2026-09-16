@@ -13,11 +13,37 @@ import { applyRoomAction, broadcastState, createRoomState, STUDENT_ACTIONS, stud
 const PUBLISH_INTERVAL_MS = 200;
 
 // The room lives in memory, so a crash or a redeploy used to end the lesson: new PIN,
-// empty register, every score gone. Saving it lets the same class carry on where it was.
-const PERSIST_VERSION = 1;
+// empty register, every score gone. Saving it lets the same class carry on where it was —
+// and finishing a lesson files the room away rather than destroying it, so a teacher who
+// moves on too early, or teaches the same class again after lunch, can pick it back up.
+const PERSIST_VERSION = 2;
 const PERSIST_DEBOUNCE_MS = 2000;
-// A room older than a school day is last week's lesson, not this one — start fresh.
-const PERSIST_MAX_AGE_MS = 6 * 60 * 60 * 1000;
+const ROOM_MAX_AGE_MS = 24 * 60 * 60 * 1000; // เก็บห้องไว้ 1 วัน
+const MAX_ARCHIVED_ROOMS = 8;
+
+// Behind a proxy this header reads "client, proxy1, proxy2", and any client can forge it to
+// win itself a fresh rate-limit bucket. It is only believed when the deployment states that
+// there really is a proxy in front; otherwise the socket address is the honest answer.
+const TRUST_PROXY = process.env.TRUST_PROXY === '1';
+const clientIp = req => {
+  if (TRUST_PROXY) {
+    const forwarded = req.headers['x-forwarded-for'];
+    const first = (Array.isArray(forwarded) ? forwarded[0] : forwarded)?.split(',')[0]?.trim();
+    if (first) return first;
+  }
+  return req.socket.remoteAddress || 'unknown';
+};
+
+// A header can be anything at all, and new URL throws on anything it dislikes.
+const parseOrigin = value => {
+  if (!value) return null;
+  try { return new URL(value); } catch { return null; }
+};
+
+const isFresh = entry => entry && Date.now() - entry.savedAt <= ROOM_MAX_AGE_MS;
+
+// Roughly one broadcast's worth of slack before a connection is considered hopeless.
+const MAX_STREAM_BACKLOG = 1024 * 1024;
 
 const RATE_WINDOW_MS = 3000;
 const PER_STUDENT_LIMIT = 20;
@@ -30,30 +56,37 @@ const safeEqual = (candidate, secret) => {
 };
 
 function readSaved(persistPath) {
-  if (!persistPath || !existsSync(persistPath)) return null;
+  if (!persistPath || !existsSync(persistPath)) return { current: null, archive: [] };
   try {
     const saved = JSON.parse(readFileSync(persistPath, 'utf8'));
-    if (saved?.version !== PERSIST_VERSION || !Array.isArray(saved.state?.students)) return null;
-    if (Date.now() - saved.savedAt > PERSIST_MAX_AGE_MS) return null;
-    return saved;
+    if (saved?.version !== PERSIST_VERSION) return { current: null, archive: [] };
+    const valid = entry => entry && Array.isArray(entry.state?.students) && isFresh(entry);
+    return {
+      current: valid(saved.current) ? saved.current : null,
+      archive: (saved.archive ?? []).filter(valid).slice(0, MAX_ARCHIVED_ROOMS),
+    };
   } catch (error) {
     console.warn('[room] อ่านสถานะห้องที่บันทึกไว้ไม่ได้ จะเริ่มห้องใหม่:', error.message);
-    return null;
+    return { current: null, archive: [] };
   }
 }
 
+// A question left open when a room was put down has a long-expired clock, so it is closed
+// on the way back in. The per-answer guards still stop anyone answering twice.
+const reopened = state => ({ ...state, questionKey: null, questionRoster: [], questionStarts: {} });
+
 export function createRoomApi({ persistPath = null } = {}) {
   const saved = readSaved(persistPath);
-  // Whatever question was open when the server stopped has an expired clock by now, so it
-  // is closed on the way back in. The per-answer guards still stop anyone answering twice.
-  let state = saved ? { ...saved.state, questionKey: null, questionRoster: [], questionStarts: {} } : createRoomState();
-  let revision = saved?.revision ?? 0;
+  let archive = saved.archive;
+  let roomId = saved.current?.id ?? randomUUID();
+  let state = saved.current ? reopened(saved.current.state) : createRoomState();
+  let revision = saved.current?.revision ?? 0;
   // Keeping the instance id means the browsers already in the room do not reload or lose
   // their seat — to them the server never went away.
-  const instance = saved?.instance ?? randomUUID();
+  let instance = saved.current?.instance ?? randomUUID();
   const streams = new Set();
   const timers = new Set();
-  if (saved) console.log(`\n  ♻️  กู้ห้องเดิมคืนมาแล้ว: PIN ${state.pin}, นักเรียน ${state.students.length} คน\n`);
+  if (saved.current) console.log(`\n  ♻️  กู้ห้องเดิมคืนมาแล้ว: PIN ${state.pin}, นักเรียน ${state.students.length} คน\n`);
   // serverNow lets each browser measure its own clock drift, so a phone set to the wrong
   // time still sees — and is judged by — the same countdown as everybody else.
   const snapshot = () => ({ instance, revision, state: broadcastState(state), serverNow: Date.now() });
@@ -61,25 +94,65 @@ export function createRoomApi({ persistPath = null } = {}) {
   // Student actions are attributed by token, never by the name in the request body.
   const tokenByStudent = new Map(); // studentKey(name) -> token
   const nameByToken = new Map();    // token -> display name
-  for (const [key, token, name] of saved?.tokens ?? []) {
+  for (const [key, token, name] of saved.current?.tokens ?? []) {
     tokenByStudent.set(key, token);
     nameByToken.set(token, name);
   }
 
+  // Everything needed to put this room down and pick it up again later, learners included.
+  const captureRoom = () => ({
+    id: roomId, savedAt: Date.now(), instance, revision, state,
+    tokens: [...tokenByStudent].map(([key, token]) => [key, token, nameByToken.get(token)]),
+  });
+  // An empty room is not worth keeping; anything else is filed under its own id.
+  const fileAway = () => {
+    const current = captureRoom();
+    if (!current.state.students.length) return;
+    archive = [current, ...archive.filter(entry => entry.id !== current.id)].slice(0, MAX_ARCHIVED_ROOMS);
+  };
+  // Puts the current room down and picks up another, learners and tokens and all. The
+  // instance id travels with the room, so every browser notices it is somewhere else now.
+  const enterRoom = record => {
+    roomId = record.id;
+    instance = record.instance;
+    revision = record.revision;
+    tokenByStudent.clear();
+    nameByToken.clear();
+    for (const [key, token, name] of record.tokens ?? []) {
+      tokenByStudent.set(key, token);
+      nameByToken.set(token, name);
+    }
+    publish(reopened(record.state), true);
+  };
+  const listRooms = () => archive.filter(isFresh).map(entry => ({
+    id: entry.id, pin: entry.state.pin, chapter: entry.state.chapter,
+    students: entry.state.students.length, savedAt: entry.savedAt,
+  }));
+
   let persistTimeout = null;
+  let persistError = null;
   const persist = () => {
     if (!persistPath) return;
     try {
       const payload = JSON.stringify({
-        version: PERSIST_VERSION, savedAt: Date.now(), instance, revision, state,
-        tokens: [...tokenByStudent].map(([key, token]) => [key, token, nameByToken.get(token)]),
+        version: PERSIST_VERSION,
+        current: captureRoom(),
+        archive: archive.filter(isFresh),
       });
       // Written beside the target and renamed, so a crash mid-write cannot leave the room
       // half-saved and unreadable.
       writeFileSync(`${persistPath}.tmp`, payload);
       renameSync(`${persistPath}.tmp`, persistPath);
+      if (persistError) {
+        console.log('[room] ✅ กลับมาบันทึกสถานะห้องได้แล้ว');
+        persistError = null;
+      }
     } catch (error) {
-      console.warn('[room] บันทึกสถานะห้องไม่สำเร็จ:', error.message);
+      // Repeating this every two seconds would bury the one message that matters.
+      if (persistError !== error.message) {
+        console.error(`[room] ⚠️  บันทึกสถานะห้องไม่ได้ ห้องจะหายถ้าเซิร์ฟเวอร์รีสตาร์ต: ${error.message}`);
+      }
+      persistError = error.message;
     }
   };
   const schedulePersist = () => {
@@ -93,9 +166,29 @@ export function createRoomApi({ persistPath = null } = {}) {
     timers.add(persistTimeout);
   };
 
+  // A phone that walks out of wi-fi leaves a socket that throws on the next write. One of
+  // those must not end the broadcast loop, let alone the process.
+  const send = (res, chunk) => {
+    try {
+      // A dying connection stops draining its socket while Node keeps buffering for it, so
+      // one bad phone can grow without limit. Letting it go costs nothing: the browser
+      // reconnects and is handed the current room anyway.
+      if (res.writableLength > MAX_STREAM_BACKLOG) {
+        streams.delete(res);
+        res.destroy();
+        return;
+      }
+      res.write(chunk);
+    } catch {
+      streams.delete(res);
+    }
+  };
+
   let publishTimeout = null;
-  const publish = next => {
-    if (next === state) return;
+  // force is for swapping rooms, where the new state is unrelated to the old one and the
+  // clients must be told even though nothing about the current room "changed".
+  const publish = (next, force = false) => {
+    if (!force && next === state) return;
     state = next;
     revision++;
     schedulePersist();
@@ -104,7 +197,7 @@ export function createRoomApi({ persistPath = null } = {}) {
         timers.delete(publishTimeout);
         publishTimeout = null;
         const event = `data: ${JSON.stringify(snapshot())}\n\n`;
-        for (const res of streams) res.write(event);
+        for (const res of streams) send(res, event);
       }, PUBLISH_INTERVAL_MS);
       publishTimeout.unref();
       timers.add(publishTimeout);
@@ -114,7 +207,7 @@ export function createRoomApi({ persistPath = null } = {}) {
     res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
     res.end(JSON.stringify(data));
   };
-  const heartbeat = setInterval(() => { for (const res of streams) res.write(': heartbeat\n\n'); }, 15000);
+  const heartbeat = setInterval(() => { for (const res of streams) send(res, ': heartbeat\n\n'); }, 15000);
   heartbeat.unref();
 
   const rateLimitMap = new Map();
@@ -140,6 +233,19 @@ export function createRoomApi({ persistPath = null } = {}) {
   }
 
   async function middleware(req, res, next = () => { res.writeHead(404); res.end(); }) {
+    try {
+      return await handleRequest(req, res, next);
+    } catch (error) {
+      // Unhandled here means an unhandled rejection, and Node ends the process for those —
+      // taking the whole class's room down over one bad request.
+      console.error('[room] คำขอนี้ล้มเหลว แต่ห้องยังทำงานต่อ:', error);
+      if (res.headersSent) res.end();
+      else json(res, 500, { error: 'เซิร์ฟเวอร์ขัดข้องชั่วคราว กรุณาลองใหม่' });
+      return undefined;
+    }
+  }
+
+  async function handleRequest(req, res, next) {
     const path = req.url?.split('?')[0];
     if (!path?.startsWith('/api/room/')) return next();
     if (req.method === 'GET' && path === '/api/room/events') {
@@ -147,11 +253,30 @@ export function createRoomApi({ persistPath = null } = {}) {
       res.write(`retry: 1000\ndata: ${JSON.stringify(snapshot())}\n\n`);
       streams.add(res);
       res.on('close', () => streams.delete(res));
+      res.on('error', () => streams.delete(res));
       return;
+    }
+    if (req.method === 'GET' && path === '/api/room/health') {
+      return json(res, 200, {
+        ok: true,
+        uptimeSeconds: Math.round(process.uptime()),
+        students: state.students.length,
+        streams: streams.size,
+        archivedRooms: archive.length,
+        revision,
+        // Deliberately no PIN: this endpoint is open, and the PIN is what gets you into the room.
+        persist: persistPath
+          ? { enabled: true, ok: !persistError, ...(persistError ? { error: persistError } : {}) }
+          : { enabled: false },
+        trustProxy: TRUST_PROXY,
+      });
+    }
+    if (req.method === 'GET' && path === '/api/room/rooms') {
+      return json(res, 200, { rooms: listRooms() });
     }
     if (req.method === 'GET' && path === '/api/room/info') {
       const localIp = Object.values(networkInterfaces()).flat().find(address => address?.family === 'IPv4' && !address.internal && /^(192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.)/.test(address.address))?.address;
-      const origin = new URL(process.env.PUBLIC_ORIGIN || `http://${req.headers.host}`);
+      const origin = parseOrigin(process.env.PUBLIC_ORIGIN) || parseOrigin(`http://${req.headers.host}`) || parseOrigin(`http://${localIp || 'localhost'}`);
       if (!process.env.PUBLIC_ORIGIN && ['localhost', '127.0.0.1', '[::1]'].includes(origin.hostname) && localIp) origin.hostname = localIp;
       return json(res, 200, { joinUrl: new URL('/', origin).href });
     }
@@ -159,7 +284,7 @@ export function createRoomApi({ persistPath = null } = {}) {
 
     // Rate Limiting
     const studentToken = req.headers['x-student-token'];
-    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+    const ip = clientIp(req);
     const limitKey = studentToken ? `student:${studentToken}` : `ip:${ip}`;
     const limit = studentToken ? PER_STUDENT_LIMIT : SHARED_LIMIT;
     const now = Date.now();
@@ -178,6 +303,30 @@ export function createRoomApi({ persistPath = null } = {}) {
       if (!action || typeof action.type !== 'string' || (action.payload !== undefined && (!action.payload || typeof action.payload !== 'object'))) throw new Error('ข้อมูลคำสั่งไม่ถูกต้อง');
       if (action.type === 'expireEmoji') throw new Error('ไม่พบคำสั่งนี้');
       action.payload = { ...action.payload, id: randomUUID(), x: Math.random() * 90 };
+
+      // Both of these swap the whole room, which applyRoomAction cannot do: it only ever
+      // sees one room's state and knows nothing about the ones filed away.
+      if (action.type === 'restoreRoom') {
+        const record = archive.find(entry => entry.id === action.payload.roomId && isFresh(entry));
+        if (!record) return json(res, 404, { error: 'ไม่พบห้องเรียนนี้แล้ว อาจเก็บไว้เกิน 1 วัน' });
+        fileAway();
+        archive = archive.filter(entry => entry.id !== record.id);
+        enterRoom(record);
+        persist();
+        return json(res, 200, snapshot());
+      }
+      if (action.type === 'reset') {
+        // Starting fresh files the old room away instead of destroying it.
+        fileAway();
+        tokenByStudent.clear();
+        nameByToken.clear();
+        roomId = randomUUID();
+        instance = randomUUID();
+        revision = 0;
+        publish(createRoomState(), true);
+        persist();
+        return json(res, 200, snapshot());
+      }
 
       if (action.type === 'join') {
         const key = studentKey(action.payload.name);
@@ -230,8 +379,18 @@ export function createRoomApi({ persistPath = null } = {}) {
       json(res, error.status || 400, { error: error instanceof SyntaxError ? 'ข้อมูลคำสั่งไม่ถูกต้อง' : error.message });
     }
   }
+  // Prove the disk takes writes at boot, rather than finding out when a lesson is lost. On
+  // a platform with an ephemeral or read-only filesystem this is the only warning there is.
+  if (persistPath) {
+    persist();
+    if (!persistError) console.log(`  💾 บันทึกสถานะห้องไว้ที่ ${persistPath}`);
+  }
+
   return {
     middleware,
+    listRooms,
+    // Enough to see, from outside, whether connections are piling up during a lesson.
+    stats: () => ({ streams: streams.size, students: state.students.length, archived: archive.length, revision }),
     close() {
       if (persistTimeout) clearTimeout(persistTimeout);
       persist();
