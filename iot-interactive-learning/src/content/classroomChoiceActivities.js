@@ -1,4 +1,7 @@
+import { chapterTwoActivities } from './chapterTwo.js';
+
 export const classroomChoiceActivities = {
+  ...chapterTwoActivities,
   roles: {
     title: 'ใครเป็นผู้ตัดสินใจในระบบ IoT?',
     question: 'เมื่อเซ็นเซอร์ส่งค่าเข้ามา อุปกรณ์ใดอ่านค่า ตรวจเงื่อนไข และสั่ง Output?',

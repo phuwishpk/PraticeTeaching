@@ -277,7 +277,7 @@ function HostDigital() {
   const showResults = isTimeUp || isAllAnswered;
 
   const options = [
-    { id: '2_states', label: '2 สถานะ (เช่น 0 กับ 1, ปิดกับเปิด)' },
+    { id: '2_states', label: '2 ระดับลอจิก (LOW/0 และ HIGH/1)' },
     { id: '10_states', label: '10 สถานะ (เช่น 0 ถึง 9)' },
     { id: 'infinite', label: 'นับไม่ถ้วน (ค่าต่อเนื่อง)' },
     { id: 'none', label: 'ไม่มีสถานะที่แน่นอน' }
@@ -287,7 +287,7 @@ function HostDigital() {
     <div className="flex-center full-screen" style={{ flexDirection: 'column', gap: '2rem' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
         <CountdownTimer startTime={roomState.questionStartTime} duration={(roomState.questionDurationMs ?? 30000) / 1000} size={70} stopped={isAllAnswered} />
-        <h1 className="text-glow-blue" style={{ fontSize: '3rem', margin: 0 }}>สัญญาณภาษาเครื่อง (Digital)</h1>
+        <h1 className="text-glow-blue" style={{ fontSize: '3rem', margin: 0 }}>สัญญาณ Digital แบบไบนารี</h1>
       </div>
       
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2rem', width: '95%', maxWidth: 1200, minHeight: '60vh', justifyContent: 'center' }}>
@@ -297,10 +297,10 @@ function HostDigital() {
           <div style={{ padding: '2rem', border: '2px solid var(--neon-blue)', borderRadius: 16, background: 'rgba(0,240,255,0.05)' }}>
             <h3 style={{ color: 'var(--neon-blue)', margin: '0 0 1rem 0', fontSize: '1.8rem' }}>1. สัญญาณ Digital</h3>
             <p style={{ color: 'white', fontSize: '1.2rem', margin: 0, lineHeight: 1.6 }}>
-              ภาษาไฟฟ้าที่เป็นพื้นฐานที่สุดของคอมพิวเตอร์และเซนเซอร์ทั่วไป
+              พิจารณาระดับลอจิกของแต่ละบิต แยกจากจำนวนค่าที่ข้อมูลหลายบิตสามารถแทนได้
             </p>
           </div>
-          <h2 style={{ textAlign: 'center', color: 'var(--neon-blue)' }}>คำถาม: สัญญาณ Digital มีกี่สถานะ?</h2>
+          <h2 style={{ textAlign: 'center', color: 'var(--neon-blue)' }}>คำถาม: Digital แบบไบนารีใช้กี่ระดับลอจิก?</h2>
         </div>
 
         {/* Right: Activity */}
@@ -812,6 +812,10 @@ const STEP_LABELS = {
   problem: 'วิเคราะห์โจทย์',
   digital: 'Digital: 0 และ 1',
   analog: 'Analog และ ADC',
+  signalmatch: 'เทียบสัญญาณสองแบบ',
+  digitaldata: 'Digital หลายบิต',
+  adcmeaning: 'ตีความค่าดิบ',
+  signaldesign: 'เลือกวิธีอ่าน',
   logic: 'เงื่อนไข IF / ELSE',
   wrapup: 'สรุประบบ IoT',
   ideation: 'ออกแบบระบบ IoT',
@@ -1105,6 +1109,10 @@ export default function HostView() {
               {currentStepData.id === 'digital' && <HostDigital />}
               {currentStepData.id === 'analog' && <HostAnalog />}
               {currentStepData.id === 'logic' && <HostLogic />}
+              {currentStepData.id === 'digitaldata' && <ClassroomChoiceActivity activityId="digitaldata" audience="teacher" />}
+              {currentStepData.id === 'adcmeaning' && <ClassroomChoiceActivity activityId="adcmeaning" audience="teacher" />}
+              {currentStepData.id === 'signaldesign' && <ClassroomChoiceActivity activityId="signaldesign" audience="teacher" />}
+              {currentStepData.id === 'signalmatch' && <ClassroomChoiceActivity activityId="signalmatch" audience="teacher" />}
               {currentStepData.id === 'wrapup' && <ClassroomChoiceActivity activityId="wrapup" audience="teacher" />}
               {currentStepData.id === 'ideation' && <ClassroomChoiceActivity activityId="ideation" audience="teacher" />}
               {currentStepData.type === 'podium' && <HostPodium />}

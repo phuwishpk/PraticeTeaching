@@ -5,6 +5,7 @@ import { MotionConfig } from 'framer-motion';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createServer } from 'vite';
 import { CHAPTER_FLOW, createRoomState } from '../shared/roomState.js';
+import { chapterTwoLessons, chapterTwoActivities } from '../src/content/chapterTwo.js';
 
 test('teacher and student pages render with the current chapter/step room state', async (t) => {
   // Model browser storage only for rendering; never touch an actual user's session.
@@ -93,6 +94,50 @@ test('teacher and student pages render with the current chapter/step room state'
             assert.ok(!student.includes('Unknown Activity'));
           }
         }
+      }
+    });
+    await t.test('chapter two renders every section and keeps discussion answers collapsed', () => {
+      entries.set('student_name', 'Test learner');
+      for (const [lessonId, lesson] of Object.entries(chapterTwoLessons)) {
+        const step = CHAPTER_FLOW[2].findIndex(entry => entry.lessonId === Number(lessonId));
+        for (let slide = 0; slide <= lesson.sections.length + 1; slide++) {
+          provide({ ...createRoomState(), chapter: 2, step,
+            students: [{ id: 'test', name: 'Test learner' }],
+            presentation: { mode: 'lesson', slide },
+          });
+          for (const Component of [Host, Client]) {
+            const html = renderPage(Component);
+            const section = lesson.sections[slide - 1];
+            assert.ok(html.includes(slide === 0 ? lesson.title : section ? section.title : lesson.recap.title));
+            if (section?.activity) {
+              assert.ok(html.includes('lesson-discussion'));
+              assert.ok(html.includes(section.activity.question));
+              assert.ok(html.includes('<details><summary>เปิดแนวคำตอบหลังอภิปราย</summary>'));
+            }
+          }
+        }
+      }
+    });
+    await t.test('chapter two choice explanations appear only after completion or expiry on both screens', () => {
+      entries.set('student_name', 'Test learner');
+      for (const [activityId, activity] of Object.entries(chapterTwoActivities)) {
+        const step = CHAPTER_FLOW[2].findIndex(entry => entry.id === activityId);
+        const state = { ...createRoomState(), chapter: 2, step,
+          questionStartTime: Date.now(), questionDurationMs: activity.durationSeconds * 1000,
+          students: [{ id: 'test', name: 'Test learner' }, { id: 'peer', name: 'Peer' }],
+          presentation: { mode: 'activity', slide: 0 },
+          choiceVotes: { [activityId]: { 'Test learner': activity.correctId } },
+        };
+        provide(state);
+        for (const Component of [Host, Client]) {
+          const html = renderPage(Component);
+          assert.ok(html.includes(activity.question));
+          assert.ok(!html.includes('classroom-choice-explanation'));
+        }
+        provide({ ...state, choiceVotes: { [activityId]: { 'Test learner': activity.correctId, Peer: activity.correctId } } });
+        for (const Component of [Host, Client]) assert.ok(renderPage(Component).includes('classroom-choice-explanation'));
+        provide({ ...state, questionStartTime: Date.now() - (activity.durationSeconds + 1) * 1000 });
+        for (const Component of [Host, Client]) assert.ok(renderPage(Component).includes('classroom-choice-explanation'));
       }
     });
     await t.test('a teacher who drops off the network is told, and how to get back', () => {

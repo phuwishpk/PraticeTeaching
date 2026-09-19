@@ -436,7 +436,7 @@ function ClientDigital() {
   }, [roomState.questionStartTime, roomState.questionDurationMs]);
 
   const options = [
-    { id: '2_states', label: '2 สถานะ (เช่น 0 กับ 1, ปิดกับเปิด)', color: '#ff4d4d' },
+    { id: '2_states', label: '2 ระดับลอจิก (LOW/0 และ HIGH/1)', color: '#ff4d4d' },
     { id: '10_states', label: '10 สถานะ (เช่น 0 ถึง 9)', color: '#8be9fd' },
     { id: 'infinite', label: 'นับไม่ถ้วน (ค่าต่อเนื่อง)', color: '#ffb86c' },
     { id: 'none', label: 'ไม่มีสถานะที่แน่นอน', color: '#ff79c6' }
@@ -449,7 +449,7 @@ function ClientDigital() {
         <CountdownTimer startTime={roomState.questionStartTime} duration={(roomState.questionDurationMs ?? 30000) / 1000} size={50} stopped={isAllAnswered} />
         <div>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>คำถาม</div>
-          <div style={{ fontWeight: 'bold', color: 'var(--neon-blue)', fontSize: '1rem' }}>สัญญาณ Digital มีกี่สถานะ?</div>
+          <div style={{ fontWeight: 'bold', color: 'var(--neon-blue)', fontSize: '1rem' }}>Digital แบบไบนารีใช้กี่ระดับลอจิก?</div>
           <div style={{ fontSize: '0.75rem', color: showResults ? (isAllAnswered ? 'var(--neon-green)' : 'var(--text-secondary)') : 'var(--neon-blue)', fontWeight: 'bold' }}>
             {showResults
               ? (isAllAnswered ? `✅ ตอบครบทุกคนแล้ว (${totalVotes}/${totalStudents} คน)` : `⏰ หมดเวลา (${totalVotes}/${totalStudents} คน)`)
@@ -1055,6 +1055,10 @@ export default function ClientView() {
           case 'digital': return <ClientDigital />;
           case 'analog': return <ClientAnalog />;
           case 'logic': return <ClientLogic />;
+          case 'digitaldata': return <ClassroomChoiceActivity activityId="digitaldata" />;
+          case 'adcmeaning': return <ClassroomChoiceActivity activityId="adcmeaning" />;
+          case 'signaldesign': return <ClassroomChoiceActivity activityId="signaldesign" />;
+          case 'signalmatch': return <ClassroomChoiceActivity activityId="signalmatch" />;
           case 'wrapup': return <ClassroomChoiceActivity activityId="wrapup" />;
           case 'ideation': return <ClassroomChoiceActivity activityId="ideation" />;
           default: return <div>Unknown Activity</div>;
@@ -1075,7 +1079,8 @@ export default function ClientView() {
       case 2: return 'bg-phase-architecture';
       case 3: return 'bg-phase-problem';
       case 4: return 'bg-phase-digital';
-      case 5: return 'bg-phase-analog';
+      case 5:
+      case 11: return 'bg-phase-analog';
       case 6: return 'bg-phase-catalog';
       case 7: return 'bg-phase-quiz';
       case 8: return 'bg-phase-logic';

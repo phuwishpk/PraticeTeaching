@@ -77,6 +77,12 @@ export function SectionExplanation({ section }) {
     {section.signalGraphic && <SignalGraphic type={section.signalGraphic} />}
     {section.wrapGraphic && <WrapUpGraphic type={section.wrapGraphic} />}
     {!section.signalGraphic && !section.wrapGraphic && section.diagram && <FlowGraphic steps={section.diagram} label="ภาพสรุปท้ายหัวข้อ" />}
+    {section.activity && <section className="lesson-discussion" aria-label={section.activity.title}>
+      <h3>{section.activity.title}</h3>
+      <ol>{section.activity.steps.map(step => <li key={step}>{step}</li>)}</ol>
+      <p><strong>คำถามชวนคิด:</strong> {section.activity.question}</p>
+      <details><summary>เปิดแนวคำตอบหลังอภิปราย</summary><p>{section.activity.answer}</p></details>
+    </section>}
     {section.takeaway && <aside className="section-takeaway"><CheckCircle2 size={22} aria-hidden="true" /><div><h3>ใจความสำคัญ</h3><p>{section.takeaway}</p></div></aside>}
   </div>;
 }

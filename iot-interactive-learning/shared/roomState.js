@@ -43,7 +43,11 @@ export const CHAPTER_FLOW = {
   2: [
     { type: 'lobby', lessonId: 1 },
     { type: 'activity', id: 'digital', lessonId: 4 },
+    { type: 'activity', id: 'digitaldata', lessonId: 4 },
     { type: 'activity', id: 'analog', lessonId: 5 },
+    { type: 'activity', id: 'adcmeaning', lessonId: 5 },
+    { type: 'activity', id: 'signalmatch', lessonId: 11 },
+    { type: 'activity', id: 'signaldesign', lessonId: 11 },
     { type: 'podium', lessonId: 1 }
   ],
   3: [
@@ -60,7 +64,7 @@ export function createRoomState() {
     pin: String(Math.floor(1000 + Math.random() * 9000)), chapter: 1, step: 0, presentation: initialPresentation('activity'),
     students: [], joinOpen: true, senses: { eyes: false, ears: false, hands: false },
     problemVotes: {}, digitalVotes: {}, analogVotes: {},
-    choiceVotes: { roles: {}, wrapup: {}, ideation: {} },
+    choiceVotes: { roles: {}, signalmatch: {}, wrapup: {}, ideation: {} },
     floatingEmojis: [], quizVotes: {}, quizRevealed: false,
     logicVotes: {}, architectureVotes: { esp32: {}, wifi: {}, cloud: {} },
     catalogCurrentQuestion: 1, catalogVotes: { 1: {}, 2: {}, 3: {}, 4: {} },

@@ -349,3 +349,20 @@
 @media (prefers-reduced-motion: reduce) {
   .lesson-slideshow-slide { transform: none !important; }
 }
+
+/* Discussion tasks accompany the same section on teacher and student screens. */
+.lesson-discussion {
+  padding: 1rem 1.25rem;
+  margin-block: 1.25rem;
+  border: 1px solid var(--neon-blue);
+  border-radius: 16px;
+  background: rgba(139, 233, 253, 0.05);
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+.lesson-discussion h3 { margin: 0 0 .75rem; color: var(--neon-blue); }
+.lesson-discussion ol { padding-inline-start: 1.5rem; }
+.lesson-discussion li + li { margin-top: .5rem; }
+.lesson-discussion summary { cursor: pointer; font-weight: 600; }
+.lesson-discussion summary:focus-visible { outline: 2px solid var(--neon-blue); outline-offset: 4px; }
+.lesson-discussion details[open] summary { margin-bottom: .75rem; }
