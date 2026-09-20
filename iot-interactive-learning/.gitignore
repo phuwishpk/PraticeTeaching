@@ -26,3 +26,6 @@ dist-ssr
 # สถานะห้องเรียนที่เซิร์ฟเวอร์บันทึกไว้ระหว่างสอน
 .room-state.json
 .room-state.json.tmp
+
+# Load testing script
+load_test.js
