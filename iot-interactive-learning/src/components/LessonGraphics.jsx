@@ -17,16 +17,26 @@ export function DeviceIcon({ device, size = 40 }) {
 }
 
 export function FlowGraphic({ steps, label = 'ภาพสรุปการทำงาน', device }) {
-  const First = device ? icons[device.icon] : Radio;
-  const flowIcons = [First, Cpu, CheckCircle2];
   return (
     <figure className="concept-graphic" aria-label={label}>
       <figcaption>{label}</figcaption>
       <ol className="concept-steps">
         {steps.map((step, index) => {
-          const Icon = flowIcons[index % flowIcons.length];
+          let NodeIcon;
+          if (index === 0) {
+            if (device && device.image) {
+              NodeIcon = () => <img src={device.image} alt={device?.name || ""} style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 6, margin: '-10px 0' }} />;
+            } else {
+              const First = device ? icons[device.icon] : Radio;
+              NodeIcon = (props) => <First {...props} />;
+            }
+          } else if (index === 1) {
+            NodeIcon = (props) => <Cpu {...props} />;
+          } else {
+            NodeIcon = (props) => <CheckCircle2 {...props} />;
+          }
           return <li key={step}>
-            <div className="concept-node"><Icon size={28} strokeWidth={1.5} aria-hidden="true" /><span>{step}</span></div>
+            <div className="concept-node"><NodeIcon size={28} strokeWidth={1.5} aria-hidden="true" /><span>{step}</span></div>
             {index < steps.length - 1 && <ArrowRight className="concept-arrow" size={22} aria-hidden="true" />}
           </li>;
         })}
@@ -76,7 +86,8 @@ export function SectionExplanation({ section }) {
     {section.graphicType === 'actuator-demo' && <ActuatorDemo />}
     {section.signalGraphic && <SignalGraphic type={section.signalGraphic} />}
     {section.wrapGraphic && <WrapUpGraphic type={section.wrapGraphic} />}
-    {!section.signalGraphic && !section.wrapGraphic && section.diagram && <FlowGraphic steps={section.diagram} label="ภาพสรุปท้ายหัวข้อ" />}
+    {!section.signalGraphic && !section.wrapGraphic && section.diagram && <FlowGraphic steps={section.diagram} label="ภาพสรุปท้ายหัวข้อ" device={section.diagramDevice ? devices[section.diagramDevice] : null} />}
+    {section.image && <ImageWithModal src={section.image} alt={section.title || "Graphic"} style={{ width: '100%', borderRadius: '8px', margin: '1rem 0' }} />}
     {section.activity && <section className="lesson-discussion" aria-label={section.activity.title}>
       <h3>{section.activity.title}</h3>
       <ol>{section.activity.steps.map(step => <li key={step}>{step}</li>)}</ol>
@@ -91,7 +102,7 @@ export function LessonRecap({ lesson }) {
   return <section className="lesson-recap" aria-label="สรุปและจุดประสงค์การเรียนรู้ท้ายเนื้อหา">
     <span className="lesson-eyebrow">ทบทวนก่อนจบ</span>
     <h2 className="lesson-slide-section-title">{lesson.recap.title}</h2>
-    {lesson.wrapOverview ? <WrapUpOverview /> : lesson.signalComparison ? <SignalComparison /> : <FlowGraphic steps={lesson.recap.diagram} label="ภาพรวมที่ควรจำ" />}
+    {lesson.wrapOverview ? <WrapUpOverview /> : lesson.signalComparison ? <SignalComparison /> : lesson.recap.image ? <ImageWithModal src={lesson.recap.image} alt={lesson.recap.title || "Recap"} style={{ width: '100%', borderRadius: '8px', margin: '1rem 0' }} /> : <FlowGraphic steps={lesson.recap.diagram} label="ภาพรวมที่ควรจำ" device={lesson.recap.diagramDevice ? devices[lesson.recap.diagramDevice] : null} />}
     {lesson.deviceIds && <div className="device-recap-grid">{lesson.deviceIds.map(id => {
       const device = devices[id];
       return <div className="device-recap-item" key={id}><DeviceIcon device={device} size={28} /><div><strong>{device.name}</strong><span>{device.subtitle}</span></div></div>;

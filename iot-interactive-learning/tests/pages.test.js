@@ -109,6 +109,15 @@ test('teacher and student pages render with the current chapter/step room state'
             const html = renderPage(Component);
             const section = lesson.sections[slide - 1];
             assert.ok(html.includes(slide === 0 ? lesson.title : section ? section.title : lesson.recap.title));
+            if (section) assert.ok(html.includes(`<h2 class="lesson-slide-section-title">${section.title}</h2>`));
+            assert.equal(html.includes('disabled="" aria-label="หน้าถัดไป"'), slide === lesson.sections.length + 1);
+            if (slide === 0) {
+              assert.ok(html.includes(lesson.displayLabel));
+              for (const other of Object.values(chapterTwoLessons)) {
+                // Other menu titles remain available as navigation tooltips.
+                if (other !== lesson) assert.ok(!html.includes(`<h1 class="lesson-slide-title">${other.title}</h1>`));
+              }
+            }
             if (section?.activity) {
               assert.ok(html.includes('lesson-discussion'));
               assert.ok(html.includes(section.activity.question));

@@ -18,6 +18,38 @@ test('chapter one builds knowledge before asking learners to solve a problem', (
   );
 });
 
+test('digital levels and multi-bit data open distinct lessons and experiments', () => {
+  const steps = CHAPTER_FLOW[2];
+  const levels = steps.find(step => step.id === 'digital');
+  const data = steps.find(step => step.id === 'digitaldata');
+  assert.notEqual(levels.lessonId, data.lessonId);
+  const levelGraphics = lessons[levels.lessonId].sections.map(section => section.signalGraphic).filter(Boolean);
+  const dataGraphics = lessons[data.lessonId].sections.map(section => section.signalGraphic).filter(Boolean);
+  assert.deepEqual(levelGraphics, ['digital:levels', 'digital:polarity']);
+  assert.deepEqual(dataGraphics, ['digital:bits']);
+  let state = applyRoomAction(createRoomState(), { type: 'changeChapter', payload: { chapter: 2 } });
+  state = applyRoomAction(state, { type: 'changeStep', payload: { step: steps.indexOf(levels) } });
+  state = applyRoomAction(state, { type: 'presentation', payload: { chapter: 2, step: state.step, slide: 3 } });
+  state = applyRoomAction(state, { type: 'changeStep', payload: { step: steps.indexOf(data) } });
+  assert.equal(state.presentation.slide, 0);
+  assert.equal(CHAPTER_FLOW[2][state.step].lessonId, data.lessonId);
+});
+
+test('every chapter two activity owns a distinct lesson without copied content slides', () => {
+  const lessonIds = CHAPTER_FLOW[2].filter(step => step.type === 'activity').map(step => step.lessonId);
+  assert.equal(new Set(lessonIds).size, lessonIds.length);
+  const chapterLessons = lessonIds.map(id => lessons[id]);
+  for (const values of [
+    chapterLessons.map(lesson => lesson.title),
+    chapterLessons.map(lesson => lesson.intro),
+    chapterLessons.map(lesson => lesson.recap.title),
+    chapterLessons.flatMap(lesson => lesson.sections.map(section => section.title)),
+    chapterLessons.flatMap(lesson => lesson.sections.map(section => section.text)),
+  ]) {
+    assert.equal(new Set(values).size, values.length);
+  }
+});
+
 test('each chapter step accepts valid navigation and rejects out-of-range slides', () => {
   let state = createRoomState();
   for (const [chapterKey, steps] of Object.entries(CHAPTER_FLOW)) {
@@ -25,7 +57,8 @@ test('each chapter step accepts valid navigation and rejects out-of-range slides
     state = applyRoomAction(state, { type: 'changeChapter', payload: { chapter } });
     for (let step = 0; step < steps.length; step++) {
       state = applyRoomAction(state, { type: 'changeStep', payload: { step } });
-      const last = lessons[steps[step].lessonId].sections.length + 2;
+      const lesson = lessons[steps[step].lessonId];
+      const last = lesson.sections.length + 1 + (lesson.code ? 1 : 0);
       for (let slide = 0; slide <= last; slide++) {
         state = applyRoomAction(state, { type: 'presentation', payload: { chapter, step, slide } });
         assert.equal(state.presentation.slide, slide);

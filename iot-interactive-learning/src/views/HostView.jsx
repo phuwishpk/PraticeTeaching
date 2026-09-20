@@ -1045,9 +1045,9 @@ export default function HostView() {
           value={roomState.chapter} 
           onChange={(e) => requestChapterChange(Number(e.target.value))}
           style={{ padding: '8px', fontSize: '1rem', fontWeight: 'bold', background: 'var(--glass-bg)', color: 'white', border: '1px solid rgba(255,255,255,0.2)' }}>
-          <option value={1} style={{color: 'black'}}>บทที่ 1: พื้นฐานและเซนเซอร์</option>
-          <option value={2} style={{color: 'black'}}>บทที่ 2: สัญญาณ Digital/Analog</option>
-          <option value={3} style={{color: 'black'}}>บทที่ 3: Logic และ ไอเดีย</option>
+          <option value={1} style={{color: 'black'}}>พื้นฐานและเซนเซอร์</option>
+          <option value={2} style={{color: 'black'}}>สัญญาณ Digital/Analog</option>
+          <option value={3} style={{color: 'black'}}>Logic และ ไอเดีย</option>
         </select>
 
         {/* Steps for current Chapter */}

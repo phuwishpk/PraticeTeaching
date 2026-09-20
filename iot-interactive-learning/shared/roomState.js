@@ -43,11 +43,11 @@ export const CHAPTER_FLOW = {
   2: [
     { type: 'lobby', lessonId: 1 },
     { type: 'activity', id: 'digital', lessonId: 4 },
-    { type: 'activity', id: 'digitaldata', lessonId: 4 },
+    { type: 'activity', id: 'digitaldata', lessonId: 12 },
     { type: 'activity', id: 'analog', lessonId: 5 },
-    { type: 'activity', id: 'adcmeaning', lessonId: 5 },
+    { type: 'activity', id: 'adcmeaning', lessonId: 13 },
     { type: 'activity', id: 'signalmatch', lessonId: 11 },
-    { type: 'activity', id: 'signaldesign', lessonId: 11 },
+    // { type: 'activity', id: 'signaldesign', lessonId: 14 }, // ซ่อนเนื้อหาเลือกวิธีอ่านตามคำขอ
     { type: 'podium', lessonId: 1 }
   ],
   3: [
@@ -272,7 +272,7 @@ export function applyRoomAction(state, action) {
       if ('slide' in p) {
         const lessonId = CHAPTER_FLOW[state.chapter][state.step].lessonId;
         const lesson = lessons[lessonId];
-        const maxSlide = lesson ? lesson.sections.length + 2 : 0; // intro=0, sections, example, recap=last
+        const maxSlide = lesson ? lesson.sections.length + 1 + (lesson.code ? 1 : 0) : 0; // intro, sections, optional code, recap
         requireValue(Number.isInteger(p.slide) && p.slide >= 0 && p.slide <= maxSlide);
         Object.assign(patch, { slide: p.slide, expanded: false, answerRevealed: false });
       }

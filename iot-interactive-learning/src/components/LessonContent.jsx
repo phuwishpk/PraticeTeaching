@@ -10,9 +10,9 @@ export default function LessonContent({ phase, quizRevealed = false }) {
   if (!lesson) return null;
 
   return (
-    <article data-signal={phase === 4 ? 'digital' : phase === 5 ? 'analog' : undefined} className="lesson-content" aria-labelledby={`lesson-title-${phase}`} lang="th">
+    <article data-signal={lesson.signalTheme} className="lesson-content" aria-labelledby={`lesson-title-${phase}`} lang="th">
       <header className="lesson-header">
-        <span className="lesson-eyebrow">IOT LAB · ส่วนที่ {chapter} / 10</span>
+        <span className="lesson-eyebrow">IOT LAB · {lesson.displayLabel || `ส่วนที่ ${chapter}`}</span>
         <h1 id={`lesson-title-${phase}`}>{lesson.title}</h1>
         <p>{lesson.intro}</p>
       </header>
@@ -101,7 +101,7 @@ export function LessonSlideshow({ phase, quizRevealed = false, controlledSlide, 
     label: 'เริ่มต้น',
     content: (
       <div className="lesson-slide-body">
-        <span className="lesson-eyebrow">IOT LAB · ส่วนที่ {chapter}</span>
+        <span className="lesson-eyebrow">IOT LAB · {lesson.displayLabel || `ส่วนที่ ${chapter}`}</span>
         <h1 className="lesson-slide-title">{lesson.title}</h1>
         <p className="lesson-slide-intro">{lesson.intro}</p>
         {lesson.goals && (
@@ -188,7 +188,7 @@ export function LessonSlideshow({ phase, quizRevealed = false, controlledSlide, 
   };
 
   return (
-    <div className="lesson-slideshow" lang="th" data-signal={phase === 4 ? 'digital' : phase === 5 ? 'analog' : undefined}>
+    <div className="lesson-slideshow" lang="th" data-signal={lesson.signalTheme}>
       {/* Slide content */}
       <div className="lesson-slideshow-stage">
         <AnimatePresence mode="wait" custom={direction}>
