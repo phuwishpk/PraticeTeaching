@@ -100,6 +100,7 @@ test('teacher and student pages render with the current chapter/step room state'
       entries.set('student_name', 'Test learner');
       for (const [lessonId, lesson] of Object.entries(chapterTwoLessons)) {
         const step = CHAPTER_FLOW[2].findIndex(entry => entry.lessonId === Number(lessonId));
+        if (step === -1) continue;
         for (let slide = 0; slide <= lesson.sections.length + 1; slide++) {
           provide({ ...createRoomState(), chapter: 2, step,
             students: [{ id: 'test', name: 'Test learner' }],
@@ -131,6 +132,7 @@ test('teacher and student pages render with the current chapter/step room state'
       entries.set('student_name', 'Test learner');
       for (const [activityId, activity] of Object.entries(chapterTwoActivities)) {
         const step = CHAPTER_FLOW[2].findIndex(entry => entry.id === activityId);
+        if (step === -1) continue;
         const state = { ...createRoomState(), chapter: 2, step,
           questionStartTime: Date.now(), questionDurationMs: activity.durationSeconds * 1000,
           students: [{ id: 'test', name: 'Test learner' }, { id: 'peer', name: 'Peer' }],

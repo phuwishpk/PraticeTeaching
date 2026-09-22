@@ -114,10 +114,17 @@
 [data-signal="analog"] .lesson-slide-goals { border-left-color: #ffc46a; background: #ffc46a0c; }
 [data-signal="analog"] .lesson-nav-page-btn.active { color: #ffd08a; border-color: #ffd08a; background: #ffd08a18; box-shadow: 0 0 10px #ffd08a16; }
 [data-signal="analog"] .lesson-nav-arrow { color: #ffd08a; border-color: #ffd08a66; background: #ffd08a0c; }
-@keyframes slide-data-packet {
-  0% { transform: translateX(0); }
-  100% { transform: translateX(var(--shift, -384px)); }
-}
-.data-packet-group {
-  animation: slide-data-packet 4s linear infinite;
-}
+/* Diagrams use labels and explicit reading steps instead of decorative signal art. */
+.signal-routes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.signal-route { padding: 20px; border: 1px solid #437d94; border-radius: 16px; background: #102b39; min-width: 0; }
+.signal-route > span { color: #9bdcf1; font-size: .8rem; }
+.signal-route h3 { margin: 10px 0; font-size: 1.1rem; line-height: 1.7; }
+.signal-route ol { padding-left: 24px; line-height: 1.85; color: #d0dae4; }
+.signal-route p, .signal-route-note { color: #bacbd9; font-size: .9rem; line-height: 1.8; }
+.signal-route.analog-route { background: #30271b; border-color: #8e724a; }
+.route-symbol { padding: 14px 8px; border-radius: 10px; background: #07131b99; text-align: center; color: #ecf3f9; font-weight: 650; }
+.signal-route-note { grid-column: 1 / -1; margin: 0; }
+.comparison-readout { display: block; margin: 14px 0; padding: 12px; border-radius: 10px; background: #07131b99; color: #ecf3f9; font-weight: 650; line-height: 1.8; overflow-wrap: anywhere; }
+.signal-threshold { stroke: #e9a1b0; stroke-width: 2; stroke-dasharray: 6 4; fill: none; }
+.signal-reference-notice { padding: 12px 16px; border: 1px solid #d7ac6e; border-radius: 10px; }
+@media (max-width: 800px) { .signal-routes { grid-template-columns: 1fr; } }

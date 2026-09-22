@@ -37,9 +37,22 @@ function driftOf(id = '') {
   return (Math.abs(hash) % 100) - 50;
 }
 
-// Memoised because the room broadcasts far more often than the emoji list changes, and
-// roomState.floatingEmojis keeps its identity until an emoji is actually added or expires.
-const FloatingEmojis = React.memo(function FloatingEmojis({ emojis }) {
+// Memoised because it now maintains its own state and doesn't depend on roomState
+const FloatingEmojis = React.memo(function FloatingEmojis() {
+  const [emojis, setEmojis] = useState([]);
+
+  useEffect(() => {
+    const handler = (e) => {
+      const p = e.detail;
+      setEmojis(prev => [...prev, { id: p.id, emoji: p.emoji, name: p.name || '', x: p.x }].slice(-30));
+      setTimeout(() => {
+        setEmojis(prev => prev.filter(em => em.id !== p.id));
+      }, 3000);
+    };
+    window.addEventListener('room-emoji', handler);
+    return () => window.removeEventListener('room-emoji', handler);
+  }, []);
+
   return (
     <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 9999 }}>
       <AnimatePresence>
@@ -1027,7 +1040,7 @@ export default function HostView() {
 
   return (
     <div className="host-learning-shell" style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
-      <FloatingEmojis emojis={roomState.floatingEmojis} />
+      <FloatingEmojis />
       <ConnectionBanner />
 
       {/* Navbar */}

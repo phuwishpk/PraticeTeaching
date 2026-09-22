@@ -50,7 +50,7 @@ const MAX_STREAM_BACKLOG = 1024 * 1024;
 
 const RATE_WINDOW_MS = 3000;
 const PER_STUDENT_LIMIT = 20;
-const SHARED_LIMIT = 300;
+const SHARED_LIMIT = 1000;
 
 const safeEqual = (candidate, secret) => {
   const left = Buffer.from(String(candidate ?? ''));
@@ -308,7 +308,6 @@ export function createRoomApi({ persistPath = null } = {}) {
     try {
       const action = await readBody(req);
       if (!action || typeof action.type !== 'string' || (action.payload !== undefined && (!action.payload || typeof action.payload !== 'object'))) throw new Error('ข้อมูลคำสั่งไม่ถูกต้อง');
-      if (action.type === 'expireEmoji') throw new Error('ไม่พบคำสั่งนี้');
       action.payload = { ...action.payload, id: randomUUID(), x: Math.random() * 90 };
 
       // Both of these swap the whole room, which applyRoomAction cannot do: it only ever
@@ -362,6 +361,13 @@ export function createRoomApi({ persistPath = null } = {}) {
         action.payload.name = name;
       }
 
+      if (action.type === 'emoji') {
+        if (!['👍', '💡', '❤️', '🔥', '🎉', '👏'].includes(action.payload.emoji)) throw new Error('ข้อมูลคำสั่งไม่ถูกต้อง');
+        const event = `event: emoji\ndata: ${JSON.stringify(action.payload)}\n\n`;
+        for (const res of streams) send(res, event);
+        return json(res, 200, snapshot());
+      }
+
       publish(applyRoomAction(state, action));
       if (action.type === 'removeStudent') {
         const key = studentKey(action.payload.name);
@@ -374,14 +380,6 @@ export function createRoomApi({ persistPath = null } = {}) {
         nameByToken.clear();
       }
       json(res, 200, snapshot());
-      if (action.type === 'emoji') {
-        const timer = setTimeout(() => {
-          publish(applyRoomAction(state, { type: 'expireEmoji', payload: { id: action.payload.id } }));
-          timers.delete(timer);
-        }, 3000);
-        timer.unref();
-        timers.add(timer);
-      }
     } catch (error) {
       json(res, error.status || 400, { error: error instanceof SyntaxError ? 'ข้อมูลคำสั่งไม่ถูกต้อง' : error.message });
     }

@@ -38,7 +38,7 @@ export function RoomProvider({ children }) {
       window.location.reload();
       return;
     }
-    if (snapshot.instance !== current.instance || snapshot.revision >= current.revision) {
+    if (snapshot.instance !== current.instance || snapshot.revision > current.revision) {
       version.current = { instance: snapshot.instance, revision: snapshot.revision };
       setRoomState(toLocalClock(snapshot));
     }
@@ -50,6 +50,9 @@ export function RoomProvider({ children }) {
       acceptSnapshot(JSON.parse(event.data));
       setConnected(true);
     };
+    stream.addEventListener('emoji', event => {
+      window.dispatchEvent(new CustomEvent('room-emoji', { detail: JSON.parse(event.data) }));
+    });
     stream.onerror = () => setConnected(false);
     fetch('/api/room/info').then(response => response.json()).then(info => setJoinUrl(info.joinUrl)).catch(() => {});
     return () => stream.close();

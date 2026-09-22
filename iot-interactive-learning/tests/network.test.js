@@ -80,7 +80,7 @@ test('a forged proxy header cannot buy a fresh rate-limit budget', () => withRoo
   // caller and has to share one budget. Believing the header would hand any learner an
   // unlimited supply of them.
   const replies = [];
-  for (let i = 0; i < 340; i++) {
+  for (let i = 0; i < 1040; i++) {
     replies.push(await post('verifyPin', { pin: '0000' }, { 'x-forwarded-for': `10.0.0.${i % 250}` }));
   }
   const refused = replies.filter(reply => reply.status === 429).length;

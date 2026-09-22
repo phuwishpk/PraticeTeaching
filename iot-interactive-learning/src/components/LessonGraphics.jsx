@@ -102,7 +102,7 @@ export function LessonRecap({ lesson }) {
   return <section className="lesson-recap" aria-label="สรุปและจุดประสงค์การเรียนรู้ท้ายเนื้อหา">
     <span className="lesson-eyebrow">ทบทวนก่อนจบ</span>
     <h2 className="lesson-slide-section-title">{lesson.recap.title}</h2>
-    {lesson.wrapOverview ? <WrapUpOverview /> : lesson.signalComparison ? <SignalComparison /> : lesson.recap.image ? <ImageWithModal src={lesson.recap.image} alt={lesson.recap.title || "Recap"} style={{ width: '100%', borderRadius: '8px', margin: '1rem 0' }} /> : <FlowGraphic steps={lesson.recap.diagram} label="ภาพรวมที่ควรจำ" device={lesson.recap.diagramDevice ? devices[lesson.recap.diagramDevice] : null} />}
+    {lesson.wrapOverview ? <WrapUpOverview /> : lesson.recap.signalGraphic ? <SignalGraphic type={lesson.recap.signalGraphic} /> : lesson.signalComparison ? <SignalComparison /> : lesson.recap.image ? <ImageWithModal src={lesson.recap.image} alt={lesson.recap.title || "Recap"} style={{ width: '100%', borderRadius: '8px', margin: '1rem 0' }} /> : <FlowGraphic steps={lesson.recap.diagram} label="ภาพรวมที่ควรจำ" device={lesson.recap.diagramDevice ? devices[lesson.recap.diagramDevice] : null} />}
     {lesson.deviceIds && <div className="device-recap-grid">{lesson.deviceIds.map(id => {
       const device = devices[id];
       return <div className="device-recap-item" key={id}><DeviceIcon device={device} size={28} /><div><strong>{device.name}</strong><span>{device.subtitle}</span></div></div>;

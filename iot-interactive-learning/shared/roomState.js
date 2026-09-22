@@ -65,7 +65,7 @@ export function createRoomState() {
     students: [], joinOpen: true, senses: { eyes: false, ears: false, hands: false },
     problemVotes: {}, digitalVotes: {}, analogVotes: {},
     choiceVotes: { roles: {}, signalmatch: {}, wrapup: {}, ideation: {} },
-    floatingEmojis: [], quizVotes: {}, quizRevealed: false,
+    quizVotes: {}, quizRevealed: false,
     logicVotes: {}, architectureVotes: { esp32: {}, wifi: {}, cloud: {} },
     catalogCurrentQuestion: 1, catalogVotes: { 1: {}, 2: {}, 3: {}, 4: {} },
     currentVoteItem: 'esp32', canvasImages: [],
@@ -386,12 +386,6 @@ export function applyRoomAction(state, action) {
         ...recordAnswer(state, { ...window, name, correct: p.layer === correctMap[p.item] }),
       };
     }
-    case 'emoji':
-      requireStudent(state, p.name);
-      requireValue(['👍', '💡', '❤️', '🔥', '🎉', '👏'].includes(p.emoji));
-      return { ...state, floatingEmojis: [...state.floatingEmojis, { id: p.id, emoji: p.emoji, name: p.name || '', x: p.x }].slice(-30) };
-    case 'expireEmoji':
-      return { ...state, floatingEmojis: state.floatingEmojis.filter(e => e.id !== p.id) };
     case 'quizVote': {
       // No chapter step shows this quiz, so openAnswerWindow refuses it — the endpoint cannot
       // be used to award points for a question nobody was asked.
