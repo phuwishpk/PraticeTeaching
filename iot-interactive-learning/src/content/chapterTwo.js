@@ -438,6 +438,21 @@ export const chapterTwoLessons = {
 };
 
 export const chapterTwoActivities = {
+  digitalbasic: {
+    title: 'Digital แบบไบนารี',
+    question: 'Digital แบบไบนารีใช้กี่ระดับลอจิก?',
+    durationSeconds: 30, correctId: 'two_levels',
+    options: [
+      { id: 'two_levels', icon: '✌️', label: '2 ระดับลอจิก (LOW/0 และ HIGH/1)', detail: 'ค่าพื้นฐานของหนึ่งบิต' },
+      { id: 'ten_states', icon: '🔟', label: '10 สถานะ (0–9)', detail: 'เหมือนเลขฐานสิบ' },
+      { id: 'continuous', icon: '〰️', label: 'นับไม่ถ้วน (ค่าต่อเนื่อง)', detail: 'มีค่าระหว่างกลางเสมอ' },
+      { id: 'no_state', icon: '❓', label: 'ไม่มีสถานะที่แน่นอน', detail: 'ค่าเปลี่ยนไปมาแบบสุ่ม' },
+    ],
+    explanation: 'หนึ่งบิตมีสองระดับลอจิก หลายบิตรวมกันแทนค่าได้มากกว่าสองค่า 0 ไม่ได้แปลว่าอุปกรณ์ไม่มีไฟเลี้ยง',
+    objective: 'ระบุจำนวนระดับลอจิกของสัญญาณดิจิทัลหนึ่งบิต',
+    flow: ['รับสัญญาณ', 'แยก LOW/HIGH', 'ตีความหมาย'],
+    signalReview: 'digital'
+  },
   digitaldata: {
     title: 'Digital ส่งอุณหภูมิเป็นตัวเลขได้อย่างไร?',
     question: 'DHT11 ส่งข้อมูลให้แสดง 28 °C ได้ เพราะเหตุใด?',
@@ -451,6 +466,21 @@ export const chapterTwoActivities = {
     explanation: 'คำตอบคือส่งหลายบิตให้โปรแกรมถอดรหัส แต่ละบิตยังใช้ LOW/HIGH สองระดับ เมื่อรับครบตามรูปแบบจึงแปลเป็นตัวเลขได้ ไม่ใช่ส่ง 28 V และไม่ใช่อ่านสถานะเพียงครั้งเดียว',
     objective: 'อธิบายว่าดิจิทัลสองระดับแทนตัวเลขได้ด้วยหลายบิต',
     flow: ['DHT11 วัดค่า', 'ส่งชุดบิต', 'โปรแกรมถอดรหัส', 'แสดง 28 °C'],
+  },
+  analogfeature: {
+    title: 'ลักษณะของ Analog',
+    question: 'สัญญาณ Analog แตกต่างจาก Digital อย่างไร?',
+    durationSeconds: 30, correctId: 'continuous_val',
+    options: [
+      { id: 'on_off', icon: '🔌', label: 'มีแค่สถานะเปิดกับปิด (0 กับ 1)', detail: 'สถานะแบบดิจิทัล' },
+      { id: 'continuous_val', icon: '🌊', label: 'มีค่าต่อเนื่อง เช่น แรงดันที่ค่อย ๆ เปลี่ยน', detail: 'สามารถมีค่าระหว่างระดับได้' },
+      { id: 'faster', icon: '⚡', label: 'ส่งข้อมูลได้เร็วกว่ามาก', detail: 'ความเร็วในการส่งข้อมูล' },
+      { id: 'less_wires', icon: '🧵', label: 'ใช้สายไฟน้อยกว่า', detail: 'จำนวนสายที่ใช้ต่อ' },
+    ],
+    explanation: 'ลักษณะที่ใช้แยกคือการแทนค่าของสัญญาณ ไม่ใช่ความเร็วหรือจำนวนสาย และค่าหลัง ADC เป็นรหัสดิจิทัลแล้ว',
+    objective: 'แยกลักษณะสำคัญที่ทำให้สัญญาณเป็น Analog',
+    flow: ['รับแรงดันต่อเนื่อง', 'นำเข้าวงจร', 'หรือนำเข้า ADC'],
+    signalReview: 'analog'
   },
   adcmeaning: {
     title: 'นักสืบค่าดิบ ADC',

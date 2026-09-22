@@ -5,6 +5,7 @@ import { classroomChoiceActivities } from '../content/classroomChoiceActivities'
 import { answerProgress } from '../../shared/roomState';
 import { getStudentName } from '../session';
 import CountdownTimer from './CountdownTimer';
+import { SignalActivityReview } from './SignalGraphics';
 import './ClassroomChoiceActivity.css';
 
 export default function ClassroomChoiceActivity({ activityId, audience = 'student' }) {
@@ -81,6 +82,8 @@ export default function ClassroomChoiceActivity({ activityId, audience = 'studen
         <h2>เฉลยพร้อมเหตุผล</h2><p>{activity.explanation}</p>
         <div className="classroom-choice-flow">{activity.flow.map((step, index) => <span key={step}>{index > 0 && <b>→</b>}<i>{step}</i></span>)}</div>
       </section>}
+
+      {activity.signalReview && <SignalActivityReview kind={activity.signalReview} revealed={revealed} />}
 
       <footer className="classroom-choice-objective"><strong>เป้าหมายของผู้เรียน</strong><span>{activity.objective}</span></footer>
     </section>
