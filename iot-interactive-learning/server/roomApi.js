@@ -23,7 +23,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 // room older than that is an earlier lesson, and is filed away with the others instead.
 const RESUME_WINDOW_MS = DAY_MS;
 const ARCHIVE_MAX_AGE_MS = ROOM_ARCHIVE_DAYS * DAY_MS;
-const MAX_ARCHIVED_ROOMS = 20;
+const MAX_ARCHIVED_ROOMS = 8;
 
 // Behind a proxy this header reads "client, proxy1, proxy2", and any client can forge it to
 // win itself a fresh rate-limit bucket. It is only believed when the deployment states that
@@ -95,7 +95,9 @@ function readSaved(persistPath) {
   if (!current || isResumable(current)) return { current, archive: archive.slice(0, MAX_ARCHIVED_ROOMS) };
   // Yesterday's room is not one to walk back into, but it is still a class's register and
   // scores. Dropping it here used to lose it for good, since the boot save writes over the file.
-  const filed = current.state.students.length && isKept(current) ? [current] : [];
+  // Kept for the usual day from the moment it is put down, like any other filed room —
+  // judging it on when the class itself ran would expire it before the teacher ever saw it.
+  const filed = current.state.students.length ? [{ ...current, savedAt: Date.now() }] : [];
   if (filed.length) console.log(`  📁 ห้อง PIN ${current.state.pin} ค้างไว้เกิน 1 วัน ย้ายไปไว้ในห้องก่อนหน้าแล้ว`);
   return { current: null, archive: [...filed, ...archive].slice(0, MAX_ARCHIVED_ROOMS) };
 }

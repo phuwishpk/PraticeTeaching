@@ -25,8 +25,15 @@ test('digital levels and multi-bit data open distinct lessons and experiments', 
   assert.notEqual(levels.lessonId, data.lessonId);
   const levelGraphics = lessons[levels.lessonId].sections.map(section => section.signalGraphic).filter(Boolean);
   const dataGraphics = lessons[data.lessonId].sections.map(section => section.signalGraphic).filter(Boolean);
-  assert.deepEqual(levelGraphics, ['digital:levels', 'digital:polarity']);
-  assert.deepEqual(dataGraphics, ['digital:bits']);
+  // Each lesson keeps gaining demonstrations, so pinning the exact list only broke the test
+  // every time one was written. What has to hold is that the two still teach it differently:
+  // each keeps its own signature experiments, and neither repeats one the other already ran.
+  for (const graphic of ['digital:levels', 'digital:polarity']) assert.ok(levelGraphics.includes(graphic), `the levels lesson lost ${graphic}`);
+  assert.ok(dataGraphics.includes('digital:bits'), 'the multi-bit lesson lost digital:bits');
+  assert.deepEqual(levelGraphics.filter(graphic => dataGraphics.includes(graphic)), [], 'a graphic is running in both lessons');
+  for (const graphics of [levelGraphics, dataGraphics]) {
+    assert.equal(new Set(graphics).size, graphics.length, 'a lesson shows the same graphic twice');
+  }
   let state = applyRoomAction(createRoomState(), { type: 'changeChapter', payload: { chapter: 2 } });
   state = applyRoomAction(state, { type: 'changeStep', payload: { step: steps.indexOf(levels) } });
   state = applyRoomAction(state, { type: 'presentation', payload: { chapter: 2, step: state.step, slide: 3 } });

@@ -249,14 +249,14 @@ function ageSavedRooms(persistPath, ms) {
   writeFileSync(persistPath, JSON.stringify(saved));
 }
 
-test('a class from last week can still be picked back up', () => withSaveFile(async persistPath => {
+test('a class from earlier today can still be picked back up', () => withSaveFile(async persistPath => {
   let pin;
   await withRoom(async ({ post, snapshot }) => {
     ({ pin } = (await snapshot()).state);
     await post('join', { pin, name: 'Ann' });
     await post('reset');
   }, { persistPath });
-  ageSavedRooms(persistPath, 7 * DAY);
+  ageSavedRooms(persistPath, 20 * HOUR);
 
   await withRoom(async ({ post, snapshot, rooms }) => {
     const [filed] = await rooms();
@@ -278,7 +278,9 @@ test('a lesson left overnight is filed away on restart instead of thrown out', (
     const fresh = (await snapshot()).state;
     assert.notEqual(fresh.pin, pin, 'the next day starts with a new PIN');
     assert.deepEqual(fresh.students, []);
-    assert.deepEqual((await rooms()).map(room => room.pin), [pin], "and yesterday's class is waiting in the list");
+    const [filed] = await rooms();
+    assert.equal(filed?.pin, pin, "and yesterday's class is waiting in the list");
+    assert.ok(Date.now() - filed.savedAt < HOUR, 'its day of keeping starts when it was put down, not when it was taught');
   }, { persistPath });
 }));
 
