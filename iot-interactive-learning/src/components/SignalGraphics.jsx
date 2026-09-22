@@ -66,6 +66,40 @@ export function DigitalSignal({ mode = 'levels' }) {
         </div>
       </div>
       <p className="signal-note">ทั้งสองวงจรยังเป็น Digital เหมือนกัน ต้องดูการต่อวงจรเพื่อรู้ว่า 0 หรือ 1 หมายถึง “กด” ค่า 0 V / 3.3 V เป็นแรงดันสัญญาณอุดมคติของตัวอย่างนี้ ไม่ใช่ไฟเลี้ยงอุปกรณ์ และช่วง LOW/HIGH จริงขึ้นกับอุปกรณ์</p>
+    </> : mode === 'combined' ? <>
+      <button type="button" className="signal-toggle" aria-pressed={pressed} onClick={() => {
+        const nextState = !pressed;
+        setPressed(nextState);
+        setHistory(previous => [...previous.slice(-7), nextState ? 1 : 0]);
+      }}>{pressed ? 'กำลังกด — แตะเพื่อปล่อย' : 'ยังไม่กด — แตะเพื่อกดปุ่ม'}</button>
+      
+      <div className="polarity-grid" aria-live="polite" style={{ marginBottom: '24px' }}>
+        <div style={{position: 'relative'}}>
+          <span>วงจร active-high</span>
+          <strong>{pressed ? 1 : 0}</strong>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, margin: '12px 0' }}>
+            <span style={{color: pressed ? '#ffca79' : '#888', fontSize: '1rem', fontWeight: 'bold'}}>แรงดันขาสัญญาณ: {pressed ? '3.3V' : '0V'}</span>
+            <div style={{ width: '80%', height: 12, background: '#222', borderRadius: 6, overflow: 'hidden' }}>
+              <div style={{ width: pressed ? '100%' : '0%', height: '100%', background: '#ffca79', transition: 'width 0.2s ease-in-out' }} />
+            </div>
+          </div>
+          <p>กด = HIGH · ปล่อย = LOW</p>
+        </div>
+        <div style={{position: 'relative'}}>
+          <span>วงจร active-low</span>
+          <strong>{pressed ? 0 : 1}</strong>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, margin: '12px 0' }}>
+            <span style={{color: !pressed ? '#ffca79' : '#888', fontSize: '1rem', fontWeight: 'bold'}}>แรงดันขาสัญญาณ: {pressed ? '0V' : '3.3V'}</span>
+            <div style={{ width: '80%', height: 12, background: '#222', borderRadius: 6, overflow: 'hidden' }}>
+              <div style={{ width: pressed ? '0%' : '100%', height: '100%', background: '#ffca79', transition: 'width 0.2s ease-in-out' }} />
+            </div>
+          </div>
+          <p>กด = LOW · ปล่อย = HIGH</p>
+        </div>
+      </div>
+      
+      <DigitalTrace bits={history} />
+      <p className="signal-note">กราฟด้านบนแสดงค่าลอจิกของวงจรแบบ <b>active-high</b> ตามลำดับการกดสวิตช์ของคุณ (ขวาคือล่าสุด)</p>
     </> : <>
       <div className="digital-controls">
         <div role="group" aria-label="เพิ่มสถานะในกราฟ" className="signal-button-group">{[0, 1].map(bit => <button type="button" key={bit} onClick={() => setHistory(previous => [...previous.slice(-7), bit])}>ส่ง {bit} · {bit ? 'HIGH' : 'LOW'}</button>)}</div>
@@ -182,6 +216,104 @@ export function SignalComparison({ mode }) {
   const [level, setLevel] = useState(mode === 'multibit' ? 25 : 50);
   const [activeLow, setActiveLow] = useState(false);
   const sliderId = useId();
+
+  if (mode === 'digianalog') {
+    const [digitalPressed, setDigitalPressed] = useState(false);
+    const [digitalHistory, setDigitalHistory] = useState([0, 0, 1, 1, 0, 1, 0]);
+    const [analogLevel, setAnalogLevel] = useState(50);
+    const [showAdc, setShowAdc] = useState(false);
+    
+    // For ADC, let's say we quantize into 8 steps for visual clarity (instead of 4096)
+    const adcSteps = 8;
+    const quantizedLevel = Math.round((analogLevel / 100) * adcSteps) / adcSteps * 100;
+
+    // Generate a simple curve for analog
+    const points = Array.from({ length: 50 }, (_, i) => {
+      const x = i * (300 / 49);
+      // A wave formula
+      const y = 50 + 40 * Math.sin(i * 0.2) + (i * 0.5);
+      // Normalize to 0-100 range and map to SVG Y (which is inverted)
+      const normalizedY = (y % 100); 
+      return { x: x + 30, y: 150 - (normalizedY * 1.2) };
+    });
+
+    const analogPath = `M ${points.map(p => `${p.x} ${p.y}`).join(' L ')}`;
+    
+    const quantizedPath = `M ${points.map(p => {
+      const qY = 150 - (Math.round(((150 - p.y) / 1.2) / (100/adcSteps)) * (100/adcSteps) * 1.2);
+      return `${p.x} ${qY}`;
+    }).join(' L ')}`;
+
+    return <section className="signal-lab analog-lab" aria-label="เปรียบเทียบ Digital และ Analog">
+      <header className="signal-heading">
+        <SlidersHorizontal aria-hidden="true" />
+        <div>
+          <span>เปรียบเทียบลักษณะสัญญาณ</span>
+          <h3>Digital 2 สถานะ vs Analog ต่อเนื่อง</h3>
+        </div>
+      </header>
+      
+      <div className="signal-comparison" style={{ alignItems: 'flex-start' }}>
+        <div className="comparison-digital" style={{ flex: 1 }}>
+          <span>ฝั่ง DIGITAL</span>
+          <h3>จำกัดแค่ 2 สถานะ (0 หรือ 1)</h3>
+          
+          <button type="button" className="signal-toggle" style={{ margin: '16px 0' }} onClick={() => {
+            const nextState = !digitalPressed;
+            setDigitalPressed(nextState);
+            setDigitalHistory(prev => [...prev.slice(-6), nextState ? 1 : 0]);
+          }}>
+            {digitalPressed ? 'กดอยู่ (HIGH / 1)' : 'ปล่อย (LOW / 0)'}
+          </button>
+          
+          <svg className="signal-chart" viewBox="0 0 360 210" role="img" aria-label="กราฟ Digital">
+            <path className="signal-axis" d="M40 25V160H340" />
+            <text x="8" y="45">1</text><text x="8" y="165">0</text>
+            <path className="signal-grid" d="M40 40H340 M40 160H340" />
+            
+            <path className="signal-line digital-line" d={`M40 ${digitalHistory[0] ? 40 : 160} ` + digitalHistory.map((val, i) => `H ${40 + i * 40} V ${val ? 40 : 160} H ${40 + (i + 1) * 40}`).join(' ')} fill="none" strokeWidth="4" />
+          </svg>
+          <p style={{ marginTop: '16px' }}>กราฟจะกระโดดสลับไปมาแค่ 2 ระดับ คือ 0 (LOW) กับ 1 (HIGH) เป็นเส้นหักมุมฉาก ไม่มีค่าระหว่างกลาง</p>
+        </div>
+
+        <div className="comparison-analog" style={{ flex: 1 }}>
+          <span>ฝั่ง ANALOG</span>
+          <h3>เปลี่ยนแปลงอย่างต่อเนื่อง</h3>
+          
+          <div className="analog-slider" style={{ margin: '16px 0' }}>
+            <label>จำลองเซนเซอร์รับค่า</label>
+            <input type="range" min="0" max="100" value={analogLevel} onChange={e => setAnalogLevel(Number(e.target.value))} />
+            <div className="range-labels"><span>0V</span><span>3.3V</span></div>
+          </div>
+          
+          <button type="button" className="signal-toggle" style={{ marginBottom: '16px', background: showAdc ? '#ffca79' : '#333', color: showAdc ? '#000' : '#fff' }} onClick={() => setShowAdc(!showAdc)}>
+            {showAdc ? 'ซ่อนจำลอง ADC Converter' : 'แสดงจำลอง ADC Converter'}
+          </button>
+          
+          <svg className="signal-chart" viewBox="0 0 360 210" role="img" aria-label="กราฟ Analog">
+            <path className="signal-axis" d="M40 25V160H340" />
+            <text x="5" y="45">3.3V</text><text x="12" y="165">0V</text>
+            
+            {showAdc && Array.from({ length: adcSteps + 1 }).map((_, i) => (
+              <path key={i} className="signal-grid" d={`M40 ${160 - (120 / adcSteps) * i}H340`} strokeOpacity="0.3" />
+            ))}
+            
+            <path d={analogPath} fill="none" stroke="#ffca79" strokeWidth="3" opacity={showAdc ? 0.3 : 1} />
+            
+            {showAdc && (
+              <path d={quantizedPath} fill="none" stroke="#ffca79" strokeWidth="4" />
+            )}
+            
+            <circle cx={180} cy={150 - (analogLevel * 1.2)} r="6" fill={showAdc ? '#888' : '#ffca79'} />
+            {showAdc && <circle cx={180} cy={150 - (quantizedLevel * 1.2)} r="8" fill="#ffca79" />}
+          </svg>
+          <p style={{ marginTop: '16px' }}>
+            {!showAdc ? 'กราฟเส้นโค้ง/ลาดเอียง แสดงระดับแรงดันไฟฟ้าที่มีค่าระหว่างกลางได้นับไม่ถ้วน' : 'ADC จะ "หั่น" ระดับแรงดันที่ต่อเนื่องให้กลายเป็นขั้นบันได (ความละเอียดขึ้นอยู่กับจำนวนบิต เช่น 12-bit หั่นได้ 4,096 ขั้น)'}
+          </p>
+        </div>
+      </div>
+    </section>;
+  }
 
   if (mode === 'aodo' || mode === 'multibit') {
     const isAoDo = mode === 'aodo';
