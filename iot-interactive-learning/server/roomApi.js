@@ -1,7 +1,7 @@
 import { randomUUID, timingSafeEqual } from 'node:crypto';
 import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { networkInterfaces } from 'node:os';
-import { applyRoomAction, broadcastState, createRoomState, ROOM_ARCHIVE_DAYS, STUDENT_ACTIONS, studentKey } from '../shared/roomState.js';
+import { applyRoomAction, broadcastState, CONTENT_SIGNATURE, createRoomState, ROOM_ARCHIVE_DAYS, STUDENT_ACTIONS, studentKey } from '../shared/roomState.js';
 
 // A whole class normally shares one public IP — school NAT, a phone hotspot, a tunnel —
 // so an allowance sized for one person locks the room the moment everybody answers at
@@ -128,7 +128,10 @@ export function createRoomApi({ persistPath = null } = {}) {
   if (saved.current) console.log(`\n  ♻️  กู้ห้องเดิมคืนมาแล้ว: PIN ${state.pin}, นักเรียน ${state.students.length} คน\n`);
   // serverNow lets each browser measure its own clock drift, so a phone set to the wrong
   // time still sees — and is judged by — the same countdown as everybody else.
-  const snapshot = () => ({ instance, revision, state: broadcastState(state), serverNow: Date.now() });
+  // content is what the browser checks itself against: the lesson content this process was
+  // started with, which a deploy that copies the build but leaves the server running changes
+  // on one side only.
+  const snapshot = () => ({ instance, revision, content: CONTENT_SIGNATURE, state: broadcastState(state), serverNow: Date.now() });
 
   // Student actions are attributed by token, never by the name in the request body.
   const tokenByStudent = new Map(); // studentKey(name) -> token

@@ -63,6 +63,24 @@ export const CHAPTER_FLOW = {
   ]
 };
 
+// When the built page and the server disagree about the lesson content, neither side can
+// see it: the browser offers slides the server then rejects with a bare 400. Each side
+// hashes the shape of what it holds, so the mismatch can be named instead of guessed at.
+// It changes whenever a lesson gains or loses a slide, which is exactly when it matters.
+const fingerprint = value => {
+  let hash = 0x811c9dc5;
+  for (let index = 0; index < value.length; index++) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0).toString(16).padStart(8, '0');
+};
+
+export const CONTENT_SIGNATURE = fingerprint(JSON.stringify([
+  Object.entries(lessons).map(([id, lesson]) => [id, lesson.sections.length, Boolean(lesson.code)]),
+  Object.entries(CHAPTER_FLOW).map(([chapter, steps]) => [chapter, steps.map(step => `${step.id || step.type}:${step.lessonId}`)]),
+]));
+
 export function createRoomState() {
   return {
     pin: String(Math.floor(1000 + Math.random() * 9000)), chapter: 1, step: 0, presentation: initialPresentation('activity'),
@@ -277,7 +295,10 @@ export function applyRoomAction(state, action) {
         const lessonId = CHAPTER_FLOW[state.chapter][state.step].lessonId;
         const lesson = lessons[lessonId];
         const maxSlide = lesson ? lesson.sections.length + 1 + (lesson.code ? 1 : 0) : 0; // intro, sections, optional code, recap
-        requireValue(Number.isInteger(p.slide) && p.slide >= 0 && p.slide <= maxSlide);
+        // Naming the likely cause here saves the teacher a silent 400 in the console: the
+        // page offering a slide the server has never heard of means the two were built apart.
+        requireValue(Number.isInteger(p.slide) && p.slide >= 0 && p.slide <= maxSlide,
+          'ไม่มีสไลด์นี้ในเนื้อหาที่เซิร์ฟเวอร์ใช้อยู่ ถ้าเพิ่งอัปเดตเนื้อหา ให้อัปเดตไฟล์บนเซิร์ฟเวอร์แล้วรีสตาร์ต');
         Object.assign(patch, { slide: p.slide, expanded: false, answerRevealed: false });
       }
       // Discard delayed demo updates belonging to a previously selected slide.

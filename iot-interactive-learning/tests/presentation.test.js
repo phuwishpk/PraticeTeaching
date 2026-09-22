@@ -71,7 +71,12 @@ test('each chapter step accepts valid navigation and rejects out-of-range slides
         assert.equal(state.presentation.slide, slide);
       }
       for (const slide of [-1, last + 1]) {
-        assert.throws(() => applyRoomAction(state, { type: 'presentation', payload: { chapter, step, slide } }));
+        // A page built from newer content asks for slides this server has never heard of, so
+        // the refusal has to point at the stale server rather than read as a broken click.
+        assert.throws(
+          () => applyRoomAction(state, { type: 'presentation', payload: { chapter, step, slide } }),
+          /รีสตาร์ต/,
+        );
       }
     }
   }

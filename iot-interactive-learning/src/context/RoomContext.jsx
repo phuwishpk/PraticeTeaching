@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
-import { createRoomState } from '../../shared/roomState';
+import { CONTENT_SIGNATURE, createRoomState } from '../../shared/roomState';
 import { clearStudent, getStudentToken, saveStudent } from '../session';
 
 const RoomContext = createContext();
@@ -27,11 +27,16 @@ export function RoomProvider({ children }) {
   const [roomState, setRoomState] = useState(createRoomState);
   const [connected, setConnected] = useState(false);
   const [error, setError] = useState('');
+  // True when this page was built from different lesson content than the server is running.
+  const [contentStale, setContentStale] = useState(false);
   const [joinUrl, setJoinUrl] = useState(`${window.location.origin}/`);
   const version = useRef({ instance: null, revision: -1 });
   const queue = useRef(Promise.resolve());
   const acceptSnapshot = useCallback(snapshot => {
     const current = version.current;
+    // A snapshot with no signature at all comes from a server older than this build, which is
+    // the very case worth reporting: the files were copied over but the process was not restarted.
+    setContentStale(snapshot.content !== CONTENT_SIGNATURE);
     // If server restarted (new instance), force page reload to get fresh PIN
     if (current.instance !== null && snapshot.instance !== current.instance) {
       console.warn('[RoomContext] Room changed — reloading to pick up the new one...');
@@ -145,7 +150,7 @@ export function RoomProvider({ children }) {
   const voteChoice = useCallback((activityId, option, name) => dispatch('choiceVote', { activityId, option, name }), [dispatch]);
 
   return (
-    <RoomContext.Provider value={{ roomState, connected, error, joinUrl,
+    <RoomContext.Provider value={{ roomState, connected, error, contentStale, joinUrl,
       setChapter, setStep, setPresentation, setJoinOpen, removeStudent, restoreRoom, listRooms, joinRoom,
       setVoteItem, submitVote, sendFloatingEmoji,
       addFloatingEmoji, voteQuiz, revealQuiz, voteLogic, activateSense, resetRoom,

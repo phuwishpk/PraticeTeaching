@@ -6,7 +6,7 @@ import { once } from 'node:events';
 import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { CHAPTER_FLOW, ROOM_ARCHIVE_DAYS } from '../shared/roomState.js';
+import { CHAPTER_FLOW, CONTENT_SIGNATURE, ROOM_ARCHIVE_DAYS } from '../shared/roomState.js';
 import { createRoomApi } from '../server/roomApi.js';
 
 const ROLES_STEP = CHAPTER_FLOW[1].findIndex(({ id }) => id === 'roles');
@@ -135,6 +135,13 @@ test('the teacher can remove a learner without leaving the lesson', () => withRo
 test('the teacher screen drives the room without signing in', () => withRoom(async ({ post, snapshot }) => {
   assert.equal((await post('changeStep', { step: ROLES_STEP })).status, 200);
   assert.equal((await snapshot()).state.step, ROLES_STEP);
+}));
+
+// Copying a build onto the server without restarting it leaves the page and the server
+// disagreeing about how many slides a lesson has, which showed up only as a bare 400.
+test('every snapshot names the lesson content the server is running', () => withRoom(async ({ post, snapshot }) => {
+  assert.equal((await snapshot()).content, CONTENT_SIGNATURE);
+  assert.equal((await (await post('changeStep', { step: ROLES_STEP })).json()).content, CONTENT_SIGNATURE);
 }));
 
 test('a restart in the middle of a lesson does not end the lesson', async () => {

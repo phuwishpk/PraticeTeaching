@@ -987,7 +987,7 @@ const resetPrompt = ({ pin, students }) => (students.length
 let reloadingOnPurpose = false;
 
 function ConnectionBanner() {
-  const { connected, error } = useRoom();
+  const { connected, error, contentStale } = useRoom();
 
   if (!connected) {
     return (
@@ -1007,6 +1007,21 @@ function ConnectionBanner() {
           style={{ padding: '6px 14px', fontSize: '.82rem', whiteSpace: 'nowrap' }}>
           โหลดใหม่
         </button>
+      </div>
+    );
+  }
+
+  // Copying the build onto the server without restarting it leaves the two disagreeing about
+  // how many slides a lesson has, and every slide past the server's count is refused.
+  if (contentStale) {
+    return (
+      <div role="alert" style={{ flexShrink: 0, margin: '8px 14px 0', padding: '10px 16px', borderRadius: 10,
+        background: 'rgba(255,184,108,.12)', border: '1px solid rgba(255,184,108,.45)', color: '#ffb86c', fontSize: '.88rem', lineHeight: 1.6 }}>
+        <strong>เนื้อหาบนหน้าเว็บกับบนเซิร์ฟเวอร์คนละเวอร์ชัน</strong> — บางสไลด์จะเปิดไม่ได้
+        <br />
+        <span style={{ color: 'var(--text-secondary)', fontSize: '.82rem' }}>
+          อัปเดตไฟล์บนเซิร์ฟเวอร์ให้ครบ (ไม่ใช่แค่โฟลเดอร์ dist) แล้วรีสตาร์ตเซิร์ฟเวอร์ จากนั้นโหลดหน้านี้ใหม่
+        </span>
       </div>
     );
   }
