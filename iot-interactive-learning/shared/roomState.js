@@ -9,6 +9,10 @@ export const initialPresentation = (mode = 'lesson') => ({
 
 export const QUESTION_DURATION_MS = 30000;
 
+// How long a finished class stays in the teacher's list of earlier rooms. The server keeps
+// to it and the teacher's screen quotes it, so both read it from here.
+export const ROOM_ARCHIVE_DAYS = 30;
+
 // Activities that state their own pace in the lesson content keep it; the server must run
 // the same clock the learners are watching, or it would cut them off mid-question.
 function questionDurationMs(state) {

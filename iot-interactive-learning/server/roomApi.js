@@ -1,7 +1,7 @@
 import { randomUUID, timingSafeEqual } from 'node:crypto';
 import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { networkInterfaces } from 'node:os';
-import { applyRoomAction, broadcastState, createRoomState, STUDENT_ACTIONS, studentKey } from '../shared/roomState.js';
+import { applyRoomAction, broadcastState, createRoomState, ROOM_ARCHIVE_DAYS, STUDENT_ACTIONS, studentKey } from '../shared/roomState.js';
 
 // A whole class normally shares one public IP — school NAT, a phone hotspot, a tunnel —
 // so an allowance sized for one person locks the room the moment everybody answers at
@@ -18,8 +18,12 @@ const PUBLISH_INTERVAL_MS = 200;
 // moves on too early, or teaches the same class again after lunch, can pick it back up.
 const PERSIST_VERSION = 2;
 const PERSIST_DEBOUNCE_MS = 2000;
-const ROOM_MAX_AGE_MS = 24 * 60 * 60 * 1000; // เก็บห้องไว้ 1 วัน
-const MAX_ARCHIVED_ROOMS = 8;
+const DAY_MS = 24 * 60 * 60 * 1000;
+// Walking straight back into the room after a restart only makes sense the same day; a
+// room older than that is an earlier lesson, and is filed away with the others instead.
+const RESUME_WINDOW_MS = DAY_MS;
+const ARCHIVE_MAX_AGE_MS = ROOM_ARCHIVE_DAYS * DAY_MS;
+const MAX_ARCHIVED_ROOMS = 20;
 
 // Behind a proxy this header reads "client, proxy1, proxy2", and any client can forge it to
 // win itself a fresh rate-limit bucket. It is only believed when the deployment states that
@@ -40,7 +44,8 @@ const parseOrigin = value => {
   try { return new URL(value); } catch { return null; }
 };
 
-const isFresh = entry => entry && Date.now() - entry.savedAt <= ROOM_MAX_AGE_MS;
+const isKept = entry => entry && Date.now() - entry.savedAt <= ARCHIVE_MAX_AGE_MS;
+const isResumable = entry => Date.now() - entry.savedAt <= RESUME_WINDOW_MS;
 
 const RECONNECT_BASE_MS = 2000;
 const RECONNECT_JITTER_MS = 3000;
@@ -58,20 +63,41 @@ const safeEqual = (candidate, secret) => {
   return left.length === right.length && timingSafeEqual(left, right);
 };
 
-function readSaved(persistPath) {
-  if (!persistPath || !existsSync(persistPath)) return { current: null, archive: [] };
+// The server writes a fresh file as soon as it boots, so one it cannot make sense of is
+// moved out of the way first: it may be the only copy of a class's register and scores.
+function setAside(persistPath, reason) {
+  const aside = `${persistPath}.unreadable-${Date.now()}`;
   try {
-    const saved = JSON.parse(readFileSync(persistPath, 'utf8'));
-    if (saved?.version !== PERSIST_VERSION) return { current: null, archive: [] };
-    const valid = entry => entry && Array.isArray(entry.state?.students) && isFresh(entry);
-    return {
-      current: valid(saved.current) ? saved.current : null,
-      archive: (saved.archive ?? []).filter(valid).slice(0, MAX_ARCHIVED_ROOMS),
-    };
+    renameSync(persistPath, aside);
+    console.warn(`[room] อ่านสถานะห้องที่บันทึกไว้ไม่ได้ (${reason}) ย้ายไฟล์เดิมไปไว้ที่ ${aside} แล้วเริ่มห้องใหม่`);
   } catch (error) {
-    console.warn('[room] อ่านสถานะห้องที่บันทึกไว้ไม่ได้ จะเริ่มห้องใหม่:', error.message);
-    return { current: null, archive: [] };
+    console.warn(`[room] อ่านสถานะห้องที่บันทึกไว้ไม่ได้ (${reason}) และย้ายไฟล์เดิมไม่ได้: ${error.message}`);
   }
+}
+
+function readSaved(persistPath) {
+  const nothing = { current: null, archive: [] };
+  if (!persistPath || !existsSync(persistPath)) return nothing;
+  let saved;
+  try {
+    saved = JSON.parse(readFileSync(persistPath, 'utf8'));
+  } catch (error) {
+    setAside(persistPath, error.message);
+    return nothing;
+  }
+  if (saved?.version !== PERSIST_VERSION) {
+    setAside(persistPath, `ไฟล์รูปแบบ ${saved?.version}`);
+    return nothing;
+  }
+  const usable = entry => Array.isArray(entry?.state?.students);
+  const archive = (saved.archive ?? []).filter(entry => usable(entry) && isKept(entry));
+  const current = usable(saved.current) ? saved.current : null;
+  if (!current || isResumable(current)) return { current, archive: archive.slice(0, MAX_ARCHIVED_ROOMS) };
+  // Yesterday's room is not one to walk back into, but it is still a class's register and
+  // scores. Dropping it here used to lose it for good, since the boot save writes over the file.
+  const filed = current.state.students.length && isKept(current) ? [current] : [];
+  if (filed.length) console.log(`  📁 ห้อง PIN ${current.state.pin} ค้างไว้เกิน 1 วัน ย้ายไปไว้ในห้องก่อนหน้าแล้ว`);
+  return { current: null, archive: [...filed, ...archive].slice(0, MAX_ARCHIVED_ROOMS) };
 }
 
 // A question left open when a room was put down has a long-expired clock, so it is closed
@@ -81,6 +107,14 @@ const reopened = state => ({ ...state, questionKey: null, questionRoster: [], qu
 export function createRoomApi({ persistPath = null } = {}) {
   const saved = readSaved(persistPath);
   let archive = saved.archive;
+  // The archive changes only when a room is filed or picked back up, while the room being
+  // taught is saved every couple of seconds; re-serialising a month of classes on each of
+  // those saves would stall the answers arriving at the same moment.
+  let archiveJson = JSON.stringify(archive);
+  const setArchive = next => {
+    archive = next.filter(isKept).slice(0, MAX_ARCHIVED_ROOMS);
+    archiveJson = JSON.stringify(archive);
+  };
   let roomId = saved.current?.id ?? randomUUID();
   let state = saved.current ? reopened(saved.current.state) : createRoomState();
   let revision = saved.current?.revision ?? 0;
@@ -111,7 +145,7 @@ export function createRoomApi({ persistPath = null } = {}) {
   const fileAway = () => {
     const current = captureRoom();
     if (!current.state.students.length) return;
-    archive = [current, ...archive.filter(entry => entry.id !== current.id)].slice(0, MAX_ARCHIVED_ROOMS);
+    setArchive([current, ...archive.filter(entry => entry.id !== current.id)]);
   };
   // Puts the current room down and picks up another, learners and tokens and all. The
   // instance id travels with the room, so every browser notices it is somewhere else now.
@@ -127,7 +161,8 @@ export function createRoomApi({ persistPath = null } = {}) {
     }
     publish(reopened(record.state), true);
   };
-  const listRooms = () => archive.filter(isFresh).map(entry => ({
+  const keptRooms = () => archive.filter(isKept);
+  const listRooms = () => keptRooms().map(entry => ({
     id: entry.id, pin: entry.state.pin, chapter: entry.state.chapter,
     students: entry.state.students.length, savedAt: entry.savedAt,
   }));
@@ -137,11 +172,7 @@ export function createRoomApi({ persistPath = null } = {}) {
   const persist = () => {
     if (!persistPath) return;
     try {
-      const payload = JSON.stringify({
-        version: PERSIST_VERSION,
-        current: captureRoom(),
-        archive: archive.filter(isFresh),
-      });
+      const payload = `{"version":${PERSIST_VERSION},"current":${JSON.stringify(captureRoom())},"archive":${archiveJson}}`;
       // Written beside the target and renamed, so a crash mid-write cannot leave the room
       // half-saved and unreadable.
       writeFileSync(`${persistPath}.tmp`, payload);
@@ -269,7 +300,7 @@ export function createRoomApi({ persistPath = null } = {}) {
         uptimeSeconds: Math.round(process.uptime()),
         students: state.students.length,
         streams: streams.size,
-        archivedRooms: archive.length,
+        archivedRooms: keptRooms().length,
         revision,
         // Deliberately no PIN: this endpoint is open, and the PIN is what gets you into the room.
         persist: persistPath
@@ -313,10 +344,10 @@ export function createRoomApi({ persistPath = null } = {}) {
       // Both of these swap the whole room, which applyRoomAction cannot do: it only ever
       // sees one room's state and knows nothing about the ones filed away.
       if (action.type === 'restoreRoom') {
-        const record = archive.find(entry => entry.id === action.payload.roomId && isFresh(entry));
-        if (!record) return json(res, 404, { error: 'ไม่พบห้องเรียนนี้แล้ว อาจเก็บไว้เกิน 1 วัน' });
+        const record = archive.find(entry => entry.id === action.payload.roomId && isKept(entry));
+        if (!record) return json(res, 404, { error: `ไม่พบห้องเรียนนี้แล้ว อาจเก็บไว้เกิน ${ROOM_ARCHIVE_DAYS} วัน` });
         fileAway();
-        archive = archive.filter(entry => entry.id !== record.id);
+        setArchive(archive.filter(entry => entry.id !== record.id));
         enterRoom(record);
         persist();
         return json(res, 200, snapshot());
@@ -388,14 +419,14 @@ export function createRoomApi({ persistPath = null } = {}) {
   // a platform with an ephemeral or read-only filesystem this is the only warning there is.
   if (persistPath) {
     persist();
-    if (!persistError) console.log(`  💾 บันทึกสถานะห้องไว้ที่ ${persistPath}`);
+    if (!persistError) console.log(`  💾 บันทึกสถานะห้องไว้ที่ ${persistPath} (ห้องก่อนหน้า ${archive.length} ห้อง)`);
   }
 
   return {
     middleware,
     listRooms,
     // Enough to see, from outside, whether connections are piling up during a lesson.
-    stats: () => ({ streams: streams.size, students: state.students.length, archived: archive.length, revision }),
+    stats: () => ({ streams: streams.size, students: state.students.length, archived: keptRooms().length, revision }),
     close() {
       if (persistTimeout) clearTimeout(persistTimeout);
       persist();

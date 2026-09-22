@@ -3,13 +3,15 @@ import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { connect } from 'node:net';
 import { once } from 'node:events';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { CHAPTER_FLOW } from '../shared/roomState.js';
+import { CHAPTER_FLOW, ROOM_ARCHIVE_DAYS } from '../shared/roomState.js';
 import { createRoomApi } from '../server/roomApi.js';
 
 const ROLES_STEP = CHAPTER_FLOW[1].findIndex(({ id }) => id === 'roles');
+const HOUR = 60 * 60 * 1000;
+const DAY = 24 * HOUR;
 
 // Boots the real middleware over a real socket, so the checks under test are the ones a
 // browser actually meets: headers, status codes and the broadcast snapshot.
@@ -229,6 +231,78 @@ test('a room that is gone says so rather than silently doing nothing', () => wit
 test('an empty room is not worth filing away', () => withRoom(async ({ post, rooms }) => {
   await post('reset');
   assert.deepEqual(await rooms(), []);
+}));
+
+async function withSaveFile(run) {
+  const dir = mkdtempSync(join(tmpdir(), 'room-'));
+  try {
+    await run(join(dir, 'room.json'), dir);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+// Rewinds what is on disk, so the next boot sees every room as having been left that long ago.
+function ageSavedRooms(persistPath, ms) {
+  const saved = JSON.parse(readFileSync(persistPath, 'utf8'));
+  for (const entry of [saved.current, ...saved.archive]) if (entry) entry.savedAt -= ms;
+  writeFileSync(persistPath, JSON.stringify(saved));
+}
+
+test('a class from last week can still be picked back up', () => withSaveFile(async persistPath => {
+  let pin;
+  await withRoom(async ({ post, snapshot }) => {
+    ({ pin } = (await snapshot()).state);
+    await post('join', { pin, name: 'Ann' });
+    await post('reset');
+  }, { persistPath });
+  ageSavedRooms(persistPath, 7 * DAY);
+
+  await withRoom(async ({ post, snapshot, rooms }) => {
+    const [filed] = await rooms();
+    assert.equal(filed?.pin, pin);
+    assert.equal((await post('restoreRoom', { roomId: filed.id })).status, 200);
+    assert.equal((await snapshot()).state.pin, pin);
+  }, { persistPath });
+}));
+
+test('a lesson left overnight is filed away on restart instead of thrown out', () => withSaveFile(async persistPath => {
+  let pin;
+  await withRoom(async ({ post, snapshot }) => {
+    ({ pin } = (await snapshot()).state);
+    await post('join', { pin, name: 'Ann' });
+  }, { persistPath });
+  ageSavedRooms(persistPath, DAY + HOUR);
+
+  await withRoom(async ({ snapshot, rooms }) => {
+    const fresh = (await snapshot()).state;
+    assert.notEqual(fresh.pin, pin, 'the next day starts with a new PIN');
+    assert.deepEqual(fresh.students, []);
+    assert.deepEqual((await rooms()).map(room => room.pin), [pin], "and yesterday's class is waiting in the list");
+  }, { persistPath });
+}));
+
+test('rooms past the keeping period are gone, and health does not count them', () => withSaveFile(async persistPath => {
+  await withRoom(async ({ post, snapshot }) => {
+    await post('join', { pin: (await snapshot()).state.pin, name: 'Ann' });
+    await post('reset');
+  }, { persistPath });
+  ageSavedRooms(persistPath, (ROOM_ARCHIVE_DAYS + 1) * DAY);
+
+  await withRoom(async ({ rooms, base }) => {
+    assert.deepEqual(await rooms(), []);
+    assert.equal((await (await fetch(`${base}/api/room/health`)).json()).archivedRooms, 0);
+  }, { persistPath });
+}));
+
+test('a save file the server cannot read is set aside, not written over', () => withSaveFile(async (persistPath, dir) => {
+  const truncated = '{"version":2,"current":';
+  writeFileSync(persistPath, truncated);
+  await withRoom(async () => {}, { persistPath });
+
+  const aside = readdirSync(dir).find(name => name.startsWith('room.json.unreadable'));
+  assert.ok(aside, 'it may be the only copy of a register, so it is kept for recovery by hand');
+  assert.equal(readFileSync(join(dir, aside), 'utf8'), truncated);
 }));
 
 // A request that throws used to become an unhandled rejection, and Node ends the process

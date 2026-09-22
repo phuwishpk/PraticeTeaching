@@ -95,8 +95,16 @@ export function RoomProvider({ children }) {
   const setJoinOpen = useCallback(open => dispatch('setJoinOpen', { open }), [dispatch]);
   const removeStudent = useCallback(name => dispatch('removeStudent', { name }), [dispatch]);
   const restoreRoom = useCallback(roomId => dispatch('restoreRoom', { roomId }), [dispatch]);
+  // null, not [], when the list could not be fetched: an empty history and a failed request
+  // looked identical on the teacher's screen, which hid every reason the list was missing.
   const listRooms = useCallback(
-    () => fetch('/api/room/rooms').then(response => response.json()).then(data => data.rooms ?? []).catch(() => []),
+    () => fetch('/api/room/rooms')
+      .then(response => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.json();
+      })
+      .then(data => data.rooms ?? [])
+      .catch(() => null),
     [],
   );
   const joinRoom = useCallback(async (name, pin) => {

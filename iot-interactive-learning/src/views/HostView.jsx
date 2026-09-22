@@ -4,7 +4,7 @@ import { SignalActivityReview } from '../components/SignalGraphics';
 import { SensorCatalog } from '../components/LessonGraphics';
 import React, { useEffect, useState, useMemo } from 'react';
 import { useRoom } from '../context/RoomContext';
-import { CHAPTER_FLOW, answerProgress, rankStudents } from '../../shared/roomState';
+import { CHAPTER_FLOW, ROOM_ARCHIVE_DAYS, answerProgress, rankStudents } from '../../shared/roomState';
 import { formatDuration } from '../format';
 import { motion, AnimatePresence } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
@@ -857,12 +857,13 @@ function HostLessonSlideshow({ chapter, step, quizRevealed }) {
 
 // The PIN, the door and the register in one place the teacher can reach from any step —
 // sending the whole class back to the lobby just to remove one name interrupts the lesson.
-const roomClock = savedAt => new Date(savedAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+// Rooms are kept for weeks now, so the time alone no longer says which class it was.
+const roomDate = savedAt => new Date(savedAt).toLocaleString('th-TH', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 
 function RoomRoster() {
   const { roomState, setJoinOpen, removeStudent, restoreRoom, listRooms } = useRoom();
   const [open, setOpen] = useState(false);
-  const [rooms, setRooms] = useState([]);
+  const [rooms, setRooms] = useState(); // undefined while loading, null if it failed
   const students = rankStudents(roomState);
 
   // Read when the panel opens, and again whenever the room itself changes.
@@ -932,28 +933,40 @@ function RoomRoster() {
               นักเรียนที่ถูกนำออกจะเห็นข้อความบนจอทันที คะแนนยังเก็บไว้ ถ้าจะให้กลับเข้ามาต้องกด "เปิดรับ" ก่อน
             </p>
 
-            {rooms.length > 0 && (
-              <div style={{ borderTop: '1px solid rgba(255,255,255,.1)', paddingTop: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <span style={{ color: 'var(--text-secondary)', fontSize: '.78rem' }}>ห้องก่อนหน้า (เก็บไว้ 1 วัน)</span>
-                {rooms.map(room => (
-                  <div key={room.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px',
-                    borderRadius: 10, background: 'rgba(176,38,255,.08)', border: '1px solid rgba(176,38,255,.2)' }}>
-                    <span style={{ flex: 1, minWidth: 0, fontSize: '.82rem' }}>
-                      PIN {room.pin} · {room.students} คน
-                      <span style={{ color: 'var(--text-secondary)' }}> · {roomClock(room.savedAt)}</span>
-                    </span>
-                    <button type="button"
-                      onClick={() => {
-                        if (!window.confirm(`กลับเข้าห้อง PIN ${room.pin} (${room.students} คน)?\n\nห้องปัจจุบันจะถูกเก็บไว้ให้กลับมาได้เหมือนกัน`)) return;
-                        setOpen(false);
-                        restoreRoom(room.id);
-                      }}
-                      style={{ background: 'transparent', border: '1px solid rgba(176,38,255,.45)', color: '#d8adff',
-                        borderRadius: 8, padding: '2px 10px', cursor: 'pointer', font: 'inherit', fontSize: '.78rem' }}>
-                      กลับเข้าห้อง
-                    </button>
-                  </div>
-                ))}
+            {rooms !== undefined && (
+              <div style={{ borderTop: '1px solid rgba(255,255,255,.1)', paddingTop: 10, display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0 }}>
+                <span style={{ color: 'var(--text-secondary)', fontSize: '.78rem' }}>ห้องก่อนหน้า (เก็บไว้ {ROOM_ARCHIVE_DAYS} วัน)</span>
+                {rooms === null && (
+                  <p style={{ color: '#ffb86c', fontSize: '.78rem', margin: 0, lineHeight: 1.6 }}>
+                    โหลดรายการห้องก่อนหน้าไม่สำเร็จ ลองปิดแล้วเปิดแผงนี้อีกครั้ง
+                  </p>
+                )}
+                {rooms?.length === 0 && (
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '.78rem', margin: 0, lineHeight: 1.6 }}>
+                    ยังไม่มีห้องก่อนหน้า — ห้องจะมาอยู่ที่นี่เมื่อกด "เริ่มห้องใหม่" ตอนที่มีนักเรียนอยู่ในห้อง (ห้องที่ไม่มีนักเรียนจะไม่ถูกเก็บ)
+                  </p>
+                )}
+                <div style={{ maxHeight: 180, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {rooms?.map(room => (
+                    <div key={room.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px',
+                      borderRadius: 10, background: 'rgba(176,38,255,.08)', border: '1px solid rgba(176,38,255,.2)' }}>
+                      <span style={{ flex: 1, minWidth: 0, fontSize: '.82rem' }}>
+                        PIN {room.pin} · {room.students} คน
+                        <span style={{ color: 'var(--text-secondary)' }}> · {roomDate(room.savedAt)}</span>
+                      </span>
+                      <button type="button"
+                        onClick={() => {
+                          if (!window.confirm(`กลับเข้าห้อง PIN ${room.pin} (${room.students} คน)?\n\nห้องปัจจุบันจะถูกเก็บไว้ให้กลับมาได้เหมือนกัน`)) return;
+                          setOpen(false);
+                          restoreRoom(room.id);
+                        }}
+                        style={{ background: 'transparent', border: '1px solid rgba(176,38,255,.45)', color: '#d8adff',
+                          borderRadius: 8, padding: '2px 10px', cursor: 'pointer', font: 'inherit', fontSize: '.78rem' }}>
+                        กลับเข้าห้อง
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
@@ -962,6 +975,12 @@ function RoomRoster() {
     </div>
   );
 }
+
+// Says what becomes of the room being left. An empty one is not kept, and a teacher trying
+// the button with nobody in the room would otherwise go looking for it in the list.
+const resetPrompt = ({ pin, students }) => (students.length
+  ? `เริ่มห้องใหม่ด้วย PIN ใหม่?\n\nห้อง PIN ${pin} (${students.length} คน) จะถูกเก็บไว้ ${ROOM_ARCHIVE_DAYS} วัน กลับเข้าห้องเดิมได้จากแถบ PIN ด้านบน`
+  : 'เริ่มห้องใหม่ด้วย PIN ใหม่?\n\nห้องนี้ยังไม่มีนักเรียน จึงจะไม่ถูกเก็บไว้ในรายการห้องก่อนหน้า');
 
 // Reloading to recover is something the teacher just asked for, so the are-you-sure guard
 // below must not interrupt it.
@@ -1075,7 +1094,7 @@ export default function HostView() {
             </button>
           ))}
         </nav>
-        <button title="ล้างข้อมูลห้องเรียนและเริ่มใหม่" onClick={() => { if (window.confirm('ล้างคะแนน คำตอบ และรายชื่อนักเรียนทั้งหมด แล้วสร้าง PIN ใหม่?')) resetRoom(); }} style={{ background: 'transparent', border: '1px solid rgba(255,0,100,0.4)', color: '#ff6b6b', borderRadius: 8, padding: '5px 10px', cursor: 'pointer', fontSize: '0.75rem' }}>
+        <button title="เริ่มห้องใหม่ด้วย PIN ใหม่ ห้องนี้จะถูกเก็บไว้ให้กลับมาได้" onClick={() => { if (window.confirm(resetPrompt(roomState))) resetRoom(); }} style={{ background: 'transparent', border: '1px solid rgba(255,0,100,0.4)', color: '#ff6b6b', borderRadius: 8, padding: '5px 10px', cursor: 'pointer', fontSize: '0.75rem' }}>
           🔄 เริ่มห้องใหม่
         </button>
       </div>
