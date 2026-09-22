@@ -33,6 +33,7 @@ npm run loadtest -- classroom --target http://127.0.0.1:3999
 | `emoji-flood` | N คนกดอิโมจิรัวตาม `--rate` เป็นเวลา `--duration` (โหลดเขียน + fan-out) |
 | `read-flood` | ยิง `GET /health` รัว ๆ ที่ `--concurrency` วัด RPS ดิบ |
 | `sse-hold` | เปิด event stream N เส้นค้างไว้ แล้ววัดว่า broadcast ไปถึงครบทุกเส้นไหม |
+| `monitor` | **อ่านอย่างเดียว**: poll `/health` ทุก 1 วิ พิมพ์ timeline (streams/uptime) จับ crash/restart — รันคู่ตอนยิงโหลด |
 | `all` | รันทุก scenario ต่อกันแล้วสรุปรวม |
 
 ## Flags (หรือใส่เป็น env var ตัวใหญ่ เช่น `STUDENTS=100`)
@@ -46,6 +47,91 @@ npm run loadtest -- classroom --target http://127.0.0.1:3999
 | `--rate` | `8` | อิโมจิต่อคนต่อวินาที (emoji-flood) |
 | `--json <path>` | — | เขียนรายงานแบบเครื่องอ่านลงไฟล์ |
 | `--i-own-this-target` | — | จำเป็นเมื่อชี้ไป host ที่ไม่ใช่ local |
+| `--reset` / `--no-reset` | local=reset, remote=ไม่ reset | บังคับ/ปิดการล้างห้องตอนเริ่ม |
+| `--force` | — | ข้ามการกันคลาสสด (remote) — ใช้เมื่อแน่ใจว่าไม่มีคลาสจริง |
+
+## เช็คบน VPS ของตัวเอง (DigitalOcean / Vultr / Hetzner / EC2 ฯลฯ)
+
+VPS ต่างจาก PaaS ตรงที่คุณเป็นเจ้าของทั้งเครื่อง จึง **เข้าไปดูฝั่งเซิร์ฟเวอร์ได้** —
+ซึ่งเป็นหัวใจของการ "เช็ค" จริง ๆ. วิธีที่แนะนำคือดู 2 ฝั่งพร้อมกัน:
+
+**ยิงโหลดจากไหนดี?**
+- **บนตัว VPS เอง (แนะนำเพื่อวัดเพดานเซิร์ฟเวอร์)** — SSH เข้าไป แล้วยิงใส่ `127.0.0.1`
+  ตัด latency อินเทอร์เน็ตและแบนด์วิดท์บ้านออก เห็นเพดาน CPU/หน่วยความจำจริง ๆ ของ Node.
+  (ตัวยิงจะแย่ง CPU กับเซิร์ฟเวอร์บ้าง — โอเคสำหรับหาเพดานเชิงฟังก์ชัน; อยากวัด throughput
+  สูงสุดเป๊ะ ๆ ให้ยิงจาก VPS ตัวที่สองใน region เดียวกัน)
+- **จากแล็ปท็อป → VPS** — วัด latency แบบผู้ใช้จริง แต่คอขวดจะกลายเป็นเน็ตบ้านคุณ
+  และทุก request มาจาก IP เดียว (ชน rate-limit เป็นก้อนเดียว).
+
+**สูตรเช็คบน VPS (3 เทอร์มินัล SSH):**
+
+```bash
+# เทอร์มินัล 1 — ดูทรัพยากรฝั่งเครื่อง (สคริปต์นี้มีให้แล้ว)
+./loadtest/vps-check.sh http://127.0.0.1:3000 1
+#   โชว์: cpu% / rss_mb / openfd(=SSE ที่ค้าง) / estab(TCP) / uptime / streams / students ทุก 1 วิ
+
+# เทอร์มินัล 2 — timeline จากมุมแอป (จับ crash/restart, stream พุ่ง)
+node loadtest/load-test.mjs monitor --target http://127.0.0.1:3000 --duration 120
+
+# เทอร์มินัล 3 — ยิงโหลดจริง
+node loadtest/load-test.mjs classroom --target http://127.0.0.1:3000 --students 200 --duration 60
+node loadtest/load-test.mjs all       --target http://127.0.0.1:3000     # ทั้งชุด
+```
+
+ดู log ของแอปควบคู่ด้วย: `journalctl -u <service> -f` (ถ้ารันเป็น systemd) หรือ `pm2 logs`.
+
+**สิ่งที่ต้องดูบน VPS โดยเฉพาะ (แอปนี้อ่อนไหวกับ 3 อย่างนี้):**
+
+1. **File descriptor limit** — นักเรียนแต่ละคน = 1 SSE socket ค้าง = 1 fd. หลาย VPS ตั้ง
+   `ulimit -n` ไว้ 1024 → เพดานจำนวนคนต่อพร้อมกันตันที่นั่นเลย. ดูจากคอลัมน์ `openfd` ใน
+   `vps-check.sh`. ถ้าใกล้ลิมิต ให้ขยาย: ใน systemd unit ใส่ `LimitNOFILE=65535`
+   (หรือ `/etc/security/limits.conf`). **นี่คือคอขวดที่พบบ่อยสุด** ของ SSE บน VPS.
+2. **Reverse proxy (nginx/Caddy) ถ้ามี** — SSE ต้อง:
+   - ปิด buffering (แอปส่ง `X-Accel-Buffering: no` มาให้ nginx เคารพอยู่แล้ว) —
+     nginx: `proxy_buffering off;`
+   - timeout ยาว ๆ: `proxy_read_timeout 1h;` ไม่งั้น proxy จะตัด stream ทุก 60 วิ →
+     นักเรียนทั้งห้อง reconnect พร้อมกัน (โค้ดใส่ jitter กันไว้ระดับหนึ่ง แต่ตั้ง proxy ให้ถูกดีกว่า)
+   - `worker_connections` ของ nginx สูงพอ ๆ กับจำนวนนักเรียน
+   - **ตั้ง `TRUST_PROXY=1`** ให้ Node ไม่งั้น rate-limit จะนับ IP ของ proxy เป็นก้อนเดียว
+     ทั้งห้องโดน 429 พร้อมกัน. เช็คได้จาก `trustProxy` ที่ `monitor` พิมพ์ตอนเริ่ม.
+3. **RAM/CPU ของ tier** — Node เธรดเดียว: ถ้า `cpu%` แตะ ~100% (ของหนึ่งคอร์) = ตันแล้ว
+   เพิ่มคนไปก็ latency พุ่ง. `rss_mb` ไต่ขึ้นเรื่อย ๆ ไม่ลง = สงสัย memory/stream leak
+   (จับคู่กับ `streams` ใน `monitor`: ปิดโหลดแล้ว streams ควรกลับไป 0).
+
+> AUP ของผู้ให้บริการ VPS: การยิงโหลดใส่ **instance ของตัวเอง** ปกติทำได้ แต่บางเจ้ามีระบบ
+> ตรวจจับ DDoS ที่อาจ throttle traffic ขาเข้า/ขาออกช่วงพีค. ยิงจากในเครื่อง (localhost) เลี่ยง
+> จุดนี้ได้ และเช็ค AUP ก่อนถ้าจะยิงข้ามเน็ตแรง ๆ.
+
+## ยิงใส่เซิร์ฟเวอร์ที่ deploy แล้ว (remote)
+
+ได้ครับ ตัวสคริปต์รองรับ HTTPS + host ระยะไกลอยู่แล้ว — แต่ต้องระวังมากกว่า localhost:
+
+```bash
+# ต้องยืนยันว่าเป็นเซิร์ฟเวอร์ของเราเอง
+node loadtest/load-test.mjs classroom \
+  --target https://your-app.onrender.com --i-own-this-target --students 40
+```
+
+สิ่งที่สคริปต์ทำให้อัตโนมัติเพื่อความปลอดภัยกับ remote:
+
+- **ไม่ล้างห้อง** (ไม่ `reset`) — remote จะ **อ่าน PIN จาก event stream แบบไม่ทำลาย** แทน.
+  (บังคับล้างได้ด้วย `--reset`, ปิดการล้างแม้ local ด้วย `--no-reset`.)
+- **กันยิงทับคลาสสด** — ถ้าเซิร์ฟเวอร์รายงานว่ามีนักเรียน/สตรีมอยู่ = อาจมีคลาสจริง
+  จะ **ปฏิเสธ** (ยกเว้น scenario `read-flood` ที่อ่านอย่างเดียว). ยืนยันจะยิงจริงใส่ `--force`.
+- **กัน host คนอื่น** — ถ้า `--target` ไม่ใช่ local ต้องใส่ `--i-own-this-target` เอง.
+
+**ข้อควรระวังก่อนยิงของจริง:**
+
+1. **อย่ายิงตอนมีคลาสสอนอยู่** — harness สั่งเปลี่ยนสไลด์/เปิดคำถาม/เพิ่มบอต เหมือนครูอีกคน
+   จะทำคาบเรียนจริงพัง. ยิงใส่ **staging / deploy เปล่า ๆ** หรือช่วงไม่มีคน.
+2. **เช็ค ToS ของผู้ให้บริการ** — Render / Railway / Vercel / Cloudflare หลายเจ้าถือว่า load test
+   = การใช้งานผิดปกติ อาจโดนแบน/ตัดชั่วคราว บางเจ้าต้องแจ้งล่วงหน้า. ดูก่อนยิง.
+3. **ตั้ง `TRUST_PROXY=1` ตอน deploy หลัง proxy** — ไม่งั้น rate-limit จะนับ IP ของ proxy
+   เป็นก้อนเดียว (`roomApi.js` เตือนเรื่องนี้ไว้). เมื่อ `TRUST_PROXY=1` จะนับตาม `x-forwarded-for`.
+4. **บอตมาจาก IP เดียว** (เครื่องที่รันสคริปต์) — เหมือน "ทั้งห้องหลัง NAT โรงเรียน" ซึ่งสมจริง
+   สำหรับเคสนั้น แต่ **ไม่** จำลองผู้ใช้หลาย IP กระจายกัน. อยากได้แบบกระจายต้องยิงจากหลายเครื่อง.
+5. **ตัวเลขจะรวม latency อินเทอร์เน็ตจริง** และสะท้อน **สเปกของ tier** (free tier มัก sleep/CPU น้อย)
+   ไม่ใช่แค่โค้ด. เปิดหน้า dashboard ดู CPU/RAM/bandwidth ควบคู่ไปด้วยตอนยิง.
 
 ## อ่านผลยังไง
 

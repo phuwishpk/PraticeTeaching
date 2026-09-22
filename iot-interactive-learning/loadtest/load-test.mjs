@@ -21,6 +21,7 @@
 //   emoji-flood   N students spam reactions for --duration (write + fan-out)
 //   read-flood    hammer GET /api/room/health at --concurrency (raw RPS)
 //   sse-hold      open N event streams, hold, measure broadcast fan-out
+//   monitor       read-only: poll health for --duration, print a server timeline
 //   all           run every scenario in sequence and print a combined report
 //
 // Common flags (also settable as UPPER_SNAKE env vars):
@@ -31,12 +32,15 @@
 //   --rate     8                        emoji per student per second (emoji-flood)
 //   --json     <path>                   also write the machine report here
 //   --i-own-this-target                 required to point at a non-local host
+//   --reset / --no-reset                wipe the room on startup (default: yes local, no remote)
+//   --force                             skip the "live class" guard on a remote target
 //
 // Examples:
 //   node loadtest/load-test.mjs smoke
 //   node loadtest/load-test.mjs classroom --students 60 --duration 20
 //   node loadtest/load-test.mjs join-storm --students 3000
 //   node loadtest/load-test.mjs read-flood --concurrency 400 --duration 10
+//   node loadtest/load-test.mjs classroom --target https://your-app.onrender.com --i-own-this-target
 // ---------------------------------------------------------------------------
 
 import http from 'node:http';
@@ -64,6 +68,8 @@ const CONCURRENCY = num(flag('concurrency'), 100);
 const RATE = num(flag('rate'), 8);
 const JSON_OUT = flag('json', null);
 const OWN_TARGET = flag('i-own-this-target', false) !== false;
+const NO_RESET = flag('no-reset', false) !== false;
+const FORCE = flag('force', false) !== false;
 
 const url = new URL(TARGET);
 const lib = url.protocol === 'https:' ? https : http;
@@ -74,12 +80,19 @@ const PORT = Number(url.port) || (url.protocol === 'https:' ? 443 : 80);
 // obviously control unless you explicitly assert ownership. Concurrent flooding
 // of a machine you don't own is a denial-of-service attack, not a test.
 const LOCAL = /^(localhost|127\.|0\.0\.0\.0|::1|\[::1\]|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/;
-if (!LOCAL.test(HOST) && !HOST.endsWith('.local') && !OWN_TARGET) {
+const REMOTE = !(LOCAL.test(HOST) || HOST.endsWith('.local'));
+if (REMOTE && !OWN_TARGET) {
   console.error(`\n✋ Refusing to load-test a non-local host: ${HOST}`);
   console.error('   This tool is for your OWN server. If you own/operate this target and are');
   console.error('   authorized to load-test it, re-run with --i-own-this-target.\n');
   process.exit(2);
 }
+
+// Whether to wipe the room to a clean slate on startup. On a deployed server that
+// would blow away a live lesson's PIN and roster, so the default there is to READ
+// the current PIN off the event stream instead (non-destructive). --reset forces a
+// wipe anywhere; --no-reset disables it even locally.
+const DO_RESET = NO_RESET ? false : (flag('reset', false) !== false ? true : !REMOTE);
 
 // keepAlive so the client isn't the bottleneck; separate uncapped agent for the
 // long-lived SSE sockets so held streams don't starve the request pool.
@@ -206,12 +219,31 @@ async function health() {
   try { return JSON.parse(r.body); } catch { return null; }
 }
 
+// Read the current PIN the way a phone does — from the first event frame — without
+// changing anything. Safe to point at a deployed server.
+function getPinFromStream() {
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    let ctrl = null;
+    const timer = setTimeout(() => { if (!settled) { settled = true; ctrl?.close(); reject(new Error('no PIN frame from /api/room/events within 5s')); } }, 5000);
+    openStream('/api/room/events', {
+      onFrame: data => {
+        if (settled) return;
+        try { const o = JSON.parse(data); if (o?.state?.pin) { settled = true; clearTimeout(timer); ctrl?.close(); resolve(String(o.state.pin)); } } catch {}
+      },
+    }).then(c => { ctrl = c; if (settled) c.close(); }).catch(err => { if (!settled) { settled = true; clearTimeout(timer); reject(err); } });
+  });
+}
+
 async function bootstrapRoom() {
-  // reset returns snapshot() with the fresh PIN in state.pin — this is exactly
-  // what a browser receives on the events stream, no secret involved.
-  const r = await action('reset');
-  if (r.status !== 200 || !r.json?.state?.pin) throw new Error(`reset failed: ${r.status} ${r.body}`);
-  return r.json.state.pin;
+  if (DO_RESET) {
+    // reset returns snapshot() with the fresh PIN in state.pin — this is exactly
+    // what a browser receives on the events stream, no secret involved.
+    const r = await action('reset');
+    if (r.status !== 200 || !r.json?.state?.pin) throw new Error(`reset failed: ${r.status} ${r.body}`);
+    return r.json.state.pin;
+  }
+  return getPinFromStream();
 }
 
 // Move the room to chapter 2 lobby so students can join.
@@ -394,13 +426,50 @@ async function scClassroom() {
   return summaries;
 }
 
+// Read-only: poll /api/room/health on a timer and print a server-side timeline.
+// Run this in one terminal (even from your laptop) while a load run hammers the
+// server from another, to watch streams pile up or catch a crash/restart.
+async function scMonitor() {
+  const secs = DURATION_S;
+  console.log(`\n  📈 monitoring /api/room/health every 1s for ${secs}s`);
+  console.log('       t     uptime  students  streams  revision   h-latency');
+  const start = performance.now();
+  let lastUptime = null, restarts = 0, maxStreams = 0, maxStudents = 0, downs = 0;
+  while ((performance.now() - start) / 1000 < secs) {
+    const t0 = performance.now();
+    const r = await request('GET', '/api/room/health');
+    const ms = performance.now() - t0;
+    let h = null; try { h = JSON.parse(r.body); } catch {}
+    const t = `${((performance.now() - start) / 1000).toFixed(0)}s`.padStart(5);
+    if (h?.ok) {
+      // uptime jumping backwards is the tell-tale of a crash + restart under load.
+      if (lastUptime !== null && h.uptimeSeconds < lastUptime - 2) restarts++;
+      lastUptime = h.uptimeSeconds;
+      maxStreams = Math.max(maxStreams, h.streams); maxStudents = Math.max(maxStudents, h.students);
+      console.log(`    ${t}  ${String(h.uptimeSeconds).padStart(6)}s ${String(h.students).padStart(8)} ${String(h.streams).padStart(8)} ${String(h.revision).padStart(9)}   ${fmt(ms)}ms`);
+    } else {
+      downs++;
+      console.log(`    ${t}  DOWN / unreachable (${r.status})`);
+    }
+    const wait = 1000 - (performance.now() - t0);
+    if (wait > 0) await sleep(wait);
+  }
+  console.log(`\n      peak streams ${maxStreams}, peak students ${maxStudents}, restarts ${restarts}, unreachable ${downs}`);
+  if (restarts > 0) console.log('      ⚠️  uptime went backwards — the server crashed & restarted during the window.');
+  if (downs > 0) console.log('      ⚠️  health was unreachable at times — the server (or its proxy) dropped requests under load.');
+  return [{ name: 'monitor', peakStreams: maxStreams, peakStudents: maxStudents, restarts, unreachable: downs }];
+}
+
 // ---- runner ---------------------------------------------------------------
 
 const SCENARIOS = {
   smoke: scSmoke, classroom: scClassroom, 'join-storm': scJoinStorm,
   'answer-storm': scAnswerStorm, 'emoji-flood': scEmojiFlood,
-  'read-flood': scReadFlood, 'sse-hold': scSseHold,
+  'read-flood': scReadFlood, 'sse-hold': scSseHold, monitor: scMonitor,
 };
+
+// Scenarios that never change the room — safe against a live server, no PIN needed.
+const READ_ONLY = new Set(['monitor', 'read-flood']);
 
 function interpret(all) {
   console.log('\n' + '─'.repeat(64));
@@ -437,8 +506,22 @@ async function main() {
   }
   console.log(`   server up: uptime ${h.uptimeSeconds}s, students ${h.students}, streams ${h.streams}, trustProxy ${h.trustProxy}`);
 
-  PIN = await bootstrapRoom();
-  console.log(`   room reset — PIN ${PIN}\n`);
+  // On a deployed server, an occupied room means a real lesson may be in progress.
+  // This harness drives the room like a teacher and adds bot students, so refuse.
+  if (REMOTE && ((h.students || 0) > 0 || (h.streams || 0) > 0) && !FORCE && !READ_ONLY.has(scenario)) {
+    console.error(`\n✋ ${TARGET} reports ${h.students} students / ${h.streams} open streams — looks like a LIVE class.`);
+    console.error('   This harness changes slides, opens questions and adds bot students, which would');
+    console.error('   disrupt a real lesson. Refusing. Run against a staging/empty deploy, use "monitor" or');
+    console.error('   "read-flood" (read-only), or add --force if you are certain no class is live.\n');
+    process.exit(3);
+  }
+
+  if (READ_ONLY.has(scenario)) {
+    console.log('   read-only scenario — the room is not touched\n');
+  } else {
+    PIN = await bootstrapRoom();
+    console.log(`   ${DO_RESET ? 'room reset' : 'room read (non-destructive)'} — PIN ${PIN}\n`);
+  }
 
   const list = scenario === 'all' ? ['smoke', 'read-flood', 'join-storm', 'answer-storm', 'emoji-flood', 'sse-hold'] : [scenario];
   if (!list.every(s => SCENARIOS[s])) { console.error(`Unknown scenario "${scenario}". Options: ${Object.keys(SCENARIOS).join(', ')}, all`); process.exit(1); }
@@ -447,7 +530,7 @@ async function main() {
   for (const name of list) {
     if (list.length > 1) console.log(`\n╔═ ${name} ${'═'.repeat(Math.max(0, 56 - name.length))}`);
     all.push(await SCENARIOS[name]());
-    if (list.length > 1) { PIN = await bootstrapRoom(); await sleep(300); } // clean slate between scenarios
+    if (list.length > 1 && !READ_ONLY.has(name)) { PIN = await bootstrapRoom(); await sleep(300); } // clean slate between scenarios
   }
 
   interpret(all);
