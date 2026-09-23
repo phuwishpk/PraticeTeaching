@@ -71,6 +71,20 @@ export function StudentLessonNotes({ phase, quizRevealed }) {
 // controlledSlide: when provided, the component uses this as the current slide (teacher mode)
 // onSlideChange: called with new slide index when navigation happens (teacher mode)
 export function LessonSlideshow({ phase, quizRevealed = false, controlledSlide, onSlideChange }) {
+  // A chapter with no lesson must not mount the stage at all, and the stage owns hooks —
+  // so the guard lives out here, where returning early skips no hook.
+  if (!lessons[phase]) return null;
+  return (
+    <LessonSlideshowStage
+      phase={phase}
+      quizRevealed={quizRevealed}
+      controlledSlide={controlledSlide}
+      onSlideChange={onSlideChange}
+    />
+  );
+}
+
+function LessonSlideshowStage({ phase, quizRevealed = false, controlledSlide, onSlideChange }) {
   const chapter = phase;
   const lesson = lessons[chapter];
 
@@ -89,8 +103,6 @@ export function LessonSlideshow({ phase, quizRevealed = false, controlledSlide, 
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [controlledSlide]);
-
-  if (!lesson) return null;
 
   // Build slides array
   const slides = [];
@@ -181,6 +193,29 @@ export function LessonSlideshow({ phase, quizRevealed = false, controlledSlide, 
   const prev = () => { if (currentIndex > 0) goTo(currentIndex - 1); };
   const next = () => { if (currentIndex < slides.length - 1) goTo(currentIndex + 1); };
 
+  // Arrow keys move the slides, so the teacher can present from a clicker or from across the
+  // room instead of walking back to the mouse. PageUp/PageDown too — that is what most
+  // presenter remotes actually send. A student following the teacher gets no keys at all:
+  // their view is controlled and has no onSlideChange to call.
+  const canNavigate = !isControlled || Boolean(onSlideChange);
+  useEffect(() => {
+    if (!canNavigate) return;
+    const handleKey = (event) => {
+      if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey) return;
+      // Never steal the keys from someone typing an answer or using a select.
+      const target = event.target;
+      if (target && (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName))) return;
+      let step = 0;
+      if (event.key === 'ArrowRight' || event.key === 'PageDown') step = 1;
+      else if (event.key === 'ArrowLeft' || event.key === 'PageUp') step = -1;
+      else return;
+      event.preventDefault();
+      if (step > 0) next(); else prev();
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  });
+
   const variants = {
     enter: d => ({ opacity: 0, x: d > 0 ? 60 : -60 }),
     center: { opacity: 1, x: 0 },
@@ -214,6 +249,7 @@ export function LessonSlideshow({ phase, quizRevealed = false, controlledSlide, 
           onClick={prev}
           disabled={currentIndex === 0}
           aria-label="หน้าก่อน"
+          title={canNavigate ? 'หน้าก่อน (←)' : 'หน้าก่อน'}
         >
           ‹
         </button>
@@ -238,6 +274,7 @@ export function LessonSlideshow({ phase, quizRevealed = false, controlledSlide, 
           onClick={next}
           disabled={currentIndex === slides.length - 1}
           aria-label="หน้าถัดไป"
+          title={canNavigate ? 'หน้าถัดไป (→)' : 'หน้าถัดไป'}
         >
           ›
         </button>
