@@ -837,20 +837,27 @@ const STEP_LABELS = {
 
 // Controlled slideshow for teacher — slide syncs with roomState.presentation
 function HostLessonSlideshow({ chapter, step, quizRevealed }) {
-  const { roomState, setPresentation } = useRoom();
+  const { roomState, setPresentation, setStep } = useRoom();
   const currentSlide = roomState.presentation?.slide ?? 0;
+  const flow = CHAPTER_FLOW[chapter];
 
   const handleSlideChange = (idx) => {
     setPresentation({ mode: 'lesson', slide: idx });
   };
 
+  // Running off the end of a topic continues into the next one rather than stopping, so the
+  // teacher can take the class through a chapter on one key. Each topic opens at its own
+  // first slide — changeStep resets the presentation — and stepping away and back does not
+  // restart an activity's clock, so overshooting costs nothing but a press the other way.
   return (
     <LessonSlideshow
       key={`${chapter}-${step}`}
-      phase={CHAPTER_FLOW[chapter][step].lessonId}
+      phase={flow[step].lessonId}
       quizRevealed={quizRevealed}
       controlledSlide={currentSlide}
       onSlideChange={handleSlideChange}
+      onPastEnd={step < flow.length - 1 ? () => setStep(step + 1) : undefined}
+      onBeforeStart={step > 0 ? () => setStep(step - 1) : undefined}
     />
   );
 }
@@ -1095,6 +1102,7 @@ export default function HostView() {
           <option value={1} style={{color: 'black'}}>พื้นฐานและเซนเซอร์</option>
           <option value={2} style={{color: 'black'}}>สัญญาณ Digital/Analog</option>
           <option value={3} style={{color: 'black'}}>Logic และ ไอเดีย</option>
+          <option value={4} style={{color: 'black'}}>สัญญาณ Digital</option>
         </select>
 
         {/* Steps for current Chapter */}

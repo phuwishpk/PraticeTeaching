@@ -1,4 +1,5 @@
 import { chapterTwoLessons } from './chapterTwo.js';
+import { chapterThreeLessons } from './chapterThree.js';
 import { enrichLessons } from './lessonEnrichment.js';
 import { problemActivity } from './problemActivity.js';
 
@@ -134,6 +135,6 @@ export const lessons = {
 };
 
 enrichLessons(lessons);
-Object.assign(lessons, chapterTwoLessons);
+Object.assign(lessons, chapterTwoLessons, chapterThreeLessons);
 
 export const sensorQuizExplanation = 'คำตอบคือ LDR เพราะโจทย์ต้องการตรวจว่ามืดแล้วหรือยัง จึงต้องวัดแสง ส่วน DHT11 วัดอุณหภูมิและความชื้นอากาศ, PIR ตรวจการเคลื่อนไหว และ Soil Moisture วัดดิน เมื่อต่อวงจร LDR ต้องทดลองก่อนว่าค่าเพิ่มหรือลดเมื่อมืด แล้วตั้งเกณฑ์เปิดไฟให้ตรงกับวงจรนั้น';

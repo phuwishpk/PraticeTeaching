@@ -111,7 +111,13 @@ test('teacher and student pages render with the current chapter/step room state'
             const section = lesson.sections[slide - 1];
             assert.ok(html.includes(slide === 0 ? lesson.title : section ? section.title : lesson.recap.title));
             if (section) assert.ok(html.includes(`<h2 class="lesson-slide-section-title">${section.title}</h2>`));
-            assert.equal(html.includes('disabled="" aria-label="หน้าถัดไป"'), slide === lesson.sections.length + 1);
+            // At either edge the arrows offer the neighbouring topic instead of another slide.
+            // The teacher can take it; the student, who only follows, finds the arrow dead.
+            const lastSlide = slide === lesson.sections.length + 1;
+            assert.equal(html.includes('aria-label="เนื้อหาถัดไป"'), lastSlide);
+            assert.equal(html.includes('aria-label="เนื้อหาก่อนหน้า"'), slide === 0);
+            assert.equal(html.includes('disabled="" aria-label="เนื้อหาถัดไป"'), lastSlide && Component === Client);
+            assert.equal(html.includes('disabled="" aria-label="เนื้อหาก่อนหน้า"'), slide === 0 && Component === Client);
             if (slide === 0) {
               assert.ok(html.includes(lesson.displayLabel));
               for (const other of Object.values(chapterTwoLessons)) {

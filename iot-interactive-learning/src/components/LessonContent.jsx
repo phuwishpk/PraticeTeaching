@@ -70,7 +70,10 @@ export function StudentLessonNotes({ phase, quizRevealed }) {
 // ─── Full-screen Slideshow for Student View ────────────────────────────────────
 // controlledSlide: when provided, the component uses this as the current slide (teacher mode)
 // onSlideChange: called with new slide index when navigation happens (teacher mode)
-export function LessonSlideshow({ phase, quizRevealed = false, controlledSlide, onSlideChange }) {
+// onPastEnd / onBeforeStart: what lies on either side of this lesson — given by the teacher's
+//   view, they turn the last and first slide into a way through to the neighbouring topic
+//   instead of a dead end. Omitted means the slideshow stops at its own edges.
+export function LessonSlideshow({ phase, quizRevealed = false, controlledSlide, onSlideChange, onPastEnd, onBeforeStart }) {
   // A chapter with no lesson must not mount the stage at all, and the stage owns hooks —
   // so the guard lives out here, where returning early skips no hook.
   if (!lessons[phase]) return null;
@@ -80,11 +83,13 @@ export function LessonSlideshow({ phase, quizRevealed = false, controlledSlide, 
       quizRevealed={quizRevealed}
       controlledSlide={controlledSlide}
       onSlideChange={onSlideChange}
+      onPastEnd={onPastEnd}
+      onBeforeStart={onBeforeStart}
     />
   );
 }
 
-function LessonSlideshowStage({ phase, quizRevealed = false, controlledSlide, onSlideChange }) {
+function LessonSlideshowStage({ phase, quizRevealed = false, controlledSlide, onSlideChange, onPastEnd, onBeforeStart }) {
   const chapter = phase;
   const lesson = lessons[chapter];
 
@@ -190,8 +195,12 @@ function LessonSlideshowStage({ phase, quizRevealed = false, controlledSlide, on
       setSlideIndex(idx);
     }
   };
-  const prev = () => { if (currentIndex > 0) goTo(currentIndex - 1); };
-  const next = () => { if (currentIndex < slides.length - 1) goTo(currentIndex + 1); };
+  const atStart = currentIndex === 0;
+  const atEnd = currentIndex === slides.length - 1;
+  // Past either edge the lesson hands over to the topic next to it, so one direction of travel
+  // carries the class through the whole chapter without reaching for the topic bar.
+  const prev = () => { if (atStart) onBeforeStart?.(); else goTo(currentIndex - 1); };
+  const next = () => { if (atEnd) onPastEnd?.(); else goTo(currentIndex + 1); };
 
   // Arrow keys move the slides, so the teacher can present from a clicker or from across the
   // room instead of walking back to the mouse. PageUp/PageDown too — that is what most
@@ -210,6 +219,9 @@ function LessonSlideshowStage({ phase, quizRevealed = false, controlledSlide, on
       else if (event.key === 'ArrowLeft' || event.key === 'PageUp') step = -1;
       else return;
       event.preventDefault();
+      // Leaving the lesson moves the whole class, so a held-down key must not run through the
+      // chapter — each crossing costs a fresh press. Within a lesson, repeat is just paging.
+      if (event.repeat && (step > 0 ? atEnd : atStart)) return;
       if (step > 0) next(); else prev();
     };
     window.addEventListener('keydown', handleKey);
@@ -247,9 +259,9 @@ function LessonSlideshowStage({ phase, quizRevealed = false, controlledSlide, on
         <button
           className="lesson-nav-arrow"
           onClick={prev}
-          disabled={currentIndex === 0}
-          aria-label="หน้าก่อน"
-          title={canNavigate ? 'หน้าก่อน (←)' : 'หน้าก่อน'}
+          disabled={atStart && !onBeforeStart}
+          aria-label={atStart ? 'เนื้อหาก่อนหน้า' : 'หน้าก่อน'}
+          title={`${atStart ? 'เนื้อหาก่อนหน้า' : 'หน้าก่อน'}${canNavigate ? ' (←)' : ''}`}
         >
           ‹
         </button>
@@ -272,9 +284,9 @@ function LessonSlideshowStage({ phase, quizRevealed = false, controlledSlide, on
         <button
           className="lesson-nav-arrow"
           onClick={next}
-          disabled={currentIndex === slides.length - 1}
-          aria-label="หน้าถัดไป"
-          title={canNavigate ? 'หน้าถัดไป (→)' : 'หน้าถัดไป'}
+          disabled={atEnd && !onPastEnd}
+          aria-label={atEnd ? 'เนื้อหาถัดไป' : 'หน้าถัดไป'}
+          title={`${atEnd ? 'เนื้อหาถัดไป' : 'หน้าถัดไป'}${canNavigate ? ' (→)' : ''}`}
         >
           ›
         </button>

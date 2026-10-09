@@ -1,7 +1,9 @@
 import { chapterTwoActivities } from './chapterTwo.js';
+import { chapterThreeActivities } from './chapterThree.js';
 
 export const classroomChoiceActivities = {
   ...chapterTwoActivities,
+  ...chapterThreeActivities,
   roles: {
     title: 'ใครเป็นผู้ตัดสินใจในระบบ IoT?',
     question: 'เมื่อเซ็นเซอร์ส่งค่าเข้ามา อุปกรณ์ใดอ่านค่า ตรวจเงื่อนไข และสั่ง Output?',

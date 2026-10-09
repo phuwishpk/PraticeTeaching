@@ -60,6 +60,14 @@ export const CHAPTER_FLOW = {
     { type: 'activity', id: 'wrapup', lessonId: 9 },
     { type: 'activity', id: 'ideation', lessonId: 10 },
     { type: 'podium', lessonId: 1 }
+  ],
+  4: [
+    { type: 'lobby', lessonId: 1 },
+    { type: 'activity', id: 'digitaltiming', lessonId: 15 },
+    { type: 'activity', id: 'digitalprotocol', lessonId: 16 },
+    { type: 'activity', id: 'statemachine', lessonId: 17 },
+    { type: 'activity', id: 'digitalplanning', lessonId: 18 },
+    { type: 'podium', lessonId: 1 }
   ]
 };
 
@@ -91,9 +99,9 @@ export function createRoomState() {
     logicVotes: {}, architectureVotes: { esp32: {}, wifi: {}, cloud: {} },
     catalogCurrentQuestion: 1, catalogVotes: { 1: {}, 2: {}, 3: {}, 4: {} },
     currentVoteItem: 'esp32', canvasImages: [],
-    chapterScores: { 1: {}, 2: {}, 3: {} },
+    chapterScores: { 1: {}, 2: {}, 3: {}, 4: {} },
     // Every graded answer, so the podium can break ties on time instead of join order.
-    answers: { 1: {}, 2: {}, 3: {} },
+    answers: { 1: {}, 2: {}, 3: {}, 4: {} },
     questionKey: null, questionStartTime: Date.now(), questionDurationMs: QUESTION_DURATION_MS,
     questionStarts: {}, questionRoster: [],
   };
@@ -257,7 +265,7 @@ export function applyRoomAction(state, action) {
   const { type, payload: p = {} } = action;
   switch (type) {
     case 'changeChapter': {
-      requireValue([1, 2, 3].includes(p.chapter));
+      requireValue([1, 2, 3, 4].includes(p.chapter));
       return syncQuestion({
         ...state, chapter: p.chapter, step: 0, joinOpen: CHAPTER_FLOW[p.chapter][0].type === 'lobby',
         presentation: initialPresentation('activity'),
