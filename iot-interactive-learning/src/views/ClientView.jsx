@@ -1061,6 +1061,10 @@ export default function ClientView() {
           case 'signalmatch': return <ClassroomChoiceActivity activityId="signalmatch" />;
           case 'wrapup': return <ClassroomChoiceActivity activityId="wrapup" />;
           case 'ideation': return <ClassroomChoiceActivity activityId="ideation" />;
+          case 'digitaltiming': return <ClassroomChoiceActivity activityId="digitaltiming" />;
+          case 'digitalprotocol': return <ClassroomChoiceActivity activityId="digitalprotocol" />;
+          case 'statemachine': return <ClassroomChoiceActivity activityId="statemachine" />;
+          case 'digitalplanning': return <ClassroomChoiceActivity activityId="digitalplanning" />;
           default: return <div>Unknown Activity</div>;
         }
       default:

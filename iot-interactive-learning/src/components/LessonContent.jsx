@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { lessons } from '../content/lessons';
 import { SectionExplanation, LessonRecap } from './LessonGraphics';
 import './LessonContent.css';
+import { DigitalIntro } from './DigitalSignal';
 
 export default function LessonContent({ phase, quizRevealed = false }) {
   const chapter = phase;
@@ -16,6 +17,7 @@ export default function LessonContent({ phase, quizRevealed = false }) {
         <h1 id={`lesson-title-${phase}`}>{lesson.title}</h1>
         <p>{lesson.intro}</p>
       </header>
+      {lesson.digitalIntro && <DigitalIntro />}
       {lesson.goals && (
         <section className="lesson-goals" aria-label="เป้าหมายการเรียนรู้">
           <h2>เมื่อจบเนื้อหานี้ คุณจะ…</h2>
@@ -121,6 +123,7 @@ function LessonSlideshowStage({ phase, quizRevealed = false, controlledSlide, on
         <span className="lesson-eyebrow">IOT LAB · {lesson.displayLabel || `ส่วนที่ ${chapter}`}</span>
         <h1 className="lesson-slide-title">{lesson.title}</h1>
         <p className="lesson-slide-intro">{lesson.intro}</p>
+        {lesson.digitalIntro && <DigitalIntro />}
         {lesson.goals && (
           <div className="lesson-slide-goals">
             <h2>🎯 เมื่อจบเนื้อหานี้ คุณจะ…</h2>

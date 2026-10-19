@@ -82,7 +82,7 @@ export function SectionExplanation({ section }) {
   if (section.deviceId) return <DeviceLesson key={section.deviceId} deviceId={section.deviceId} />;
   return <div className="section-explanation">
     <p className="lesson-slide-section-text">{section.text}</p>
-    {section.detail && <p className="section-detail">{section.detail}</p>}
+    {section.detail && !section.detailDisclosure && <p className="section-detail">{section.detail}</p>}
     {section.graphicType === 'actuator-demo' && <ActuatorDemo />}
     {section.signalGraphic && <SignalGraphic type={section.signalGraphic} />}
     {section.wrapGraphic && <WrapUpGraphic type={section.wrapGraphic} />}
@@ -94,6 +94,7 @@ export function SectionExplanation({ section }) {
       <p><strong>คำถามชวนคิด:</strong> {section.activity.question}</p>
       <details><summary>เปิดแนวคำตอบหลังอภิปราย</summary><p>{section.activity.answer}</p></details>
     </section>}
+    {section.detail && section.detailDisclosure && <details className="digital-teacher-detail"><summary>ขยายความเข้าใจ · รายละเอียดสำหรับการสอน</summary><p>{section.detail}</p></details>}
     {section.takeaway && <aside className="section-takeaway"><CheckCircle2 size={22} aria-hidden="true" /><div><h3>ใจความสำคัญ</h3><p>{section.takeaway}</p></div></aside>}
   </div>;
 }

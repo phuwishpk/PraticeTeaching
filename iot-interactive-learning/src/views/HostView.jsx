@@ -1170,6 +1170,10 @@ export default function HostView() {
               {currentStepData.id === 'signalmatch' && <ClassroomChoiceActivity activityId="signalmatch" audience="teacher" />}
               {currentStepData.id === 'wrapup' && <ClassroomChoiceActivity activityId="wrapup" audience="teacher" />}
               {currentStepData.id === 'ideation' && <ClassroomChoiceActivity activityId="ideation" audience="teacher" />}
+              {currentStepData.id === 'digitaltiming' && <ClassroomChoiceActivity activityId="digitaltiming" audience="teacher" />}
+              {currentStepData.id === 'digitalprotocol' && <ClassroomChoiceActivity activityId="digitalprotocol" audience="teacher" />}
+              {currentStepData.id === 'statemachine' && <ClassroomChoiceActivity activityId="statemachine" audience="teacher" />}
+              {currentStepData.id === 'digitalplanning' && <ClassroomChoiceActivity activityId="digitalplanning" audience="teacher" />}
               {currentStepData.type === 'podium' && <HostPodium />}
             </motion.div>
           )}

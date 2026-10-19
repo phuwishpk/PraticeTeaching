@@ -6,6 +6,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { createServer } from 'vite';
 import { CHAPTER_FLOW, createRoomState } from '../shared/roomState.js';
 import { chapterTwoLessons, chapterTwoActivities } from '../src/content/chapterTwo.js';
+import { chapterThreeLessons } from '../src/content/chapterThree.js';
 
 test('teacher and student pages render with the current chapter/step room state', async (t) => {
   // Model browser storage only for rendering; never touch an actual user's session.
@@ -133,6 +134,41 @@ test('teacher and student pages render with the current chapter/step room state'
           }
         }
       }
+    });
+    await t.test('every chapter four laboratory reaches both screens on its own slide', () => {
+      entries.set('student_name', 'Test learner');
+      // A graphic family the dispatcher does not know falls through to the analog lab without
+      // complaining, so each slide is checked for wording only its own laboratory renders.
+      const marker = {
+        'timing:pulse': 'ยิงคลื่นวัดอีกครั้ง',
+        'timing:compare': 'เซนเซอร์แบบมีเกณฑ์',
+        'protocol:bus': 'ไม่มีใครอยู่',
+        'protocol:frame': 'จังหวะถัดไป',
+        'state:alarm': 'isAlarm',
+        'state:toggle': 'สถานะที่จำไว้',
+      };
+      const seen = new Set();
+      for (const [lessonId, lesson] of Object.entries(chapterThreeLessons)) {
+        const step = CHAPTER_FLOW[4].findIndex(entry => entry.lessonId === Number(lessonId));
+        if (step === -1) continue;
+        for (let slide = 0; slide <= lesson.sections.length + 1; slide++) {
+          provide({ ...createRoomState(), chapter: 4, step,
+            students: [{ id: 'test', name: 'Test learner' }],
+            presentation: { mode: 'lesson', slide },
+          });
+          const section = lesson.sections[slide - 1];
+          for (const Component of [Host, Client]) {
+            const html = renderPage(Component);
+            assert.ok(html.includes(slide === 0 ? lesson.title : section ? section.title : lesson.recap.title));
+            if (!section?.signalGraphic) continue;
+            assert.ok(marker[section.signalGraphic], `no marker for ${section.signalGraphic}`);
+            assert.ok(html.includes(marker[section.signalGraphic]),
+              `${section.signalGraphic} did not render its own laboratory on slide ${slide}`);
+            seen.add(section.signalGraphic);
+          }
+        }
+      }
+      assert.deepEqual([...seen].sort(), Object.keys(marker).sort(), 'every laboratory needs a slide');
     });
     await t.test('chapter two choice explanations appear only after completion or expiry on both screens', () => {
       entries.set('student_name', 'Test learner');

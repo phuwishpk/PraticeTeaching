@@ -1,7 +1,12 @@
+import DigitalSignal from './DigitalSignal';
+import TimingLab from './TimingLab';
+import ProtocolLab from './ProtocolLab';
+import StateLab from './StateLab';
+export { default as DigitalSignal } from './DigitalSignal';
 import { useId, useState } from 'react';
-import { Sun, Sprout, ArrowRight, Binary, SlidersHorizontal } from 'lucide-react';
+import { Sun, Sprout, ArrowRight, SlidersHorizontal } from 'lucide-react';
 import './SignalGraphics.css';
-import { adcCode, binaryValue } from '../content/signalMath.js';
+import { adcCode } from '../content/signalMath.js';
 
 const HIGH_Y = 42;
 const LOW_Y = 152;
@@ -21,95 +26,6 @@ function DigitalTrace({ bits }) {
     <path className="signal-line digital-line" d={path} />
     <text x="78" y="196">ก่อนหน้า</text><text x="517" y="196" textAnchor="end">ลำดับการอ่าน →</text>
   </svg>;
-}
-
-export function DigitalSignal({ mode = 'levels' }) {
-  const [history, setHistory] = useState([0, 0, 1, 1, 0, 1, 0, 0]);
-  const [pressed, setPressed] = useState(false);
-  const [bits, setBits] = useState([0, 1, 0, 1]);
-  const current = history[history.length - 1];
-  const decimal = binaryValue(bits);
-  return <section className="signal-lab digital-lab" aria-label="กราฟิก Digital">
-    <header className="signal-heading"><Binary aria-hidden="true" /><div><span>DIGITAL · ระดับลอจิก</span><h3>{mode === 'bits' ? 'หลายบิต รวมกันเป็นตัวเลข' : mode === 'polarity' ? 'กดปุ่มเหมือนกัน แต่รหัสอาจต่างกัน' : 'สองระดับที่แยกจากกันชัดเจน'}</h3></div></header>
-    {mode === 'bits' ? <>
-      <p>แตะแต่ละบิตเพื่อเปลี่ยน 0 ↔ 1 แล้วดูว่าค่าตัวเลขเปลี่ยนอย่างไร</p>
-      <div className="bit-calculator">
-        <div className="bit-buttons">{bits.map((bit, index) => <button key={index} type="button" aria-label={`บิตน้ำหนัก ${2 ** (3 - index)}`} aria-pressed={Boolean(bit)} onClick={() => setBits(bits.map((value, i) => i === index ? 1 - value : value))}><small>× {2 ** (3 - index)}</small><strong>{bit}</strong></button>)}</div>
-        <output className="decimal-result" aria-live="polite"><small>เลขฐานสิบ</small><strong>{decimal}</strong></output>
-      </div>
-      <DigitalTrace bits={bits} />
-      <p className="signal-note">4 บิตแทนได้ 16 ค่า ตั้งแต่ 0–15 แต่ละบิตยังมีแค่ 0 หรือ 1 ตัวอย่างนี้อธิบายเลขฐานสอง ไม่ใช่รูปแบบข้อมูลจริงของ DHT11</p>
-    </> : mode === 'polarity' ? <>
-      <button type="button" className="signal-toggle" aria-pressed={pressed} onClick={() => setPressed(!pressed)}>{pressed ? 'กำลังกด — แตะเพื่อปล่อย' : 'ยังไม่กด — แตะเพื่อกดปุ่ม'}</button>
-      <div className="polarity-grid" aria-live="polite">
-        <div style={{position: 'relative'}}>
-          <span>วงจร active-high</span>
-          <strong>{pressed ? 1 : 0}</strong>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, margin: '12px 0' }}>
-            <span style={{color: pressed ? '#ffca79' : '#888', fontSize: '1rem', fontWeight: 'bold'}}>แรงดันขาสัญญาณ: {pressed ? '3.3V' : '0V'}</span>
-            <div style={{ width: '80%', height: 12, background: '#222', borderRadius: 6, overflow: 'hidden' }}>
-              <div style={{ width: pressed ? '100%' : '0%', height: '100%', background: '#ffca79', transition: 'width 0.2s ease-in-out' }} />
-            </div>
-          </div>
-          <p>กด = HIGH · ปล่อย = LOW</p>
-        </div>
-        <div style={{position: 'relative'}}>
-          <span>วงจร active-low</span>
-          <strong>{pressed ? 0 : 1}</strong>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, margin: '12px 0' }}>
-            <span style={{color: !pressed ? '#ffca79' : '#888', fontSize: '1rem', fontWeight: 'bold'}}>แรงดันขาสัญญาณ: {pressed ? '0V' : '3.3V'}</span>
-            <div style={{ width: '80%', height: 12, background: '#222', borderRadius: 6, overflow: 'hidden' }}>
-              <div style={{ width: pressed ? '0%' : '100%', height: '100%', background: '#ffca79', transition: 'width 0.2s ease-in-out' }} />
-            </div>
-          </div>
-          <p>กด = LOW · ปล่อย = HIGH</p>
-        </div>
-      </div>
-      <p className="signal-note">ทั้งสองวงจรยังเป็น Digital เหมือนกัน ต้องดูการต่อวงจรเพื่อรู้ว่า 0 หรือ 1 หมายถึง “กด” ค่า 0 V / 3.3 V เป็นแรงดันสัญญาณอุดมคติของตัวอย่างนี้ ไม่ใช่ไฟเลี้ยงอุปกรณ์ และช่วง LOW/HIGH จริงขึ้นกับอุปกรณ์</p>
-    </> : mode === 'combined' ? <>
-      <button type="button" className="signal-toggle" aria-pressed={pressed} onClick={() => {
-        const nextState = !pressed;
-        setPressed(nextState);
-        setHistory(previous => [...previous.slice(-7), nextState ? 1 : 0]);
-      }}>{pressed ? 'กำลังกด — แตะเพื่อปล่อย' : 'ยังไม่กด — แตะเพื่อกดปุ่ม'}</button>
-      
-      <div className="polarity-grid" aria-live="polite" style={{ marginBottom: '24px' }}>
-        <div style={{position: 'relative'}}>
-          <span>วงจร active-high</span>
-          <strong>{pressed ? 1 : 0}</strong>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, margin: '12px 0' }}>
-            <span style={{color: pressed ? '#ffca79' : '#888', fontSize: '1rem', fontWeight: 'bold'}}>แรงดันขาสัญญาณ: {pressed ? '3.3V' : '0V'}</span>
-            <div style={{ width: '80%', height: 12, background: '#222', borderRadius: 6, overflow: 'hidden' }}>
-              <div style={{ width: pressed ? '100%' : '0%', height: '100%', background: '#ffca79', transition: 'width 0.2s ease-in-out' }} />
-            </div>
-          </div>
-          <p>กด = HIGH · ปล่อย = LOW</p>
-        </div>
-        <div style={{position: 'relative'}}>
-          <span>วงจร active-low</span>
-          <strong>{pressed ? 0 : 1}</strong>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, margin: '12px 0' }}>
-            <span style={{color: !pressed ? '#ffca79' : '#888', fontSize: '1rem', fontWeight: 'bold'}}>แรงดันขาสัญญาณ: {pressed ? '0V' : '3.3V'}</span>
-            <div style={{ width: '80%', height: 12, background: '#222', borderRadius: 6, overflow: 'hidden' }}>
-              <div style={{ width: pressed ? '0%' : '100%', height: '100%', background: '#ffca79', transition: 'width 0.2s ease-in-out' }} />
-            </div>
-          </div>
-          <p>กด = LOW · ปล่อย = HIGH</p>
-        </div>
-      </div>
-      
-      <DigitalTrace bits={history} />
-      <p className="signal-note">กราฟด้านบนแสดงค่าลอจิกของวงจรแบบ <b>active-high</b> ตามลำดับการกดสวิตช์ของคุณ (ขวาคือล่าสุด)</p>
-    </> : <>
-      <div className="digital-controls">
-        <div role="group" aria-label="เพิ่มสถานะในกราฟ" className="signal-button-group">{[0, 1].map(bit => <button type="button" key={bit} onClick={() => setHistory(previous => [...previous.slice(-7), bit])}>ส่ง {bit} · {bit ? 'HIGH' : 'LOW'}</button>)}</div>
-        <output className="logic-readout" aria-live="polite"><span>ค่าล่าสุด</span><strong>{current}</strong><span>{current ? 'HIGH' : 'LOW'}</span></output>
-      </div>
-      <DigitalTrace bits={history} />
-      <div className="signal-insight"><span className="binary-token">0</span><span>หรือ</span><span className="binary-token">1</span><p>อ่านเป็นสองสถานะ<br /><b>ไม่มีสถานะลอจิก 0.5 ในตัวอย่างนี้</b></p></div>
-      <p className="signal-note">กดส่งค่าแล้วกราฟจะเลื่อนไปทีละช่อง เป็นภาพอุดมคติของสถานะลอจิก ไม่ใช่กราฟแรงดันจริง ช่วงเปลี่ยนระดับของวงจรจริงใช้เวลา</p>
-    </>}
-  </section>;
 }
 
 function AnalogTrace({ level }) {
@@ -217,11 +133,12 @@ export function SignalComparison({ mode }) {
   const [activeLow, setActiveLow] = useState(false);
   const sliderId = useId();
 
+  const [digitalPressed, setDigitalPressed] = useState(false);
+  const [digitalHistory, setDigitalHistory] = useState([0, 0, 1, 1, 0, 1, 0]);
+  const [analogLevel, setAnalogLevel] = useState(50);
+  const [showAdc, setShowAdc] = useState(false);
+
   if (mode === 'digianalog') {
-    const [digitalPressed, setDigitalPressed] = useState(false);
-    const [digitalHistory, setDigitalHistory] = useState([0, 0, 1, 1, 0, 1, 0]);
-    const [analogLevel, setAnalogLevel] = useState(50);
-    const [showAdc, setShowAdc] = useState(false);
     
     // For ADC, let's say we quantize into 8 steps for visual clarity (instead of 4096)
     const adcSteps = 8;
@@ -386,6 +303,10 @@ export default function SignalGraphic({ type }) {
   if (type === 'comparison') return <SignalComparison />;
   const [family, mode] = type.split(':');
   if (family === 'comparison') return <SignalComparison mode={mode} />;
+  // The chapter four laboratories: time, protocol and remembered state.
+  if (family === 'timing') return <TimingLab mode={mode} />;
+  if (family === 'protocol') return <ProtocolLab mode={mode} />;
+  if (family === 'state') return <StateLab mode={mode} />;
   return family === 'digital' ? <DigitalSignal mode={mode} /> : <AnalogSignal mode={mode} />;
 }
 
