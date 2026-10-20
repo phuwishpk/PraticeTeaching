@@ -67,6 +67,8 @@
 .lab-trace-level { fill: #8eabba; font-size: 15px; }
 .lab-trace-grid { stroke: #2f485c; stroke-width: 2; stroke-dasharray: 5 7; }
 .lab-trace-wave { fill: none; stroke: #9ee8c9; stroke-width: 5; stroke-linejoin: round; }
+.lab-output-wave { stroke: #b5c9ff; }
+.lab-edge-marker { stroke: #ffe2a0; stroke-width: 2; stroke-dasharray: 5 5; }
 .lab-trace-wave-error { fill: none; stroke: #ffb86c; stroke-width: 5; stroke-dasharray: 8 6; }
 .lab-trace-span { stroke: #ffe2a0; stroke-width: 2; }
 .lab-trace-span-label { fill: #ffe2a0; font-size: 17px; font-weight: 700; }

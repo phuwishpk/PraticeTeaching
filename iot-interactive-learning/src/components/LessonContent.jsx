@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { lessons } from '../content/lessons';
 import { SectionExplanation, LessonRecap } from './LessonGraphics';
 import './LessonContent.css';
@@ -92,6 +92,7 @@ export function LessonSlideshow({ phase, quizRevealed = false, controlledSlide, 
 }
 
 function LessonSlideshowStage({ phase, quizRevealed = false, controlledSlide, onSlideChange, onPastEnd, onBeforeStart }) {
+  const reduceMotion = useReducedMotion();
   const chapter = phase;
   const lesson = lessons[chapter];
 
@@ -249,7 +250,7 @@ function LessonSlideshowStage({ phase, quizRevealed = false, controlledSlide, on
             initial="enter"
             animate="center"
             exit="exit"
-            transition={{ duration: 0.28, ease: 'easeInOut' }}
+            transition={{ duration: reduceMotion ? 0 : 0.28, ease: 'easeInOut' }}
             className="lesson-slideshow-slide"
           >
             {slides[currentIndex].content}
@@ -262,19 +263,30 @@ function LessonSlideshowStage({ phase, quizRevealed = false, controlledSlide, on
         <button
           className="lesson-nav-arrow"
           onClick={prev}
-          disabled={atStart && !onBeforeStart}
+          disabled={!canNavigate || (atStart && !onBeforeStart)}
           aria-label={atStart ? 'เนื้อหาก่อนหน้า' : 'หน้าก่อน'}
           title={`${atStart ? 'เนื้อหาก่อนหน้า' : 'หน้าก่อน'}${canNavigate ? ' (←)' : ''}`}
         >
           ‹
         </button>
 
+        {/* กล่องเลือกหัวข้อย่อยแบบ select สำหรับ digital (คอมเมนต์ออกตามคำขอ) */}
+        {/* {lesson.signalTheme === 'digital' ? (
+          <label className="digital-slide-picker">
+            <span>หน้า {currentIndex + 1} / {slides.length} · ไปยังหัวข้อย่อย</span>
+            <select aria-label="เลือกหัวข้อย่อย" value={currentIndex} disabled={!canNavigate}
+              onChange={event => goTo(Number(event.target.value))}>
+              {slides.map((slide, i) => <option key={slide.id} value={i}>{slide.label}</option>)}
+            </select>
+          </label>
+        ) : ( */}
         <div className="lesson-nav-pages">
           {slides.map((slide, i) => (
             <button
               key={slide.id}
               className={`lesson-nav-page-btn${i === currentIndex ? ' active' : ''}`}
               onClick={() => goTo(i)}
+              disabled={!canNavigate}
               aria-current={i === currentIndex ? 'true' : undefined}
               title={slide.label}
               aria-label={slide.label}
@@ -283,11 +295,12 @@ function LessonSlideshowStage({ phase, quizRevealed = false, controlledSlide, on
             </button>
           ))}
         </div>
+        {/* )} */}
 
         <button
           className="lesson-nav-arrow"
           onClick={next}
-          disabled={atEnd && !onPastEnd}
+          disabled={!canNavigate || (atEnd && !onPastEnd)}
           aria-label={atEnd ? 'เนื้อหาถัดไป' : 'หน้าถัดไป'}
           title={`${atEnd ? 'เนื้อหาถัดไป' : 'หน้าถัดไป'}${canNavigate ? ' (→)' : ''}`}
         >

@@ -4,6 +4,7 @@ import {
   TOGGLE_STATES, alarmReducer, initialAlarm, initialToggle, sirenOn, toggleReducer,
 } from '../content/chapterFourLabs';
 import './DigitalLabs.css';
+import PredictionCheck from './PredictionCheck';
 
 function AlarmScene({ pir, siren }) {
   return <svg viewBox="0 0 820 280" className="lab-scene" data-sending={pir} aria-hidden="true">
@@ -75,7 +76,7 @@ function AlarmMachine() {
     <header className="lab-heading">
       <div>
         <span className="lab-kicker">STATE · ขากลับเป็น 0 แล้ว แต่ระบบยังจำได้</span>
-        <h3>กดให้คนเดินผ่าน แล้วกดให้เดินออกไป</h3>
+        <h3>ตรวจพบการเคลื่อนไหว แล้วให้ขา PIR กลับเป็น LOW</h3>
         <p>ลองสลับระหว่างโปรแกรมที่จำสถานะกับโปรแกรมที่ไม่จำ แล้วดูว่าไซเรนต่างกันอย่างไร</p>
       </div>
       <button type="button" className="lab-reset" onClick={() => dispatch({ type: 'reset-all' })}>
@@ -92,13 +93,17 @@ function AlarmMachine() {
       </button>
     </div>
 
+    <PredictionCheck key={String(remembers)} question={`หลังตรวจพบการเคลื่อนไหว (HIGH) แล้วขา PIR กลับเป็น LOW โปรแกรมที่${remembers ? 'จำ' : 'ไม่จำ'}สถานะจะทำให้ไซเรนเป็นอย่างไร?`} options={[
+      { id: 'on', label: 'ยังดังอยู่', correct: remembers, reason: remembers ? 'isAlarm ยังคงเป็น 1 จนกด Reset ลองทดลองด้านล่าง' : 'โปรแกรมนี้สั่งตามขา PIR โดยตรง ขาเป็น LOW จึงหยุดไซเรน' },
+      { id: 'off', label: 'หยุดดัง', correct: !remembers, reason: remembers ? 'ขา PIR เป็น 0 แต่ isAlarm ยังเป็น 1 ลองดูสองค่านี้แยกกัน' : 'ถูกแล้ว โปรแกรมนี้ไม่มีสถานะค้างไว้ เมื่อขา LOW ไซเรนจึงหยุด' },
+    ]} />
     <div className="lab-stage">
       <AlarmScene pir={pir} siren={siren} />
     </div>
 
     <div className="lab-control-row">
       <button type="button" className="lab-trigger" onClick={() => dispatch({ type: 'pir' })}>
-        <Hand size={21} aria-hidden="true" />{pir ? 'ให้คนเดินออกไป' : 'ให้คนเดินผ่านหน้า PIR'}
+        <Hand size={21} aria-hidden="true" />{pir ? 'ให้ขา PIR กลับเป็น LOW' : 'จำลองตรวจพบการเคลื่อนไหว'}
       </button>
       <button type="button" className="lab-trigger is-secondary" onClick={() => dispatch({ type: 'reset' })}>
         <Power size={21} aria-hidden="true" />กดปุ่ม Reset
@@ -123,13 +128,13 @@ function AlarmMachine() {
     <p className="lab-switch-note" role="status">
       {remembers
         ? latched && !pir
-          ? 'คนเดินไปแล้ว ขา PIR กลับเป็น 0 — แต่ isAlarm ยังเป็น 1 ไซเรนจึงดังต่อจนมีคนกด Reset'
+          ? 'ขา PIR กลับเป็น 0 แล้ว — แต่ isAlarm ยังเป็น 1 ไซเรนจึงดังต่อจนมีคนกด Reset'
           : latched
-            ? 'ตรวจพบการเคลื่อนไหว isAlarm ถูกตั้งเป็น 1 ลองให้คนเดินออกไปแล้วดูว่าไซเรนหยุดไหม'
+            ? 'ตรวจพบการเคลื่อนไหว isAlarm ถูกตั้งเป็น 1 ลองให้ขา PIR กลับเป็น LOW แล้วดูว่าไซเรนหยุดไหม'
             : 'สถานะเฝ้าระวัง isAlarm = 0 รอสัญญาณจาก PIR'
         : pir
           ? 'ไซเรนดังตามขา PIR ตรง ๆ'
-          : 'พอขา PIR กลับเป็น 0 ไซเรนก็หยุดทันที — โจรเดินหนีไปแล้วก็ไม่มีใครรู้ว่าเคยเกิดอะไรขึ้น'}
+          : 'พอขา PIR กลับเป็น 0 ไซเรนก็หยุดทันที — โปรแกรมไม่ได้เก็บสถานะการแจ้งเตือนไว้'}
     </p>
 
     {log.length > 0 && <ol className="lab-log" aria-label="ลำดับเหตุการณ์ที่ผ่านมา">
@@ -138,18 +143,18 @@ function AlarmMachine() {
 
     <div className="lab-key-idea"><Lightbulb size={22} aria-hidden="true" />
       <p><b>สถานะคือความจำของโปรแกรม</b><br />
-        ขาสัญญาณบอกได้แค่ “ตอนนี้”  ส่วนตัวแปร 1 บิตในโปรแกรมทำให้ระบบรู้ว่า “เคยเกิดอะไรขึ้นแล้ว”</p>
+        ขา PIR บอกค่าที่อ่านตอนนี้ ส่วน isAlarm จำว่าเคยตรวจพบการเคลื่อนไหวแล้ว</p>
     </div>
     <p className="lab-footnote">
       โมดูล PIR จริงมักค้างสถานะไว้ตามเวลาที่ตั้งบนบอร์ดก่อนกลับเป็น 0 แบบจำลองนี้เปลี่ยนทันทีเพื่อให้เห็นประเด็นเรื่องสถานะ
-      และการกด Reset ขณะยังมีคนอยู่จะทำให้ไซเรนติดใหม่ เพราะเงื่อนไขยังเป็นจริง
+      PIR ตรวจการเคลื่อนไหว ไม่ได้ยืนยันว่ามีคนอยู่นิ่ง การกด Reset ขณะขา PIR ยัง HIGH จะตั้งเตือนใหม่ตามกติกาโปรแกรมนี้
     </p>
   </section>;
 }
 
 function ToggleMachine() {
   const [state, dispatch] = useReducer(toggleReducer, undefined, initialToggle);
-  const { signal, latched, presses, history } = state;
+  const { signal, latched, presses, history, outputHistory } = state;
   const stepWidth = 64;
   let path = `M60 ${history[0] ? 26 : 86}`;
   history.forEach((bit, index) => {
@@ -168,6 +173,10 @@ function ToggleMachine() {
       </button>
     </header>
 
+    <PredictionCheck question="เริ่มจากไฟดับ กดปุ่มหนึ่งครั้งแล้วปล่อย ไฟจะเป็นอย่างไร?" options={[
+      { id: 'on', label: 'ยังติดอยู่', correct: true, reason: 'จังหวะกดสลับสถานะเป็นเปิด จังหวะปล่อยไม่สลับอีกครั้ง ลองดูกราฟปุ่มเทียบกับกราฟไฟ' },
+      { id: 'off', label: 'ดับทันทีที่ปล่อย', correct: false, reason: 'นั่นคือโปรแกรมที่สั่งตามปุ่มตรง ๆ ตัวอย่างนี้จำสถานะไฟไว้หลังปล่อยปุ่ม' },
+    ]} />
     <div className="lab-stage">
       <ToggleScene signal={signal} latched={latched} />
     </div>
@@ -206,13 +215,23 @@ function ToggleMachine() {
       <span className="lab-state-arrow" aria-hidden="true">กดปุ่ม ⇄ กดปุ่ม</span>
     </div>
 
-    <svg viewBox="0 0 760 130" className="lab-trace" role="img"
-      aria-label={`สัญญาณปุ่มที่ผ่านมา: ${history.join(', ')}`}>
+    <p className="lab-note">อ่านสองกราฟตามช่องเดียวกัน: กราฟแรกคือปุ่ม กราฟที่สองคือไฟ เส้นประสีเหลืองคือจังหวะกด (0 → 1) ที่ทำให้ไฟสลับ</p>
+    <svg viewBox="0 0 760 260" className="lab-trace" role="img"
+      aria-label={`สัญญาณปุ่ม: ${history.join(', ')}; สถานะไฟในแต่ละช่อง: ${outputHistory.join(', ')}`}>
+      <text x="60" y="18" className="lab-trace-level">ปุ่ม · Input</text>
       <text x="8" y="32" className="lab-trace-level">1</text>
       <text x="8" y="92" className="lab-trace-level">0</text>
       <path d="M60 26H700 M60 86H700" className="lab-trace-grid" />
       <path d={path} className="lab-trace-wave" />
-      <text x="60" y="118" className="lab-trace-level">กดแล้วปล่อย = ขอบขาขึ้นหนึ่งครั้ง = สลับหนึ่งครั้ง</text>
+      <text x="60" y="132" className="lab-trace-level">ไฟ · สถานะที่โปรแกรมจำ</text>
+      <text x="8" y="151" className="lab-trace-level">1</text>
+      <text x="8" y="211" className="lab-trace-level">0</text>
+      <path d="M60 145H700 M60 205H700" className="lab-trace-grid" />
+      <path d={`M60 ${outputHistory[0] ? 145 : 205}` + outputHistory.map((bit, i) => `${i ? `V${bit ? 145 : 205}` : ''}H${60 + (i + 1) * stepWidth}`).join('')}
+        className="lab-trace-wave lab-output-wave" />
+      {history.map((bit, i) => i > 0 && bit === 1 && history[i - 1] === 0 ? <path key={i}
+        d={`M${60 + i * stepWidth} 22V218`} className="lab-edge-marker" /> : null)}
+      <text x="60" y="245" className="lab-trace-level">หนึ่งช่องต่อเหตุการณ์กดหรือปล่อย · ไม่ใช่เวลาจริง</text>
     </svg>
 
     <div className="lab-key-idea"><Lightbulb size={22} aria-hidden="true" />

@@ -1,37 +1,53 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Binary } from 'lucide-react';
-import { LessonSlideshow } from '../components/LessonContent';
+import LessonContent, { LessonSlideshow } from '../components/LessonContent';
 import DigitalExamples from '../components/DigitalExamples';
 
-// Every digital lesson in teaching order, so the arrows carry straight from one into the next.
 const LESSON_TOUR = [
-  { id: 4, label: 'รู้จัก 0 และ 1' },
-  { id: 17, label: 'จำสถานะ' },
+  { id: 'examples', label: 'ทดลองใกล้ตัว' },
+  { id: '4', label: '0/1 และอ่านกราฟ' },
+  { id: '12', label: 'หลายบิตเป็นตัวเลข' },
+  // { id: '17', label: 'จำสถานะ' }, // ซ่อนเนื้อหาจำสถานะตามคำขอ
+  { id: '18', label: 'สรุปทบทวน' },
 ];
 
-// An independent teaching preview; navigation here never changes the live classroom.
+// URL topics can be bookmarked or shared without changing the live classroom.
 export default function DigitalLessonView() {
-  const [phase, setPhase] = useState('examples');
+  const [params, setParams] = useSearchParams();
+  const phase = LESSON_TOUR.some(lesson => lesson.id === params.get('topic')) ? params.get('topic') : 'examples';
+  const reading = params.get('view') === 'read';
   const index = LESSON_TOUR.findIndex(lesson => lesson.id === phase);
-  return <div className="digital-lesson-view">
+  const changeTopic = id => setParams({ topic: id, ...(reading ? { view: 'read' } : {}) });
+  return <div className="digital-lesson-view" lang="th">
+    <a className="digital-skip-link" href="#digital-main">ข้ามไปเนื้อหา</a>
     <header className="digital-lesson-nav">
       <Link to="/host"><Binary size={24} aria-hidden="true" />IOT LAB<span>ห้องเรียน</span></Link>
       <nav aria-label="หัวข้อบทเรียน Digital">
-        <button type="button" aria-pressed={phase === 'examples'} onClick={() => setPhase('examples')}>
-          กดจำลองตัวอย่าง
-        </button>
-        {LESSON_TOUR.map(lesson => <button type="button" key={lesson.id} aria-pressed={phase === lesson.id}
-          onClick={() => setPhase(lesson.id)}>{lesson.label}</button>)}
+        {LESSON_TOUR.map((lesson, i) => <button type="button" key={lesson.id}
+          aria-current={phase === lesson.id ? 'step' : undefined} aria-pressed={phase === lesson.id}
+          onClick={() => changeTopic(lesson.id)}>{i + 1}. {lesson.label}</button>)}
       </nav>
-      <span>สื่อทดลองสำหรับการสอน</span>
     </header>
-    <main>
+    <div className="digital-study-tools">
+      <p>หัวข้อ {index + 1} / {LESSON_TOUR.length} · เลือกหัวข้อได้เลย หรือเรียนตามลำดับ</p>
+      {phase !== 'examples' && <div role="group" aria-label="รูปแบบการอ่าน">
+        <button type="button" aria-pressed={!reading} onClick={() => setParams({ topic: phase })}>ทีละหน้า</button>
+        <button type="button" aria-pressed={reading} onClick={() => setParams({ topic: phase, view: 'read' })}>อ่านต่อเนื่อง</button>
+      </div>}
+    </div>
+    <main id="digital-main" tabIndex={-1}>
       {phase === 'examples'
         ? <div className="digital-examples-page"><DigitalExamples /></div>
-        : <LessonSlideshow key={phase} phase={phase}
-          onPastEnd={index < LESSON_TOUR.length - 1 ? () => setPhase(LESSON_TOUR[index + 1].id) : undefined}
-          onBeforeStart={index > 0 ? () => setPhase(LESSON_TOUR[index - 1].id) : undefined} />}
+        : reading
+          ? <div className="digital-reading-page" key={phase}><LessonContent phase={Number(phase)} /></div>
+          : <LessonSlideshow key={phase} phase={Number(phase)}
+            onPastEnd={index < LESSON_TOUR.length - 1 ? () => changeTopic(LESSON_TOUR[index + 1].id) : undefined}
+            onBeforeStart={index > 0 ? () => changeTopic(LESSON_TOUR[index - 1].id) : undefined} />}
     </main>
+    <nav className="digital-topic-footer" aria-label="เปลี่ยนหัวข้อ">
+      <button type="button" disabled={index === 0} onClick={() => changeTopic(LESSON_TOUR[index - 1].id)}>← หัวข้อก่อนหน้า</button>
+      <span>{LESSON_TOUR[index].label}</span>
+      <button type="button" disabled={index === LESSON_TOUR.length - 1} onClick={() => changeTopic(LESSON_TOUR[index + 1].id)}>หัวข้อถัดไป →</button>
+    </nav>
   </div>;
 }

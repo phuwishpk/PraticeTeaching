@@ -32,6 +32,22 @@ test('replay and step controls walk through explanation phases', () => {
   assert.equal(state.output, true);
 });
 
+test('automatic playback can pause, resume and switch to manual without skipping phases', () => {
+  let state = act(initialSimulation(), { type: 'toggle' });
+  state = act(state, { type: 'replay' });
+  assert.equal(state.phase, 1);
+  assert.equal(state.running, true);
+  state = act(state, { type: 'pause' });
+  assert.equal(act(state, { type: 'tick' }), state);
+  state = act(act(state, { type: 'play' }), { type: 'tick' });
+  assert.equal(state.phase, 2);
+  state = act(state, { type: 'mode', automatic: false });
+  assert.equal(act(state, { type: 'tick' }), state);
+  state = act(state, { type: 'step' });
+  assert.equal(state.phase, 3);
+  assert.equal(state.running, false);
+});
+
 test('reset and changing examples cancel playback and clear the previous readings', () => {
   let state = act(initialSimulation('motion'), { type: 'toggle' });
   state = act(state, { type: 'replay' });

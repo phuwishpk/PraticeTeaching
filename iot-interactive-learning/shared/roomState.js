@@ -65,7 +65,8 @@ export const CHAPTER_FLOW = {
     { type: 'lobby', lessonId: 1 },
     { type: 'activity', id: 'digitalexamples', lessonId: 4 },
     { type: 'activity', id: 'digital', lessonId: 4 },
-    { type: 'activity', id: 'statemachine', lessonId: 17 },
+    { type: 'activity', id: 'digitaldata', lessonId: 12 },
+    // { type: 'activity', id: 'statemachine', lessonId: 17 }, // ซ่อนเนื้อหาจำสถานะตามคำขอ
     { type: 'activity', id: 'digitalsummary', lessonId: 18 },
     { type: 'podium', lessonId: 1 }
   ]

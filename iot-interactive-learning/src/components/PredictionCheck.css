@@ -1,0 +1,8 @@
+.prediction-check { display: grid; gap: 12px; padding: 18px; border: 1px solid #6b8295; border-radius: 14px; background: #182d3e; color: #edf5fa; min-width: 0; }
+.prediction-check h4, .prediction-check p { margin: 0; }
+.prediction-check h4 { color: #ffe2a0; font-size: 1.1em; }
+.prediction-options { display: flex; flex-wrap: wrap; gap: 10px; }
+.prediction-options button { min-height: 48px; padding: 10px 16px; border: 1px solid #839bad; border-radius: 10px; color: #edf5fa; background: #112330; cursor: pointer; font: inherit; }
+.prediction-options button[aria-pressed="true"] { background: #244c41; border-color: #9dedc8; }
+.prediction-options button:focus-visible { outline: 3px solid #ffdc8f; outline-offset: 3px; }
+.prediction-check .prediction-feedback { color: #c6d9e6; font-size: .9em; line-height: 1.7; }

@@ -114,7 +114,7 @@ export function busReducer(state, action) {
 
 // ─── Lesson 17 · State: the program remembers what the pin has forgotten ─────────
 // The siren latches on motion and only a reset clears it — and a reset while someone is
-// still in the room latches straight back, which is the honest behaviour of the real thing.
+// holding the PIR input HIGH latches straight back under this program’s reset rule.
 export function initialAlarm() {
   return { pir: false, latched: false, remembers: true, log: [] };
 }
@@ -132,7 +132,7 @@ export function alarmReducer(state, action) {
     case 'reset':
       if (!state.remembers) return logged(state, 'กด Reset · โปรแกรมนี้ไม่มีสถานะให้ล้าง');
       return logged({ ...state, latched: state.pir },
-        state.pir ? 'กด Reset · ยังมีคนอยู่ ไซเรนจึงติดใหม่ทันที' : 'กด Reset · isAlarm = 0 ไซเรนหยุด');
+        state.pir ? 'กด Reset · ขา PIR ยัง HIGH โปรแกรมจึงตั้งเตือนใหม่' : 'กด Reset · isAlarm = 0 ไซเรนหยุด');
     case 'remembers':
       return { ...initialAlarm(), remembers: !state.remembers, pir: state.pir, latched: !state.remembers && state.pir };
     case 'reset-all': return { ...initialAlarm(), remembers: state.remembers };
@@ -146,7 +146,7 @@ export const sirenOn = state => (state.remembers ? state.latched : state.pir);
 // One button, two programs: a latch that flips on the rising edge, and a lamp that merely
 // follows the pin. Pressing and releasing is what separates them.
 export function initialToggle() {
-  return { signal: false, latched: false, presses: 0, history: [0] };
+  return { signal: false, latched: false, presses: 0, history: [0], outputHistory: [0] };
 }
 
 export function toggleReducer(state, action) {
@@ -159,6 +159,7 @@ export function toggleReducer(state, action) {
         latched: rising ? !state.latched : state.latched,
         presses: rising ? state.presses + 1 : state.presses,
         history: [...state.history.slice(-9), Number(signal)],
+        outputHistory: [...state.outputHistory.slice(-9), Number(rising ? !state.latched : state.latched)],
       };
     }
     case 'reset': return initialToggle();

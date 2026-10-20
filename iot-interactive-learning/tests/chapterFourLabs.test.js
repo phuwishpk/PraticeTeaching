@@ -101,7 +101,7 @@ test('the siren keeps ringing after the pin goes quiet, until someone resets it'
   assert.ok(state.log.length > 0, 'the class reads what happened from the log');
 });
 
-test('resetting while someone is still in the room latches straight back', () => {
+test('resetting while the PIR pin is HIGH latches straight back', () => {
   let state = alarmReducer(initialAlarm(), { type: 'pir' });
   state = alarmReducer(state, { type: 'reset' });
   assert.equal(state.latched, true);
@@ -141,4 +141,19 @@ test('the button trace keeps a bounded window of presses', () => {
   for (let i = 0; i < 20; i++) state = toggleReducer(state, { type: 'signal' });
   assert.equal(state.history.length, 10);
   assert.equal(state.presses, 10, 'twenty edges are ten complete presses');
+});
+
+test('button and lamp histories stay aligned and preserve the lamp on release', () => {
+  let state = initialToggle();
+  state = toggleReducer(state, { type: 'signal' });
+  state = toggleReducer(state, { type: 'signal' });
+  assert.deepEqual(state.history, [0, 1, 0]);
+  assert.deepEqual(state.outputHistory, [0, 1, 1]);
+  state = toggleReducer(state, { type: 'signal' });
+  assert.deepEqual(state.outputHistory, [0, 1, 1, 0]);
+  for (let i = 0; i < 20; i++) state = toggleReducer(state, { type: 'signal' });
+  assert.equal(state.history.length, 10);
+  assert.equal(state.outputHistory.length, 10);
+  assert.equal(state.outputHistory.at(-1), Number(state.latched));
+  assert.deepEqual(toggleReducer(state, { type: 'reset' }).outputHistory, [0]);
 });

@@ -883,6 +883,7 @@ const STEP_LABELS = {
   lobby: 'เข้าห้องเรียน',
   digitalexamples: 'จำลองตัวอย่าง',
   digital: 'รู้จัก 0 และ 1',
+  digitaldata: 'หลายบิตเป็นตัวเลข',
   statemachine: 'จำสถานะ',
   digitalsummary: 'สรุปเนื้อหา',
   architecture: 'ภาพรวมระบบ IoT',

@@ -164,7 +164,13 @@ test('teacher and student pages render with the current chapter/step room state'
           }
         }
       }
-      assert.deepEqual([...seen].sort(), Object.keys(marker).sort(), 'every laboratory needs a slide');
+      const expectedMarkers = Object.keys(marker).filter(graphic => {
+        return Object.entries(chapterThreeLessons).some(([lessonId, lesson]) =>
+          CHAPTER_FLOW[4].some(entry => entry.lessonId === Number(lessonId)) &&
+          lesson.sections.some(s => s.signalGraphic === graphic)
+        );
+      });
+      assert.deepEqual([...seen].sort(), expectedMarkers.sort(), 'every laboratory needs a slide');
     });
     await t.test('chapter two choice explanations appear only after completion or expiry on both screens', () => {
       entries.set('student_name', 'Test learner');

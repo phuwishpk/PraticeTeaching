@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { classroomChoiceActivities } from '../src/content/classroomChoiceActivities.js';
-import { act, openActivity } from './roomHarness.js';
+import { act, locateActivity, openActivity } from './roomHarness.js';
 
 test('new classroom activities are multiple choice with one valid answer', () => {
   for (const activity of Object.values(classroomChoiceActivities)) {
@@ -22,4 +22,3 @@ test('classroom choice scoring accepts one answer and rewards only the correct o
     }
   }
 });
-

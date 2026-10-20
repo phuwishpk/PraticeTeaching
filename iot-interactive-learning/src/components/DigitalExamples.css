@@ -31,6 +31,7 @@
 .example-controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 18px; }
 .example-trigger { display: inline-flex; align-items: center; justify-content: center; gap: 14px; border: 1px solid #b7f9d6; background: #a0edc8; color: #0b3028 !important; border-radius: 14px; padding: 16px 22px; font-weight: 700 !important; font-size: 1.15em !important; }
 .example-trigger:hover { background: #c1ffe1; }
+.digital-examples button:disabled { opacity: .45; cursor: default; }
 .example-playback { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; font-size: .82em; }
 .example-playback > div { display: flex; gap: 4px; padding: 4px; border: 1px solid #4b6375; border-radius: 12px; }
 .example-playback > div button { background: transparent; border: 1px solid transparent; border-radius: 8px; padding: 7px 12px; }
