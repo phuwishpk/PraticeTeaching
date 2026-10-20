@@ -14,6 +14,7 @@ import { ImageWithModal } from '../components/ImageWithModal';
 import { lessons, sensorQuizExplanation } from '../content/lessons';
 import { sensorCatalogOptions, sensorCatalogQuestions } from '../content/sensorCatalogActivity';
 import CountdownTimer from '../components/CountdownTimer';
+import DigitalExamples from '../components/DigitalExamples';
 
 // react-use was a 2 MB dependency pulled in for this one hook, and it drags nano-css in
 // with it — cost the learners pay on every page load for a confetti canvas the teacher sees.
@@ -290,58 +291,102 @@ function HostDigital() {
   const showResults = isTimeUp || isAllAnswered;
 
   const options = [
-    { id: '2_states', label: '2 ระดับลอจิก (LOW/0 และ HIGH/1)' },
-    { id: '10_states', label: '10 สถานะ (เช่น 0 ถึง 9)' },
-    { id: 'infinite', label: 'นับไม่ถ้วน (ค่าต่อเนื่อง)' },
-    { id: 'none', label: 'ไม่มีสถานะที่แน่นอน' }
+    {
+      id: '2_states',
+      label: '2 ระดับลอจิก (LOW/0 และ HIGH/1)',
+      sub: 'ส่ง HIGH (1) เมื่อพบคน และ LOW (0) เมื่อไม่มีคน'
+    },
+    {
+      id: '10_states',
+      label: '10 ระดับสถานะ (0 ถึง 9)',
+      sub: 'ส่งตัวเลข 0 ถึง 9 เพื่อบอกจำนวนคนที่กำลังเดินผ่าน'
+    },
+    {
+      id: 'infinite',
+      label: 'นับไม่ถ้วน ค่าต่อเนื่อง (Analog)',
+      sub: 'ส่งค่าแรงดันที่แปรผันตามระยะหรือความเร็วการเดิน'
+    },
+    {
+      id: 'none',
+      label: 'ไม่มีสถานะที่แน่นอน (สุ่มค่า)',
+      sub: 'ส่งค่าสลับไปมาแบบสุ่มไม่มีสภาวะลอจิกคงที่'
+    }
   ];
 
   return (
-    <div className="flex-center full-screen" style={{ flexDirection: 'column', gap: '2rem' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+    <div style={{ width: '100%', minHeight: '100%', padding: '2rem 1.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2rem', boxSizing: 'border-box' }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
         <CountdownTimer startTime={roomState.questionStartTime} duration={(roomState.questionDurationMs ?? 30000) / 1000} size={70} stopped={isAllAnswered} />
-        <h1 className="text-glow-blue" style={{ fontSize: '3rem', margin: 0 }}>สัญญาณ Digital แบบไบนารี</h1>
+        <div>
+          <h1 className="text-glow-blue" style={{ fontSize: '2.5rem', margin: '0 0 0.5rem 0' }}>
+            ภารกิจ IoT: สัญญาณ Digital กับระบบตรวจจับคน (PIR)
+          </h1>
+          <div style={{ color: 'var(--text-secondary)', fontSize: '1.1rem' }}>
+            ทดลองจำลองสถานการณ์จริง เปรียบเทียบสภาวะ 0 และ 1 พร้อมร่วมตอบคำถาม
+          </div>
+        </div>
       </div>
       
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2rem', width: '95%', maxWidth: 1200, minHeight: '60vh', justifyContent: 'center' }}>
+      {/* Main 2-Column Layout */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2rem', width: '100%', maxWidth: 1400, justifyContent: 'center', alignItems: 'flex-start' }}>
         
-        {/* Left: Theory */}
-        <div className="glass-panel" style={{ flex: 1, padding: '2.5rem', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-          <div style={{ padding: '2rem', border: '2px solid var(--neon-blue)', borderRadius: 16, background: 'rgba(0,240,255,0.05)' }}>
-            <h3 style={{ color: 'var(--neon-blue)', margin: '0 0 1rem 0', fontSize: '1.8rem' }}>1. สัญญาณ Digital</h3>
-            <p style={{ color: 'white', fontSize: '1.2rem', margin: 0, lineHeight: 1.6 }}>
-              พิจารณาระดับลอจิกของแต่ละบิต แยกจากจำนวนค่าที่ข้อมูลหลายบิตสามารถแทนได้
-            </p>
-          </div>
-          <h2 style={{ textAlign: 'center', color: 'var(--neon-blue)' }}>คำถาม: Digital แบบไบนารีใช้กี่ระดับลอจิก?</h2>
+        {/* Left: Interactive Digital Simulation */}
+        <div style={{ flex: '1.4', minWidth: 440, maxWidth: 800 }}>
+          <DigitalExamples initialScenario="motion" showScenarioPicker={true} />
         </div>
 
-        {/* Right: Activity */}
-        <div className="glass-panel" style={{ flex: 1.5, padding: '2rem', display: 'flex', flexDirection: 'column' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-            <h2 style={{ color: 'var(--neon-green)', margin: 0 }}>ผลโหวต</h2>
-            <div style={{ color: showResults ? (isAllAnswered ? 'var(--neon-green)' : 'var(--text-secondary)') : 'var(--neon-blue)', fontWeight: 'bold' }}>
+        {/* Right: Classroom Q&A & Live Voting */}
+        <div className="glass-panel" style={{ flex: '1', minWidth: 380, maxWidth: 560, padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          
+          {/* Question Box */}
+          <div style={{ padding: '1.5rem', border: '2px solid var(--neon-blue)', borderRadius: 16, background: 'rgba(0,240,255,0.06)' }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 12px', borderRadius: 20, background: 'rgba(0,240,255,0.15)', color: 'var(--neon-blue)', fontSize: '0.85rem', fontWeight: 'bold', marginBottom: '0.8rem' }}>
+              🎯 โจทย์ถามตอบกิจกรรมในห้องเรียน
+            </div>
+            <h2 style={{ color: 'white', margin: '0 0 0.5rem 0', fontSize: '1.35rem', lineHeight: 1.5 }}>
+              เมื่อเซนเซอร์ PIR ตรวจพบคนเดินผ่าน สัญญาณ Digital 1 บิต ส่งค่าแบบใดให้บอร์ดสั่งเปิดไฟ?
+            </h2>
+            <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: '0.95rem', lineHeight: 1.5 }}>
+              💡 ลองสังเกตจากตัวจำลอง: เมื่อคนเดินผ่านเซนเซอร์ (PIR) ขาสัญญาณส่งระดับลอจิกใดเข้าสู่บอร์ด?
+            </p>
+          </div>
+
+          {/* Voting Status */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h2 style={{ color: 'var(--neon-green)', margin: 0, fontSize: '1.4rem' }}>ผลโหวต</h2>
+            <div style={{ color: showResults ? (isAllAnswered ? 'var(--neon-green)' : 'var(--text-secondary)') : 'var(--neon-blue)', fontWeight: 'bold', fontSize: '0.95rem' }}>
               {showResults
                 ? (isAllAnswered ? `✅ ตอบครบทุกคนแล้ว (${totalVotes}/${totalStudents} คน)` : `⏰ หมดเวลา (${totalVotes}/${totalStudents} คน)`)
                 : `⏳ กำลังรอคำตอบ... (${totalVotes}/${totalStudents} คน)`}
             </div>
           </div>
           
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '1rem', justifyContent: 'center' }}>
+          {/* Options & Progress */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             {options.map(opt => {
               const count = Object.values(votes).filter(v => v === opt.id).length;
               const pct = totalVotes === 0 ? 0 : Math.round((count / totalVotes) * 100);
               const isCorrect = opt.id === '2_states';
               return (
-                <div key={opt.id} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: '1.2rem', color: showResults && isCorrect ? 'var(--neon-green)' : 'white' }}>
-                      {opt.label} {showResults && isCorrect && '🎯'}
-                    </span>
-                    {showResults && <span style={{ fontSize: '1.2rem' }}>{count} โหวต ({pct}%)</span>}
+                <div key={opt.id} style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', padding: '0.75rem', borderRadius: 12, background: 'rgba(255,255,255,0.03)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                    <div>
+                      <div style={{ fontSize: '1.05rem', color: showResults && isCorrect ? 'var(--neon-green)' : 'white', fontWeight: showResults && isCorrect ? 'bold' : 'normal' }}>
+                        {opt.label} {showResults && isCorrect && '🎯'}
+                      </div>
+                      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                        {opt.sub}
+                      </div>
+                    </div>
+                    {showResults && (
+                      <span style={{ fontSize: '1.1rem', fontWeight: 'bold', color: isCorrect ? 'var(--neon-green)' : 'var(--neon-blue)', marginLeft: '0.5rem', flexShrink: 0 }}>
+                        {count} ({pct}%)
+                      </span>
+                    )}
                   </div>
                   {showResults && (
-                    <div style={{ width: '100%', height: 16, background: 'rgba(255,255,255,0.1)', borderRadius: 8, overflow: 'hidden' }}>
+                    <div style={{ width: '100%', height: 12, background: 'rgba(255,255,255,0.1)', borderRadius: 6, overflow: 'hidden', marginTop: '4px' }}>
                       <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} style={{ height: '100%', background: isCorrect ? 'var(--neon-green)' : 'var(--neon-blue)' }} />
                     </div>
                   )}
@@ -349,10 +394,31 @@ function HostDigital() {
               );
             })}
           </div>
+
+          {/* Explanation when revealed */}
+          {showResults && (
+            <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }}
+              style={{ padding: '1.25rem', borderRadius: 14, background: 'rgba(80,250,123,0.08)', border: '1px solid rgba(80,250,123,0.3)' }}>
+              <div style={{ color: 'var(--neon-green)', fontWeight: 'bold', fontSize: '1.05rem', marginBottom: '0.5rem' }}>
+                🎯 เฉลย: สัญญาณ Digital 1 บิต มีเพียง 2 ระดับสถานะ (0 / 1)
+              </div>
+              <p style={{ color: 'white', fontSize: '0.95rem', margin: '0 0 0.75rem 0', lineHeight: 1.6 }}>
+                เซนเซอร์ตรวจจับความเคลื่อนไหว (PIR) เป็นอุปกรณ์ Digital Input ส่งค่า <b>HIGH (1)</b> เมื่อตรวจพบคน และส่ง <b>LOW (0)</b> เมื่อไม่มีคน บอร์ดไมโครคอนโทรลเลอร์จะตรวจสอบเงื่อนไข <code>if (read == HIGH)</code> แล้วจึงสั่งเปิดไฟทางเดิน!
+              </p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', fontSize: '0.85rem', color: '#8becbf', background: 'rgba(0,0,0,0.3)', padding: '8px 12px', borderRadius: 8 }}>
+                <span>คนเดินผ่าน 🚶</span>
+                <span>→</span>
+                <span>PIR ส่ง 1 (HIGH) ⚡</span>
+                <span>→</span>
+                <span>บอร์ดประมวลผล 🧠</span>
+                <span>→</span>
+                <span>สั่งเปิดไฟติด 💡</span>
+              </div>
+            </motion.div>
+          )}
         </div>
 
       </div>
-      <SignalActivityReview kind="digital" revealed={showResults} />
     </div>
   );
 }
@@ -819,14 +885,15 @@ function HostPodium() {
 // ─── Host View Shell ──────────────────────────────────────────────────────────
 const STEP_LABELS = {
   lobby: 'เข้าห้องเรียน',
+  digitalexamples: 'จำลองตัวอย่าง',
+  digital: '01 · รู้จัก 0 และ 1',
+  statemachine: '02 · จำสถานะ',
   architecture: 'ภาพรวมระบบ IoT',
   roles: 'Output',
   sensors: 'Input',
   problem: 'วิเคราะห์โจทย์',
-  digital: 'Digital: 0 และ 1',
   analog: 'Analog และ ADC',
   signalmatch: 'เทียบสัญญาณสองแบบ',
-  digitaldata: 'Digital หลายบิต',
   adcmeaning: 'ตีความค่าดิบ',
   signaldesign: 'เลือกวิธีอ่าน',
   logic: 'เงื่อนไข IF / ELSE',
@@ -834,6 +901,19 @@ const STEP_LABELS = {
   ideation: 'ออกแบบระบบ IoT',
   podium: 'สรุปคะแนน',
 };
+
+function getStepLabel(step, chapter) {
+  if (chapter === 2) {
+    if (step.id === 'digital') return 'Digital: 0 และ 1';
+    if (step.id === 'digitaldata') return 'Digital หลายบิต';
+  }
+  if (chapter === 4) {
+    if (step.id === 'digitalexamples') return 'จำลองตัวอย่าง';
+    if (step.id === 'digital') return '01 · รู้จัก 0 และ 1';
+    if (step.id === 'statemachine') return '02 · จำสถานะ';
+  }
+  return STEP_LABELS[step.id || step.type] || lessons[step.lessonId]?.title;
+}
 
 // Controlled slideshow for teacher — slide syncs with roomState.presentation
 function HostLessonSlideshow({ chapter, step, quizRevealed }) {
@@ -850,15 +930,25 @@ function HostLessonSlideshow({ chapter, step, quizRevealed }) {
   // first slide — changeStep resets the presentation — and stepping away and back does not
   // restart an activity's clock, so overshooting costs nothing but a press the other way.
   return (
-    <LessonSlideshow
-      key={`${chapter}-${step}`}
-      phase={flow[step].lessonId}
-      quizRevealed={quizRevealed}
-      controlledSlide={currentSlide}
-      onSlideChange={handleSlideChange}
-      onPastEnd={step < flow.length - 1 ? () => setStep(step + 1) : undefined}
-      onBeforeStart={step > 0 ? () => setStep(step - 1) : undefined}
-    />
+    <div className="lesson-slideshow-stage" style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+      {flow[step]?.id === 'digitalexamples' ? (
+        <div className="digital-examples-page" style={{ flex: 1, overflowY: 'auto' }}>
+          <DigitalExamples />
+        </div>
+      ) : (
+        <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+          <LessonSlideshow
+            key={`${chapter}-${step}`}
+            phase={flow[step].lessonId}
+            quizRevealed={quizRevealed}
+            controlledSlide={currentSlide}
+            onSlideChange={handleSlideChange}
+            onPastEnd={step < flow.length - 1 ? () => setStep(step + 1) : undefined}
+            onBeforeStart={step > 0 ? () => setStep(step - 1) : undefined}
+          />
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -1113,7 +1203,7 @@ export default function HostView() {
               title={step.type === 'activity' ? lessons[step.lessonId]?.title : STEP_LABELS[step.type]}
               className="neu-button"
               style={{ padding: '8px 12px', fontSize: '0.85rem', lineHeight: 1.6, whiteSpace: 'nowrap', color: roomState.step === i ? 'var(--neon-blue)' : 'inherit', boxShadow: roomState.step === i ? 'var(--neumorph-inset)' : 'var(--neumorph-shadow)' }}>
-              {STEP_LABELS[step.id || step.type] || lessons[step.lessonId]?.title}
+              {getStepLabel(step, roomState.chapter)}
             </button>
           ))}
         </nav>
@@ -1161,6 +1251,11 @@ export default function HostView() {
               {currentStepData.id === 'roles' && <ClassroomChoiceActivity activityId="roles" audience="teacher" />}
               {currentStepData.id === 'sensors' && <HostCatalog />}
               {currentStepData.id === 'problem' && <HostProblem />}
+              {currentStepData.id === 'digitalexamples' && (
+                <div className="digital-examples-page" style={{ flex: 1, overflowY: 'auto' }}>
+                  <DigitalExamples />
+                </div>
+              )}
               {currentStepData.id === 'digital' && <HostDigital />}
               {currentStepData.id === 'analog' && <HostAnalog />}
               {currentStepData.id === 'logic' && <HostLogic />}
@@ -1171,9 +1266,7 @@ export default function HostView() {
               {currentStepData.id === 'wrapup' && <ClassroomChoiceActivity activityId="wrapup" audience="teacher" />}
               {currentStepData.id === 'ideation' && <ClassroomChoiceActivity activityId="ideation" audience="teacher" />}
               {currentStepData.id === 'digitaltiming' && <ClassroomChoiceActivity activityId="digitaltiming" audience="teacher" />}
-              {currentStepData.id === 'digitalprotocol' && <ClassroomChoiceActivity activityId="digitalprotocol" audience="teacher" />}
               {currentStepData.id === 'statemachine' && <ClassroomChoiceActivity activityId="statemachine" audience="teacher" />}
-              {currentStepData.id === 'digitalplanning' && <ClassroomChoiceActivity activityId="digitalplanning" audience="teacher" />}
               {currentStepData.type === 'podium' && <HostPodium />}
             </motion.div>
           )}

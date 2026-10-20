@@ -14,6 +14,7 @@ import { StudentLessonNotes, LessonSlideshow } from '../components/LessonContent
 import { sensorQuizExplanation } from '../content/lessons';
 import { sensorCatalogOptions, sensorCatalogQuestions } from '../content/sensorCatalogActivity';
 import CountdownTimer from '../components/CountdownTimer';
+import DigitalExamples from '../components/DigitalExamples';
 
 // ─── Shared Mini Progress Bar ─────────────────────────────────────────────────
 function MiniBar({ value, max, color = 'var(--neon-blue)', label, count }) {
@@ -436,28 +437,56 @@ function ClientDigital() {
   }, [roomState.questionStartTime, roomState.questionDurationMs]);
 
   const options = [
-    { id: '2_states', label: '2 ระดับลอจิก (LOW/0 และ HIGH/1)', color: '#ff4d4d' },
-    { id: '10_states', label: '10 สถานะ (เช่น 0 ถึง 9)', color: '#8be9fd' },
-    { id: 'infinite', label: 'นับไม่ถ้วน (ค่าต่อเนื่อง)', color: '#ffb86c' },
-    { id: 'none', label: 'ไม่มีสถานะที่แน่นอน', color: '#ff79c6' }
+    {
+      id: '2_states',
+      label: '2 ระดับลอจิก (LOW/0 และ HIGH/1)',
+      sub: 'ส่ง HIGH (1) เมื่อพบคน และ LOW (0) เมื่อไม่มีคน',
+      color: '#50fa7b'
+    },
+    {
+      id: '10_states',
+      label: '10 ระดับสถานะ (0 ถึง 9)',
+      sub: 'ส่งตัวเลข 0 ถึง 9 เพื่อบอกจำนวนคนที่กำลังเดินผ่าน',
+      color: '#8be9fd'
+    },
+    {
+      id: 'infinite',
+      label: 'นับไม่ถ้วน ค่าต่อเนื่อง (Analog)',
+      sub: 'ส่งค่าแรงดันที่แปรผันตามระยะหรือความเร็วการเดิน',
+      color: '#ffb86c'
+    },
+    {
+      id: 'none',
+      label: 'ไม่มีสถานะที่แน่นอน (สุ่มค่า)',
+      sub: 'ส่งค่าสลับไปมาแบบสุ่มไม่มีสภาวะลอจิกคงที่',
+      color: '#ff79c6'
+    }
   ];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '1.5rem', maxWidth: 440, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', padding: '1.25rem', maxWidth: 640, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
       
-      <div className="glass-panel" style={{ padding: '1.25rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-        <CountdownTimer startTime={roomState.questionStartTime} duration={(roomState.questionDurationMs ?? 30000) / 1000} size={50} stopped={isAllAnswered} />
-        <div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>คำถาม</div>
-          <div style={{ fontWeight: 'bold', color: 'var(--neon-blue)', fontSize: '1rem' }}>Digital แบบไบนารีใช้กี่ระดับลอจิก?</div>
-          <div style={{ fontSize: '0.75rem', color: showResults ? (isAllAnswered ? 'var(--neon-green)' : 'var(--text-secondary)') : 'var(--neon-blue)', fontWeight: 'bold' }}>
-            {showResults
-              ? (isAllAnswered ? `✅ ตอบครบทุกคนแล้ว (${totalVotes}/${totalStudents} คน)` : `⏰ หมดเวลา (${totalVotes}/${totalStudents} คน)`)
-              : `โหวตแล้ว ${totalVotes} / ${totalStudents} คน ⏳`}
+      {/* Question Card */}
+      <div className="glass-panel" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <CountdownTimer startTime={roomState.questionStartTime} duration={(roomState.questionDurationMs ?? 30000) / 1000} size={50} stopped={isAllAnswered} />
+          <div>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 12, background: 'rgba(0,240,255,0.15)', color: 'var(--neon-blue)', fontSize: '0.75rem', fontWeight: 'bold' }}>
+              🚶 ภารกิจ IoT: ตรวจจับคนด้วยเซนเซอร์ PIR
+            </div>
+            <div style={{ fontWeight: 'bold', color: 'white', fontSize: '1.05rem', marginTop: '0.3rem', lineHeight: 1.4 }}>
+              เมื่อเซนเซอร์ตรวจพบคนเดินผ่าน สัญญาณ Digital 1 บิต ส่งค่าแบบใดให้บอร์ดสั่งเปิดไฟ?
+            </div>
+            <div style={{ fontSize: '0.75rem', color: showResults ? (isAllAnswered ? 'var(--neon-green)' : 'var(--text-secondary)') : 'var(--neon-blue)', fontWeight: 'bold', marginTop: '0.3rem' }}>
+              {showResults
+                ? (isAllAnswered ? `✅ ตอบครบทุกคนแล้ว (${totalVotes}/${totalStudents} คน)` : `⏰ หมดเวลา (${totalVotes}/${totalStudents} คน)`)
+                : `โหวตแล้ว ${totalVotes} / ${totalStudents} คน ⏳`}
+            </div>
           </div>
         </div>
       </div>
 
+      {/* Choices */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
         {options.map(opt => {
           const count = Object.values(allVotes).filter(v => v === opt.id).length;
@@ -484,11 +513,16 @@ function ClientDigital() {
                 />
               )}
               <div style={{ position: 'relative', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ color: showResults && isCorrectAnswer ? '#50fa7b' : isMyVote ? opt.color : 'white', fontWeight: isMyVote || (showResults && isCorrectAnswer) ? 'bold' : 'normal', fontSize: '1rem' }}>
-                  {opt.label} {isMyVote && '✅'} {showResults && isCorrectAnswer && '🎯'}
-                </span>
+                <div>
+                  <div style={{ color: showResults && isCorrectAnswer ? '#50fa7b' : isMyVote ? opt.color : 'white', fontWeight: isMyVote || (showResults && isCorrectAnswer) ? 'bold' : 'normal', fontSize: '0.98rem' }}>
+                    {opt.label} {isMyVote && '✅'} {showResults && isCorrectAnswer && '🎯'}
+                  </div>
+                  <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginTop: '0.2rem' }}>
+                    {opt.sub}
+                  </div>
+                </div>
                 {showResults && totalVotes > 0 && (
-                  <span style={{ color: opt.color, fontWeight: 'bold', fontSize: '1.1rem' }}>
+                  <span style={{ color: opt.color, fontWeight: 'bold', fontSize: '1.1rem', marginLeft: '0.5rem', flexShrink: 0 }}>
                     {pct}%
                   </span>
                 )}
@@ -504,19 +538,32 @@ function ClientDigital() {
           ⏳ บันทึกคำตอบแล้ว — กำลังรอเพื่อนๆ ตอบให้ครบ ({totalVotes} / {totalStudents} คน)
         </motion.div>
       )}
-      {showResults && myVote && (
+
+      {showResults && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-          style={{ textAlign: 'center', color: myVote === correctAnswer ? 'var(--neon-green)' : '#ff6b6b', fontSize: '0.9rem', padding: '0.5rem' }}>
-          {myVote === correctAnswer ? '🎉 ถูกต้อง!' : '❌ ไม่ถูก — คำตอบที่ถูกคือ ' + options.find(o => o.id === correctAnswer)?.label}
+          style={{ padding: '1rem', borderRadius: 12, background: myVote === correctAnswer ? 'rgba(80,250,123,0.1)' : 'rgba(255,107,107,0.1)', border: `1px solid ${myVote === correctAnswer ? 'rgba(80,250,123,0.3)' : 'rgba(255,107,107,0.3)'}` }}>
+          <div style={{ color: myVote === correctAnswer ? 'var(--neon-green)' : '#ff6b6b', fontWeight: 'bold', fontSize: '0.95rem', marginBottom: '0.4rem' }}>
+            {myVote === correctAnswer ? '🎉 คำตอบของคุณถูกต้อง!' : '❌ ยังไม่ถูกต้อง (คำตอบที่ถูกคือ: 2 ระดับลอจิก)'}
+          </div>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', margin: '0 0 0.5rem 0', lineHeight: 1.5 }}>
+            เซนเซอร์ตรวจจับความเคลื่อนไหว (PIR) ส่งค่า <b>1 (HIGH)</b> เมื่อพบคน และส่ง <b>0 (LOW)</b> เมื่อไม่มีคน บอร์ดจึงสั่งเปิดไฟตามสภาวะลอจิกนี้
+          </p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap', fontSize: '0.78rem', color: '#8becbf', background: 'rgba(0,0,0,0.3)', padding: '6px 10px', borderRadius: 6 }}>
+            <span>คนเดินผ่าน 🚶</span>
+            <span>→</span>
+            <span>PIR ส่ง 1 (HIGH) ⚡</span>
+            <span>→</span>
+            <span>บอร์ด ESP32 🧠</span>
+            <span>→</span>
+            <span>ไฟเปิดติด 💡</span>
+          </div>
         </motion.div>
       )}
-      {showResults && !myVote && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-          style={{ textAlign: 'center', color: '#ff6b6b', fontSize: '0.9rem' }}>
-          ⏰ หมดเวลา! คำตอบที่ถูกคือ {options.find(o => o.id === correctAnswer)?.label}
-        </motion.div>
-      )}
-      <SignalActivityReview kind="digital" revealed={showResults} />
+
+      {/* Interactive Digital Simulator directly on Student Screen */}
+      <div style={{ marginTop: '0.5rem' }}>
+        <DigitalExamples initialScenario="motion" showScenarioPicker={true} />
+      </div>
     </div>
   );
 }
@@ -1052,6 +1099,11 @@ export default function ClientView() {
           case 'roles': return <ClassroomChoiceActivity activityId="roles" />;
           case 'sensors': return <ClientCatalog />;
           case 'problem': return <ClientProblem />;
+          case 'digitalexamples': return (
+            <div className="digital-examples-page" style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
+              <DigitalExamples />
+            </div>
+          );
           case 'digital': return <ClientDigital />;
           case 'analog': return <ClientAnalog />;
           case 'logic': return <ClientLogic />;
@@ -1062,9 +1114,7 @@ export default function ClientView() {
           case 'wrapup': return <ClassroomChoiceActivity activityId="wrapup" />;
           case 'ideation': return <ClassroomChoiceActivity activityId="ideation" />;
           case 'digitaltiming': return <ClassroomChoiceActivity activityId="digitaltiming" />;
-          case 'digitalprotocol': return <ClassroomChoiceActivity activityId="digitalprotocol" />;
           case 'statemachine': return <ClassroomChoiceActivity activityId="statemachine" />;
-          case 'digitalplanning': return <ClassroomChoiceActivity activityId="digitalplanning" />;
           default: return <div>Unknown Activity</div>;
         }
       default:
@@ -1160,12 +1210,18 @@ export default function ClientView() {
               transition={{ duration: 0.22 }}
               style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
             >
-              <LessonSlideshow
-                key={currentStepData.lessonId}
-                phase={currentStepData.lessonId}
-                quizRevealed={roomState.quizRevealed}
-                controlledSlide={roomState.presentation?.slide ?? 0}
-              />
+              {currentStepData.id === 'digitalexamples' ? (
+                <div className="digital-examples-page" style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
+                  <DigitalExamples />
+                </div>
+              ) : (
+                <LessonSlideshow
+                  key={currentStepData.lessonId}
+                  phase={currentStepData.lessonId}
+                  quizRevealed={roomState.quizRevealed}
+                  controlledSlide={roomState.presentation?.slide ?? 0}
+                />
+              )}
             </motion.div>
           )}
         </AnimatePresence>

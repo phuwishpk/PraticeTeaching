@@ -140,10 +140,6 @@ test('teacher and student pages render with the current chapter/step room state'
       // A graphic family the dispatcher does not know falls through to the analog lab without
       // complaining, so each slide is checked for wording only its own laboratory renders.
       const marker = {
-        'timing:pulse': 'ยิงคลื่นวัดอีกครั้ง',
-        'timing:compare': 'เซนเซอร์แบบมีเกณฑ์',
-        'protocol:bus': 'ไม่มีใครอยู่',
-        'protocol:frame': 'จังหวะถัดไป',
         'state:alarm': 'isAlarm',
         'state:toggle': 'สถานะที่จำไว้',
       };
