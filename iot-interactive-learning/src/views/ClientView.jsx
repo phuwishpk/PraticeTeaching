@@ -472,7 +472,7 @@ function ClientDigital() {
           <CountdownTimer startTime={roomState.questionStartTime} duration={(roomState.questionDurationMs ?? 30000) / 1000} size={50} stopped={isAllAnswered} />
           <div>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 12, background: 'rgba(0,240,255,0.15)', color: 'var(--neon-blue)', fontSize: '0.75rem', fontWeight: 'bold' }}>
-              🚶 ภารกิจ IoT: ตรวจจับคนด้วยเซนเซอร์ PIR
+              🎯 กิจกรรม Multiple Choice · สัญญาณ Digital 0 และ 1
             </div>
             <div style={{ fontWeight: 'bold', color: 'white', fontSize: '1.05rem', marginTop: '0.3rem', lineHeight: 1.4 }}>
               เมื่อเซนเซอร์ตรวจพบคนเดินผ่าน สัญญาณ Digital 1 บิต ส่งค่าแบบใดให้บอร์ดสั่งเปิดไฟ?
@@ -1099,11 +1099,7 @@ export default function ClientView() {
           case 'roles': return <ClassroomChoiceActivity activityId="roles" />;
           case 'sensors': return <ClientCatalog />;
           case 'problem': return <ClientProblem />;
-          case 'digitalexamples': return (
-            <div className="digital-examples-page" style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
-              <DigitalExamples />
-            </div>
-          );
+          case 'digitalexamples': return <ClassroomChoiceActivity activityId="digitalexamples" />;
           case 'digital': return <ClientDigital />;
           case 'analog': return <ClientAnalog />;
           case 'logic': return <ClientLogic />;

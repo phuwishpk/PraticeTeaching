@@ -4,6 +4,21 @@ import { chapterThreeActivities } from './chapterThree.js';
 export const classroomChoiceActivities = {
   ...chapterTwoActivities,
   ...chapterThreeActivities,
+  digitalexamples: {
+    title: 'ตัวจำลองสัญญาณ Digital',
+    question: 'จากตัวจำลองอุปกรณ์ดิจิทัล ข้อใดคือสัญญาณ Digital แบบ 1 บิต (มีเพียง 2 สถานะ เปิด/ปิด หรือ ตรวจพบ/ไม่พบ)?',
+    durationSeconds: 45,
+    correctId: 'switch_pir',
+    options: [
+      { id: 'switch_pir', icon: '🔘', label: 'สวิตช์ปุ่มกด และ เซนเซอร์ PIR', detail: 'ส่งค่า LOW (0) หรือ HIGH (1) บอกสถานะเปิด/ปิด หรือพบ/ไม่พบ' },
+      { id: 'dht11_temp', icon: '🌡️', label: 'เซนเซอร์ DHT11 วัดอุณหภูมิ', detail: 'ส่งข้อมูลชุดตัวเลขหลายบิต ไม่ใช่เพียงสถานะเดียว' },
+      { id: 'analog_light', icon: '💡', label: 'เซนเซอร์วัดแสงแบบ Analog AO', detail: 'ส่งระดับแรงดันต่อเนื่องตามความสว่าง' },
+      { id: 'motor_speed', icon: '⚙️', label: 'มอเตอร์พัดลมปรับความเร็วรอบ', detail: 'ปรับความเร็วได้หลายระดับอย่างต่อเนื่อง' },
+    ],
+    explanation: 'สวิตช์ปุ่มกด และ เซนเซอร์ PIR ส่งสัญญาณ Digital แบบ 1 บิต คือมีเพียง 2 ระดับสถานะ (LOW=0 / HIGH=1) เหมาะกับการบอกสภาวะเปิด/ปิด หรือพบ/ไม่พบสิ่งของ ส่วน DHT11 ส่งข้อมูลหลายบิต และเซนเซอร์ Analog ส่งแรงดันต่อเนื่อง',
+    objective: 'แยกแยะอุปกรณ์ที่ใช้สัญญาณ Digital 1 บิตออกจากสัญญาณแบบอื่นได้จากตัวจำลอง',
+    flow: ['ทดลองในตัวจำลอง', 'สังเกตสถานะ 0/1', 'เลือกอุปกรณ์ 1 บิต'],
+  },
   roles: {
     title: 'ใครเป็นผู้ตัดสินใจในระบบ IoT?',
     question: 'เมื่อเซ็นเซอร์ส่งค่าเข้ามา อุปกรณ์ใดอ่านค่า ตรวจเงื่อนไข และสั่ง Output?',

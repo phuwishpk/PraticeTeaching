@@ -293,131 +293,127 @@ function HostDigital() {
   const options = [
     {
       id: '2_states',
+      icon: '✌️',
       label: '2 ระดับลอจิก (LOW/0 และ HIGH/1)',
       sub: 'ส่ง HIGH (1) เมื่อพบคน และ LOW (0) เมื่อไม่มีคน'
     },
     {
       id: '10_states',
+      icon: '🔟',
       label: '10 ระดับสถานะ (0 ถึง 9)',
       sub: 'ส่งตัวเลข 0 ถึง 9 เพื่อบอกจำนวนคนที่กำลังเดินผ่าน'
     },
     {
       id: 'infinite',
+      icon: '〰️',
       label: 'นับไม่ถ้วน ค่าต่อเนื่อง (Analog)',
       sub: 'ส่งค่าแรงดันที่แปรผันตามระยะหรือความเร็วการเดิน'
     },
     {
       id: 'none',
+      icon: '❓',
       label: 'ไม่มีสถานะที่แน่นอน (สุ่มค่า)',
       sub: 'ส่งค่าสลับไปมาแบบสุ่มไม่มีสภาวะลอจิกคงที่'
     }
   ];
 
   return (
-    <div style={{ width: '100%', minHeight: '100%', padding: '2rem 1.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2rem', boxSizing: 'border-box' }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
-        <CountdownTimer startTime={roomState.questionStartTime} duration={(roomState.questionDurationMs ?? 30000) / 1000} size={70} stopped={isAllAnswered} />
-        <div>
-          <h1 className="text-glow-blue" style={{ fontSize: '2.5rem', margin: '0 0 0.5rem 0' }}>
-            ภารกิจ IoT: สัญญาณ Digital กับระบบตรวจจับคน (PIR)
-          </h1>
-          <div style={{ color: 'var(--text-secondary)', fontSize: '1.1rem' }}>
-            ทดลองจำลองสถานการณ์จริง เปรียบเทียบสภาวะ 0 และ 1 พร้อมร่วมตอบคำถาม
-          </div>
-        </div>
-      </div>
-      
-      {/* Main 2-Column Layout */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2rem', width: '100%', maxWidth: 1400, justifyContent: 'center', alignItems: 'flex-start' }}>
+    <div style={{ width: '100%', minHeight: '100%', padding: '2rem 1.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center', boxSizing: 'border-box' }}>
+      <div className="glass-panel" style={{ width: '100%', maxWidth: 840, padding: '2.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         
-        {/* Left: Interactive Digital Simulation */}
-        <div style={{ flex: '1.4', minWidth: 440, maxWidth: 800 }}>
-          <DigitalExamples initialScenario="motion" showScenarioPicker={true} />
+        {/* Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '1.25rem' }}>
+          <div>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 12px', borderRadius: 20, background: 'rgba(0,240,255,0.15)', color: 'var(--neon-blue)', fontSize: '0.85rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
+              🎯 กิจกรรม Multiple Choice
+            </div>
+            <h1 className="text-glow-blue" style={{ fontSize: '2rem', margin: 0 }}>
+              สัญญาณ Digital: โลกของ 0 และ 1
+            </h1>
+          </div>
+          <CountdownTimer startTime={roomState.questionStartTime} duration={(roomState.questionDurationMs ?? 30000) / 1000} size={70} stopped={isAllAnswered} />
         </div>
 
-        {/* Right: Classroom Q&A & Live Voting */}
-        <div className="glass-panel" style={{ flex: '1', minWidth: 380, maxWidth: 560, padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          
-          {/* Question Box */}
-          <div style={{ padding: '1.5rem', border: '2px solid var(--neon-blue)', borderRadius: 16, background: 'rgba(0,240,255,0.06)' }}>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 12px', borderRadius: 20, background: 'rgba(0,240,255,0.15)', color: 'var(--neon-blue)', fontSize: '0.85rem', fontWeight: 'bold', marginBottom: '0.8rem' }}>
-              🎯 โจทย์ถามตอบกิจกรรมในห้องเรียน
-            </div>
-            <h2 style={{ color: 'white', margin: '0 0 0.5rem 0', fontSize: '1.35rem', lineHeight: 1.5 }}>
-              เมื่อเซนเซอร์ PIR ตรวจพบคนเดินผ่าน สัญญาณ Digital 1 บิต ส่งค่าแบบใดให้บอร์ดสั่งเปิดไฟ?
-            </h2>
-            <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: '0.95rem', lineHeight: 1.5 }}>
-              💡 ลองสังเกตจากตัวจำลอง: เมื่อคนเดินผ่านเซนเซอร์ (PIR) ขาสัญญาณส่งระดับลอจิกใดเข้าสู่บอร์ด?
-            </p>
-          </div>
-
-          {/* Voting Status */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h2 style={{ color: 'var(--neon-green)', margin: 0, fontSize: '1.4rem' }}>ผลโหวต</h2>
-            <div style={{ color: showResults ? (isAllAnswered ? 'var(--neon-green)' : 'var(--text-secondary)') : 'var(--neon-blue)', fontWeight: 'bold', fontSize: '0.95rem' }}>
+        {/* Question Box */}
+        <div style={{ padding: '1.5rem', border: '2px solid rgba(0,240,255,0.3)', borderRadius: 16, background: 'rgba(0,240,255,0.05)' }}>
+          <h2 style={{ color: 'white', margin: '0 0 0.5rem 0', fontSize: '1.35rem', lineHeight: 1.5 }}>
+            เมื่อเซนเซอร์ PIR ตรวจพบคนเดินผ่าน สัญญาณ Digital 1 บิต ส่งค่าแบบใดให้บอร์ดสั่งเปิดไฟ?
+          </h2>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+            <span style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
+              💡 เลือกระดับสถานะลอจิกที่ถูกต้องของสัญญาณ Digital 1 บิต
+            </span>
+            <span style={{ color: showResults ? (isAllAnswered ? 'var(--neon-green)' : 'var(--text-secondary)') : 'var(--neon-blue)', fontWeight: 'bold', fontSize: '0.95rem' }}>
               {showResults
                 ? (isAllAnswered ? `✅ ตอบครบทุกคนแล้ว (${totalVotes}/${totalStudents} คน)` : `⏰ หมดเวลา (${totalVotes}/${totalStudents} คน)`)
-                : `⏳ กำลังรอคำตอบ... (${totalVotes}/${totalStudents} คน)`}
-            </div>
+                : `⏳ เปิดรับคำตอบ · ${totalVotes} / ${totalStudents} คน`}
+            </span>
           </div>
-          
-          {/* Options & Progress */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {options.map(opt => {
-              const count = Object.values(votes).filter(v => v === opt.id).length;
-              const pct = totalVotes === 0 ? 0 : Math.round((count / totalVotes) * 100);
-              const isCorrect = opt.id === '2_states';
-              return (
-                <div key={opt.id} style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', padding: '0.75rem', borderRadius: 12, background: 'rgba(255,255,255,0.03)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+        </div>
+
+        {/* Multiple Choice Options Grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '1rem' }}>
+          {options.map(opt => {
+            const count = Object.values(votes).filter(v => v === opt.id).length;
+            const pct = totalVotes === 0 ? 0 : Math.round((count / totalVotes) * 100);
+            const isCorrect = opt.id === '2_states';
+            return (
+              <div key={opt.id} style={{
+                display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '1.25rem', borderRadius: 14,
+                background: showResults && isCorrect ? 'rgba(80,250,123,0.12)' : 'rgba(255,255,255,0.04)',
+                border: `2px solid ${showResults && isCorrect ? 'var(--neon-green)' : 'rgba(255,255,255,0.1)'}`,
+                boxShadow: showResults && isCorrect ? '0 0 20px rgba(80,250,123,0.2)' : 'none',
+                position: 'relative', overflow: 'hidden'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+                    <span style={{ fontSize: '1.6rem', lineHeight: 1 }}>{opt.icon}</span>
                     <div>
-                      <div style={{ fontSize: '1.05rem', color: showResults && isCorrect ? 'var(--neon-green)' : 'white', fontWeight: showResults && isCorrect ? 'bold' : 'normal' }}>
+                      <div style={{ fontSize: '1.1rem', color: showResults && isCorrect ? 'var(--neon-green)' : 'white', fontWeight: showResults && isCorrect ? 'bold' : '600' }}>
                         {opt.label} {showResults && isCorrect && '🎯'}
                       </div>
-                      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                      <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '4px', lineHeight: 1.4 }}>
                         {opt.sub}
                       </div>
                     </div>
-                    {showResults && (
-                      <span style={{ fontSize: '1.1rem', fontWeight: 'bold', color: isCorrect ? 'var(--neon-green)' : 'var(--neon-blue)', marginLeft: '0.5rem', flexShrink: 0 }}>
-                        {count} ({pct}%)
-                      </span>
-                    )}
                   </div>
                   {showResults && (
-                    <div style={{ width: '100%', height: 12, background: 'rgba(255,255,255,0.1)', borderRadius: 6, overflow: 'hidden', marginTop: '4px' }}>
-                      <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} style={{ height: '100%', background: isCorrect ? 'var(--neon-green)' : 'var(--neon-blue)' }} />
-                    </div>
+                    <span style={{ fontSize: '1.2rem', fontWeight: 'bold', color: isCorrect ? 'var(--neon-green)' : 'var(--neon-blue)', marginLeft: '0.5rem', flexShrink: 0 }}>
+                      {count} ({pct}%)
+                    </span>
                   )}
                 </div>
-              );
-            })}
-          </div>
-
-          {/* Explanation when revealed */}
-          {showResults && (
-            <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }}
-              style={{ padding: '1.25rem', borderRadius: 14, background: 'rgba(80,250,123,0.08)', border: '1px solid rgba(80,250,123,0.3)' }}>
-              <div style={{ color: 'var(--neon-green)', fontWeight: 'bold', fontSize: '1.05rem', marginBottom: '0.5rem' }}>
-                🎯 เฉลย: สัญญาณ Digital 1 บิต มีเพียง 2 ระดับสถานะ (0 / 1)
+                {showResults && (
+                  <div style={{ width: '100%', height: 8, background: 'rgba(255,255,255,0.08)', borderRadius: 4, overflow: 'hidden', marginTop: '6px' }}>
+                    <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} style={{ height: '100%', background: isCorrect ? 'var(--neon-green)' : 'var(--neon-blue)' }} />
+                  </div>
+                )}
               </div>
-              <p style={{ color: 'white', fontSize: '0.95rem', margin: '0 0 0.75rem 0', lineHeight: 1.6 }}>
-                เซนเซอร์ตรวจจับความเคลื่อนไหว (PIR) เป็นอุปกรณ์ Digital Input ส่งค่า <b>HIGH (1)</b> เมื่อตรวจพบคน และส่ง <b>LOW (0)</b> เมื่อไม่มีคน บอร์ดไมโครคอนโทรลเลอร์จะตรวจสอบเงื่อนไข <code>if (read == HIGH)</code> แล้วจึงสั่งเปิดไฟทางเดิน!
-              </p>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', fontSize: '0.85rem', color: '#8becbf', background: 'rgba(0,0,0,0.3)', padding: '8px 12px', borderRadius: 8 }}>
-                <span>คนเดินผ่าน 🚶</span>
-                <span>→</span>
-                <span>PIR ส่ง 1 (HIGH) ⚡</span>
-                <span>→</span>
-                <span>บอร์ดประมวลผล 🧠</span>
-                <span>→</span>
-                <span>สั่งเปิดไฟติด 💡</span>
-              </div>
-            </motion.div>
-          )}
+            );
+          })}
         </div>
 
+        {/* Explanation when revealed */}
+        {showResults && (
+          <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }}
+            style={{ padding: '1.5rem', borderRadius: 14, background: 'rgba(80,250,123,0.08)', border: '1px solid rgba(80,250,123,0.3)', marginTop: '0.5rem' }}>
+            <div style={{ color: 'var(--neon-green)', fontWeight: 'bold', fontSize: '1.15rem', marginBottom: '0.5rem' }}>
+              🎯 เฉลย: สัญญาณ Digital 1 บิต มีเพียง 2 ระดับสถานะ (0 / 1)
+            </div>
+            <p style={{ color: 'white', fontSize: '0.98rem', margin: '0 0 1rem 0', lineHeight: 1.6 }}>
+              เซนเซอร์ตรวจจับความเคลื่อนไหว (PIR) เป็นอุปกรณ์ Digital Input ส่งค่า <b>HIGH (1)</b> เมื่อตรวจพบคน และส่ง <b>LOW (0)</b> เมื่อไม่มีคน บอร์ดไมโครคอนโทรลเลอร์จะตรวจสอบเงื่อนไข <code>if (read == HIGH)</code> แล้วจึงสั่งเปิดไฟทางเดิน!
+            </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', fontSize: '0.9rem', color: '#8becbf', background: 'rgba(0,0,0,0.3)', padding: '10px 16px', borderRadius: 10 }}>
+              <span>คนเดินผ่าน 🚶</span>
+              <span>→</span>
+              <span>PIR ส่ง 1 (HIGH) ⚡</span>
+              <span>→</span>
+              <span>ESP32 ตรวจเงื่อนไข 🧠</span>
+              <span>→</span>
+              <span>สั่งเปิดไฟทางเดินติด 💡</span>
+            </div>
+          </motion.div>
+        )}
       </div>
     </div>
   );
@@ -1251,11 +1247,7 @@ export default function HostView() {
               {currentStepData.id === 'roles' && <ClassroomChoiceActivity activityId="roles" audience="teacher" />}
               {currentStepData.id === 'sensors' && <HostCatalog />}
               {currentStepData.id === 'problem' && <HostProblem />}
-              {currentStepData.id === 'digitalexamples' && (
-                <div className="digital-examples-page" style={{ flex: 1, overflowY: 'auto' }}>
-                  <DigitalExamples />
-                </div>
-              )}
+              {currentStepData.id === 'digitalexamples' && <ClassroomChoiceActivity activityId="digitalexamples" audience="teacher" />}
               {currentStepData.id === 'digital' && <HostDigital />}
               {currentStepData.id === 'analog' && <HostAnalog />}
               {currentStepData.id === 'logic' && <HostLogic />}

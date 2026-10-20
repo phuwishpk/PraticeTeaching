@@ -11,7 +11,7 @@ function advance(state) {
   if (state.phase >= 3) return state;
   const phase = state.phase + 1;
   return { ...state, phase, running: phase < 3 && state.running,
-    ...(phase === 2 ? { readBit: Number(state.input), history: [...state.history.slice(-7), Number(state.input)] } : {}),
+    ...(phase === 2 ? { readBit: Number(state.input) } : {}),
     ...(phase === 3 ? { output: state.input } : {}),
   };
 }
@@ -19,7 +19,19 @@ export function simulationReducer(state, action) {
   switch (action.type) {
     case 'scenario': return digitalScenarios[action.scenario] ? initialSimulation(action.scenario) : state;
     case 'reset': return initialSimulation(state.scenario);
-    case 'toggle': return { ...state, input: !state.input, phase: 1, running: state.automatic };
+    case 'toggle': {
+      const nextInput = !state.input;
+      const bit = Number(nextInput);
+      return {
+        ...state,
+        input: nextInput,
+        readBit: bit,
+        output: nextInput,
+        phase: 3,
+        running: false,
+        history: [...state.history.slice(-7), bit],
+      };
+    }
     case 'replay': return { ...state, phase: 1, running: state.automatic };
     case 'mode': return { ...state, automatic: action.automatic, running: action.automatic && state.phase < 3 };
     case 'pause': return { ...state, running: false };

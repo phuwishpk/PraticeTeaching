@@ -7,10 +7,7 @@ import DigitalExamples from '../components/DigitalExamples';
 // Every digital lesson in teaching order, so the arrows carry straight from one into the next.
 const LESSON_TOUR = [
   { id: 4, label: '01 · รู้จัก 0 และ 1' },
-  { id: 12, label: '02 · รวมบิตเป็นตัวเลข' },
-  { id: 15, label: '03 · เวลาเป็นข้อมูล' },
-  { id: 16, label: '04 · โปรโตคอลและที่อยู่' },
-  { id: 17, label: '05 · จำสถานะ' },
+  { id: 17, label: '02 · จำสถานะ' },
 ];
 
 // An independent teaching preview; navigation here never changes the live classroom.

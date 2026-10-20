@@ -26,8 +26,8 @@ function Scene({ scenario, input, output }) {
     </g>}
     <g transform="translate(405 157)"><path d="M-35 0h90m-14-12l14 12-14 12" stroke={input ? '#90edc4' : '#526c86'} strokeWidth="4" fill="none" strokeDasharray="8 5" className="example-signal-path" /></g>
     {scenario === 'door' ? <g transform="translate(642 138)"><rect x="-46" y="-48" width="92" height="105" rx="18" fill={output ? '#cf685e' : '#34495d'} stroke={output ? '#ffd1aa' : '#8195a9'} strokeWidth="3" /><circle r="27" fill="#152c3b" /><circle r="15" fill={output ? '#ffcf8e' : '#6b829a'} />{output && <g className="example-alarm-waves" stroke="#ffcf8e" fill="none" strokeWidth="4"><path d="M-64-30q-25 30 0 60 M64-30q25 30 0 60 M-80-45q-35 45 0 90 M80-45q35 45 0 90" /></g>}</g> : <g transform="translate(642 132)">
-      <circle className="example-lamp-glow" r="85" fill="#ffe3a5" opacity={output ? .12 : 0} /><circle r="65" fill="#ffdc8f" opacity={output ? .1 : 0} />
-      <path d="M-16 25C-65-20-30-58 0-58S65-20 16 25V45H-16Z" fill={output ? '#ffe2a0' : '#334b61'} stroke={output ? '#fff2cb' : '#8195a9'} strokeWidth="4" />
+      <circle className="example-lamp-glow" r="95" fill="#ffe3a5" opacity={output ? .35 : 0} /><circle r="65" fill="#ffdc8f" opacity={output ? .25 : 0} />
+      <path d="M-16 25C-65-20-30-58 0-58S65-20 16 25V45H-16Z" fill={output ? '#ffe2a0' : '#334b61'} stroke={output ? '#fff2cb' : '#8195a9'} strokeWidth="4" style={{ filter: output ? 'drop-shadow(0 0 20px rgba(255, 226, 160, 0.8))' : 'none', transition: 'fill .2s, filter .2s' }} />
       <path d="M-18 34H18 M-18 44H18 M-9 53H9" stroke="#9bb1c1" strokeWidth="5" strokeLinecap="round" />
       {output && <g stroke="#ffe2a0" strokeWidth="4" strokeLinecap="round"><path d="M0-80v-12 M57-56l10-10 M-57-56l-10-10 M76 0h12 M-76 0h-12" /></g>}
     </g>}
