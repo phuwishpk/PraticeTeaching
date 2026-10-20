@@ -66,6 +66,7 @@ export const CHAPTER_FLOW = {
     { type: 'activity', id: 'digitalexamples', lessonId: 4 },
     { type: 'activity', id: 'digital', lessonId: 4 },
     { type: 'activity', id: 'statemachine', lessonId: 17 },
+    { type: 'activity', id: 'digitalsummary', lessonId: 18 },
     { type: 'podium', lessonId: 1 }
   ]
 };

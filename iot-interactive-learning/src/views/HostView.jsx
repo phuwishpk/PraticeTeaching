@@ -884,6 +884,7 @@ const STEP_LABELS = {
   digitalexamples: 'จำลองตัวอย่าง',
   digital: 'รู้จัก 0 และ 1',
   statemachine: 'จำสถานะ',
+  digitalsummary: 'สรุปเนื้อหา',
   architecture: 'ภาพรวมระบบ IoT',
   roles: 'Output',
   sensors: 'Input',
@@ -907,6 +908,7 @@ function getStepLabel(step, chapter) {
     if (step.id === 'digitalexamples') return 'จำลองตัวอย่าง';
     if (step.id === 'digital') return 'รู้จัก 0 และ 1';
     if (step.id === 'statemachine') return 'จำสถานะ';
+    if (step.id === 'digitalsummary') return 'สรุปเนื้อหา';
   }
   return STEP_LABELS[step.id || step.type] || lessons[step.lessonId]?.title;
 }
@@ -1259,6 +1261,7 @@ export default function HostView() {
               {currentStepData.id === 'ideation' && <ClassroomChoiceActivity activityId="ideation" audience="teacher" />}
               {currentStepData.id === 'digitaltiming' && <ClassroomChoiceActivity activityId="digitaltiming" audience="teacher" />}
               {currentStepData.id === 'statemachine' && <ClassroomChoiceActivity activityId="statemachine" audience="teacher" />}
+              {currentStepData.id === 'digitalsummary' && <ClassroomChoiceActivity activityId="digitalsummary" audience="teacher" />}
               {currentStepData.type === 'podium' && <HostPodium />}
             </motion.div>
           )}

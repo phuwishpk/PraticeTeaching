@@ -1111,6 +1111,7 @@ export default function ClientView() {
           case 'ideation': return <ClassroomChoiceActivity activityId="ideation" />;
           case 'digitaltiming': return <ClassroomChoiceActivity activityId="digitaltiming" />;
           case 'statemachine': return <ClassroomChoiceActivity activityId="statemachine" />;
+          case 'digitalsummary': return <ClassroomChoiceActivity activityId="digitalsummary" />;
           default: return <div>Unknown Activity</div>;
         }
       default:
