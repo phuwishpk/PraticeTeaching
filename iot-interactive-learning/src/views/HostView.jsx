@@ -882,8 +882,8 @@ function HostPodium() {
 const STEP_LABELS = {
   lobby: 'เข้าห้องเรียน',
   digitalexamples: 'จำลองตัวอย่าง',
-  digital: '01 · รู้จัก 0 และ 1',
-  statemachine: '02 · จำสถานะ',
+  digital: 'รู้จัก 0 และ 1',
+  statemachine: 'จำสถานะ',
   architecture: 'ภาพรวมระบบ IoT',
   roles: 'Output',
   sensors: 'Input',
@@ -905,8 +905,8 @@ function getStepLabel(step, chapter) {
   }
   if (chapter === 4) {
     if (step.id === 'digitalexamples') return 'จำลองตัวอย่าง';
-    if (step.id === 'digital') return '01 · รู้จัก 0 และ 1';
-    if (step.id === 'statemachine') return '02 · จำสถานะ';
+    if (step.id === 'digital') return 'รู้จัก 0 และ 1';
+    if (step.id === 'statemachine') return 'จำสถานะ';
   }
   return STEP_LABELS[step.id || step.type] || lessons[step.lessonId]?.title;
 }

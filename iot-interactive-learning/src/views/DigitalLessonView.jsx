@@ -6,8 +6,8 @@ import DigitalExamples from '../components/DigitalExamples';
 
 // Every digital lesson in teaching order, so the arrows carry straight from one into the next.
 const LESSON_TOUR = [
-  { id: 4, label: '01 · รู้จัก 0 และ 1' },
-  { id: 17, label: '02 · จำสถานะ' },
+  { id: 4, label: 'รู้จัก 0 และ 1' },
+  { id: 17, label: 'จำสถานะ' },
 ];
 
 // An independent teaching preview; navigation here never changes the live classroom.

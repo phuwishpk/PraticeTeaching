@@ -87,8 +87,8 @@ function DigitalSignalLab({ mode }) {
       <div className="digital-key-idea"><Check aria-hidden="true" /><p><b>0 ไม่ได้แปลว่าปิดเสมอไป</b><br />ต้องรู้การต่อวงจร ก่อนแปลความหมายของบิต</p></div>
       <p className="digital-caption">0 V / 3.3 V เป็นแรงดันขาสัญญาณอุดมคติในตัวอย่าง ช่วงแรงดัน LOW/HIGH จริงขึ้นกับอุปกรณ์</p>
     </> : mode === 'check' ? <QuickCheck key={resetCount} /> : <>
-      <div className="digital-level-console"><div><span className="digital-kicker">01 · เลือกส่งค่าทีละบิต</span><div className="digital-actions"><button type="button" className="digital-send-low" onClick={() => send(0)}><b>0</b><span>ส่ง LOW</span></button><button type="button" className="digital-send-high" onClick={() => send(1)}><b>1</b><span>ส่ง HIGH</span></button></div></div><output className="digital-current" aria-live="polite"><span>ค่าล่าสุด</span><strong>{current}</strong><b>{current ? 'HIGH' : 'LOW'}</b></output></div>
-      <div className="digital-chart-heading"><span className="digital-kicker">02 · อ่านกราฟจากซ้ายไปขวา</span><span>ขวาสุด = ค่าล่าสุด</span></div>
+      <div className="digital-level-console"><div><span className="digital-kicker">เลือกส่งค่าทีละบิต</span><div className="digital-actions"><button type="button" className="digital-send-low" onClick={() => send(0)}><b>0</b><span>ส่ง LOW</span></button><button type="button" className="digital-send-high" onClick={() => send(1)}><b>1</b><span>ส่ง HIGH</span></button></div></div><output className="digital-current" aria-live="polite"><span>ค่าล่าสุด</span><strong>{current}</strong><b>{current ? 'HIGH' : 'LOW'}</b></output></div>
+      <div className="digital-chart-heading"><span className="digital-kicker">อ่านกราฟจากซ้ายไปขวา</span><span>ขวาสุด = ค่าล่าสุด</span></div>
       <Trace bits={history} selected={selected} onSelect={setSelected} />
       <p className="digital-selected" aria-live="polite">ช่องที่ <b>{selected + 1}</b> อ่านได้ <b>{history[selected]} · {history[selected] ? 'HIGH' : 'LOW'}</b></p>
       <div className="digital-key-idea"><Lightbulb aria-hidden="true" /><p>ลองส่ง <b>1 → 1</b> ติดกัน: กราฟยังอยู่ที่ HIGH <b>ไม่ได้เพิ่มเป็น 2</b></p></div>

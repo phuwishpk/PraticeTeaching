@@ -11,7 +11,7 @@ export const chapterTwoLessons = {
     ],
     "sections": [
       {
-        "title": "2.1 หนึ่งบิต มีแค่ 2 สถานะ (LOW และ HIGH)",
+        "title": "หนึ่งบิต มีแค่ 2 สถานะ (LOW และ HIGH)",
         "text": "สัญญาณ Digital มีเพียง 2 ระดับ คือ LOW (0) และ HIGH (1) โดย 1 บิตส่งได้ทีละสถานะ เช่น 0V = LOW และ 3.3V = HIGH อ่านกราฟจากซ้ายไปขวา: สูง = 1, ต่ำ = 0",
         "detail": "ในวงจรจริงใช้ระดับแรงดันไฟฟ้าแทนสถานะ บอร์ดอ่านค่า 0 หรือ 1 ไปประมวลผล เช่น สวิตช์เปลี่ยนสถานะ หรือเซนเซอร์ส่งค่า แล้วสั่งให้ LED ติดหรือดับ",
         "signalGraphic": "digital:levels",
@@ -19,7 +19,7 @@ export const chapterTwoLessons = {
         "detailDisclosure": true
       },
       {
-        "title": "2.2 วงจรและการแปลความหมาย 0 และ 1",
+        "title": "วงจรและการแปลความหมาย 0 และ 1",
         "text": "ความหมายของ 0 และ 1 ขึ้นอยู่กับรูปแบบการต่อวงจร เช่น วงจรแบบ Active-High (กดปุ่ม = 1) หรือ Active-Low (กดปุ่ม = 0) และเซนเซอร์อย่าง PIR ที่ส่ง 1 เมื่อพบการเคลื่อนไหว",
         "detail": "ต้องตรวจดูวงจรหรือสเปกของเซนเซอร์ก่อนเขียนโปรแกรมเสมอ เพราะค่า 0 ไม่ได้แปลว่า 'ปิด' หรือ 'ไม่มีไฟเลี้ยง' เสมอไป",
         "signalGraphic": "digital:polarity",
@@ -37,7 +37,7 @@ export const chapterTwoLessons = {
       ],
       "diagramDevice": "pir"
     },
-    "displayLabel": "บทที่ 2 · ตอนที่ 1 / 5",
+    "displayLabel": "สัญญาณ Digital 0 และ 1",
     "signalTheme": "digital"
   },
   "5": {
