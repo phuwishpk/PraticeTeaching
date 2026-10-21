@@ -14,7 +14,7 @@ function toLocalClock(snapshot) {
 // Only the teacher's navigation depends on arriving in order — a slider dragged across a
 // slide, a step pressed twice. An answer does not, and queueing one behind a stalled emoji
 // on bad wi-fi is how a learner misses the deadline holding a phone that looks fine.
-const ORDERED_ACTIONS = new Set(['presentation', 'changeStep', 'changeChapter', 'voteItem', 'setCatalogQuestion']);
+const ORDERED_ACTIONS = new Set(['presentation', 'changeStep', 'changeChapter', 'voteItem', 'setCatalogQuestion', 'skipQuestion']);
 
 function authHeaders() {
   const headers = { 'Content-Type': 'application/json' };
@@ -148,13 +148,14 @@ export function RoomProvider({ children }) {
   const voteDigital = useCallback((option, name) => dispatch('digitalVote', { option, name }), [dispatch]);
   const voteAnalog = useCallback((option, name) => dispatch('analogVote', { option, name }), [dispatch]);
   const voteChoice = useCallback((activityId, option, name) => dispatch('choiceVote', { activityId, option, name }), [dispatch]);
+  const skipQuestion = useCallback(() => dispatch('skipQuestion'), [dispatch]);
 
   return (
     <RoomContext.Provider value={{ roomState, connected, error, contentStale, joinUrl,
       setChapter, setStep, setPresentation, setJoinOpen, removeStudent, restoreRoom, listRooms, joinRoom,
       setVoteItem, submitVote, sendFloatingEmoji,
       addFloatingEmoji, voteQuiz, revealQuiz, voteLogic, activateSense, resetRoom,
-      voteProblem, voteDigital, voteAnalog, voteChoice, setCatalogQuestion, voteCatalog }}>
+      voteProblem, voteDigital, voteAnalog, voteChoice, setCatalogQuestion, voteCatalog, skipQuestion }}>
       {children}
     </RoomContext.Provider>
   );

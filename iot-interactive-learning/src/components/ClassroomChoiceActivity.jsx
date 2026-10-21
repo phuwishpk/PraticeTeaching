@@ -5,6 +5,7 @@ import { classroomChoiceActivities } from '../content/classroomChoiceActivities'
 import { answerProgress } from '../../shared/roomState';
 import { getStudentName } from '../session';
 import CountdownTimer from './CountdownTimer';
+import SkipQuestionButton from './SkipQuestionButton';
 import { SignalActivityReview } from './SignalGraphics';
 import './ClassroomChoiceActivity.css';
 
@@ -43,7 +44,10 @@ export default function ClassroomChoiceActivity({ activityId, audience = 'studen
     <section className={`classroom-choice ${teacher ? 'is-teacher' : 'is-student'}`} lang="th">
       <header className="classroom-choice-heading">
         <div><span>กิจกรรม Multiple Choice</span><h1>{activity.title}</h1></div>
-        <CountdownTimer startTime={startTime} duration={activity.durationSeconds} size={teacher ? 70 : 54} stopped={allAnswered} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          {teacher && !revealed && <SkipQuestionButton votes={votes} />}
+          <CountdownTimer startTime={startTime} duration={activity.durationSeconds} size={teacher ? 70 : 54} stopped={allAnswered} />
+        </div>
       </header>
 
       <div className="classroom-choice-question">

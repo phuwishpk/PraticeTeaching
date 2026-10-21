@@ -451,6 +451,26 @@ export function applyRoomAction(state, action) {
       requireStudent(state, p.name);
       requireValue(['eyes', 'ears', 'hands'].includes(p.sense));
       return { ...state, senses: { ...state.senses, [p.sense]: true } };
+    case 'skipQuestion': {
+      const duration = state.questionDurationMs || 30000;
+      const endedTime = Date.now() - (duration + 15000);
+      const key = state.questionKey || currentQuestionKey(state);
+      const currentStart = key ? (state.questionStarts[key] || {}) : {};
+      return {
+        ...state,
+        questionStartTime: endedTime,
+        ...(key ? {
+          questionKey: key,
+          questionStarts: {
+            ...state.questionStarts,
+            [key]: {
+              ...currentStart,
+              startedAt: endedTime,
+            },
+          },
+        } : {}),
+      };
+    }
     case 'reset': return createRoomState();
     default: throw new Error('ไม่พบคำสั่งนี้');
   }

@@ -5,6 +5,7 @@ import { problemActivity, isProblemOption } from '../content/problemActivity';
 import { answerProgress } from '../../shared/roomState';
 import { getStudentName } from '../session';
 import CountdownTimer from './CountdownTimer';
+import SkipQuestionButton from './SkipQuestionButton';
 import './ProblemActivity.css';
 
 function PlanSteps({ option }) {
@@ -44,7 +45,13 @@ export default function ProblemActivity({ audience = 'student' }) {
   };
 
   return <section className={`problem-activity ${teacher ? 'problem-teacher' : 'problem-student'}`} lang="th">
-    <header className="problem-heading"><div><span>กิจกรรมในห้องเรียน · Multiple Choice · วิเคราะห์โจทย์</span><h1>{problemActivity.title}</h1></div><CountdownTimer startTime={startTime} duration={problemActivity.durationSeconds} size={64} stopped={allAnswered} /></header>
+    <header className="problem-heading">
+      <div><span>กิจกรรมในห้องเรียน · Multiple Choice · วิเคราะห์โจทย์</span><h1>{problemActivity.title}</h1></div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        {teacher && !revealed && <SkipQuestionButton votes={votes} />}
+        <CountdownTimer startTime={startTime} duration={problemActivity.durationSeconds} size={64} stopped={allAnswered} />
+      </div>
+    </header>
     <div className="problem-scenario"><p>{problemActivity.scenario}</p><div className="problem-scene-pair">
       <div className="problem-night"><Moon aria-hidden="true" /><House aria-hidden="true" /><Lightbulb aria-hidden="true" /><strong>มืด → ไฟเปิด</strong></div>
       <div className="problem-day"><Sun aria-hidden="true" /><House aria-hidden="true" /><Lightbulb aria-hidden="true" /><strong>สว่าง → ไฟปิด</strong></div>

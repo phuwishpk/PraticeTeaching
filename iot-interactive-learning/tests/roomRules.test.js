@@ -60,6 +60,24 @@ test('an answer that arrives after the countdown is refused', () => {
   assert.throws(() => act(expired, 'choiceVote', { ...ROLES, name: 'Ann' }), /หมดเวลา/);
 });
 
+test('skipping a question closes the answer window immediately', () => {
+  let state = openActivity('roles', ['Ann', 'Bob']);
+  // Ann answers before skip
+  state = act(state, 'choiceVote', { ...ROLES, name: 'Ann' });
+  assert.equal(state.choiceVotes.roles.Ann, ROLES.option);
+
+  // Teacher skips question
+  state = act(state, 'skipQuestion');
+  assert.ok(Date.now() - state.questionStartTime >= state.questionDurationMs);
+
+  // Bob tries to answer after skip
+  assert.throws(() => act(state, 'choiceVote', { ...ROLES, name: 'Bob' }), /หมดเวลา/);
+
+  // Only Ann's score is recorded
+  assert.ok(state.chapterScores[state.chapter].Ann > 0);
+  assert.equal(state.chapterScores[state.chapter].Bob, undefined);
+});
+
 test('an answer is final once submitted, in every activity', () => {
   const rounds = [
     ['digital', 'digitalVote', { option: 'infinite' }, { option: '2_states' }],

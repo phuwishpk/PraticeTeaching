@@ -14,6 +14,7 @@ import { ImageWithModal } from '../components/ImageWithModal';
 import { lessons, sensorQuizExplanation } from '../content/lessons';
 import { sensorCatalogOptions, sensorCatalogQuestions } from '../content/sensorCatalogActivity';
 import CountdownTimer from '../components/CountdownTimer';
+import SkipQuestionButton from '../components/SkipQuestionButton';
 import DigitalExamples from '../components/DigitalExamples';
 
 // react-use was a 2 MB dependency pulled in for this one hook, and it drags nano-css in
@@ -175,6 +176,7 @@ function HostArchitecture() {
     <div className="flex-center full-screen" style={{ flexDirection: 'column', gap: '2rem' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
         <CountdownTimer startTime={roomState.questionStartTime} duration={(roomState.questionDurationMs ?? 30000) / 1000} size={70} stopped={isAllAnswered} />
+        {!showResults && <SkipQuestionButton votes={votes} />}
         <h1 className="text-glow-blue" style={{ fontSize: '3rem', margin: 0 }}>โหวต: อุปกรณ์นี้อยู่ชั้นไหน?</h1>
       </div>
       
@@ -331,7 +333,10 @@ function HostDigital() {
               สัญญาณ Digital: โลกของ 0 และ 1
             </h1>
           </div>
-          <CountdownTimer startTime={roomState.questionStartTime} duration={(roomState.questionDurationMs ?? 30000) / 1000} size={70} stopped={isAllAnswered} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            {!showResults && <SkipQuestionButton votes={votes} />}
+            <CountdownTimer startTime={roomState.questionStartTime} duration={(roomState.questionDurationMs ?? 30000) / 1000} size={70} stopped={isAllAnswered} />
+          </div>
         </div>
 
         {/* Question Box */}
@@ -447,6 +452,7 @@ function HostAnalog() {
     <div className="flex-center full-screen" style={{ flexDirection: 'column', gap: '2rem' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
         <CountdownTimer startTime={roomState.questionStartTime} duration={(roomState.questionDurationMs ?? 30000) / 1000} size={70} stopped={isAllAnswered} />
+        {!showResults && <SkipQuestionButton votes={votes} />}
         <h1 className="signal-analog-title" style={{ fontSize: '3rem', margin: 0 }}>สัญญาณค่าต่อเนื่อง (Analog)</h1>
       </div>
       
@@ -541,6 +547,7 @@ function HostCatalog() {
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', justifyContent: 'center' }}>
         <CountdownTimer startTime={roomState.questionStartTime} duration={(roomState.questionDurationMs ?? 30000) / 1000} size={70} stopped={isAllAnswered} />
+        {!isRevealed && <SkipQuestionButton votes={votes} />}
         <h1 className="text-glow-blue" style={{ fontSize: '2.2rem', margin: 0, textAlign: 'center', maxWidth: '800px', lineHeight: '1.4' }}>
           {currentQ.prompt}
         </h1>
@@ -607,6 +614,7 @@ function HostQuiz() {
     <div className="flex-center full-screen" style={{ flexDirection: 'column', gap: '2rem' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', justifyContent: 'center' }}>
         <CountdownTimer startTime={roomState.questionStartTime} duration={(roomState.questionDurationMs ?? 30000) / 1000} size={70} stopped={isAllAnswered || roomState.quizRevealed} />
+        {!isRevealed && <SkipQuestionButton votes={votes} />}
         <h1 className="text-glow-blue" style={{ fontSize: '2.5rem', margin: 0, textAlign: 'center' }}>
           "อยากทำระบบเปิดไฟหน้าบ้านอัตโนมัติตอนกลางคืน ต้องใช้เซนเซอร์อะไร?"
         </h1>
