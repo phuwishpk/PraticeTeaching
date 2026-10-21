@@ -155,7 +155,7 @@ function HostArchitecture() {
 
   const getPercent = (layer) => totalVotes === 0 ? 0 : Math.round((Object.values(votes).filter(v => v === layer).length / totalVotes) * 100);
   const { total: totalStudents, allAnswered: isAllAnswered } = answerProgress(roomState, votes);
-  const showResults = isTimeUp || isAllAnswered;
+  const showResults = isTimeUp || isAllAnswered || roomState.quizRevealed || Boolean(roomState.presentation?.answerRevealed);
 
   const items = [
     { id: 'esp32', name: 'บอร์ด ESP32', icon: '🎛️', image: '/images/esp32_board_1789207904514.jpg', correct: 'device' },
@@ -290,7 +290,7 @@ function HostDigital() {
   }, [roomState.questionStartTime, roomState.questionDurationMs]);
 
   const { total: totalStudents, allAnswered: isAllAnswered } = answerProgress(roomState, votes);
-  const showResults = isTimeUp || isAllAnswered;
+  const showResults = isTimeUp || isAllAnswered || roomState.quizRevealed || Boolean(roomState.presentation?.answerRevealed);
 
   const options = [
     {
@@ -439,7 +439,7 @@ function HostAnalog() {
   }, [roomState.questionStartTime, roomState.questionDurationMs]);
 
   const { total: totalStudents, allAnswered: isAllAnswered } = answerProgress(roomState, votes);
-  const showResults = isTimeUp || isAllAnswered;
+  const showResults = isTimeUp || isAllAnswered || roomState.quizRevealed || Boolean(roomState.presentation?.answerRevealed);
 
   const options = [
     { id: 'binary', label: 'มีแค่สถานะเปิดกับปิด (0 กับ 1)' },
@@ -527,7 +527,7 @@ function HostCatalog() {
   }, [roomState.questionStartTime, roomState.questionDurationMs, qIndex]);
 
   const { answered: totalVotesCount, total: totalStudents, allAnswered: isAllAnswered } = answerProgress(roomState, votes);
-  const isRevealed = isTimeUp || isAllAnswered;
+  const isRevealed = isTimeUp || isAllAnswered || roomState.quizRevealed || Boolean(roomState.presentation?.answerRevealed);
   const currentQ = sensorCatalogQuestions[qIndex];
 
   return (

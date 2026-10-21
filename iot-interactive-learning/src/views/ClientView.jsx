@@ -305,7 +305,7 @@ function ClientArchitecture() {
 
   const correctMap = { esp32: 'device', wifi: 'network', cloud: 'service' };
   const correctAnswer = correctMap[currentItem];
-  const showResults = isTimeUp || isAllAnswered;
+  const showResults = isTimeUp || isAllAnswered || roomState.quizRevealed || Boolean(roomState.presentation?.answerRevealed);
 
   // Track timer expiry
   useEffect(() => {
@@ -428,7 +428,7 @@ function ClientDigital() {
   const { answered: totalVotes, total: totalStudents, allAnswered: isAllAnswered } = answerProgress(roomState, allVotes);
 
   const correctAnswer = '2_states';
-  const showResults = isTimeUp || isAllAnswered;
+  const showResults = isTimeUp || isAllAnswered || roomState.quizRevealed || Boolean(roomState.presentation?.answerRevealed);
 
   useEffect(() => {
     setIsTimeUp(false);
@@ -579,7 +579,7 @@ function ClientAnalog() {
   const { answered: totalVotes, total: totalStudents, allAnswered: isAllAnswered } = answerProgress(roomState, allVotes);
 
   const correctAnswer = 'continuous';
-  const showResults = isTimeUp || isAllAnswered;
+  const showResults = isTimeUp || isAllAnswered || roomState.quizRevealed || Boolean(roomState.presentation?.answerRevealed);
 
   useEffect(() => {
     setIsTimeUp(false);
@@ -685,7 +685,7 @@ function ClientCatalog() {
   const { answered: totalVotes, total: totalStudents, allAnswered: isAllAnswered } = answerProgress(roomState, allVotes);
 
   const correctAnswer = sensorCatalogQuestions[qIndex].correct;
-  const showResults = isTimeUp || isAllAnswered;
+  const showResults = isTimeUp || isAllAnswered || roomState.quizRevealed || Boolean(roomState.presentation?.answerRevealed);
 
   useEffect(() => {
     setIsTimeUp(false);

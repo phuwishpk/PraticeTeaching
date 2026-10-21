@@ -35,7 +35,7 @@ export default function ProblemActivity({ audience = 'student' }) {
   const { answered: total, total: students, allAnswered } = answerProgress(roomState, votes);
   const myVote = teacher ? undefined : votes[name];
   const expired = expiredAt === startTime;
-  const revealed = expired || allAnswered;
+  const revealed = expired || allAnswered || roomState.quizRevealed || Boolean(roomState.presentation?.answerRevealed);
   const answer = problemActivity.options.find(option => option.id === problemActivity.correctId);
 
   const submit = async id => {

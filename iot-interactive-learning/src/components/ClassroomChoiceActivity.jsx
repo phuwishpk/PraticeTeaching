@@ -32,7 +32,7 @@ export default function ClassroomChoiceActivity({ activityId, audience = 'studen
   }, [activity.durationSeconds, startTime]);
 
   const expired = expiredAt === startTime;
-  const revealed = expired || allAnswered;
+  const revealed = expired || allAnswered || roomState.quizRevealed || Boolean(roomState.presentation?.answerRevealed);
 
   const submit = async optionId => {
     if (teacher || !name || myVote || submitting || revealed || !connected) return;

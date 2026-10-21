@@ -95,7 +95,10 @@ export function RoomProvider({ children }) {
   }, [acceptSnapshot]);
 
   const setChapter = useCallback(chapter => dispatch('changeChapter', { chapter }), [dispatch]);
-  const setStep = useCallback(step => dispatch('changeStep', { step }), [dispatch]);
+  const setStep = useCallback(step => {
+    if (roomState.quizRevealed) dispatch('quizReveal', { reveal: false });
+    return dispatch('changeStep', { step });
+  }, [dispatch, roomState.quizRevealed]);
   const setPresentation = useCallback(patch => dispatch('presentation', { chapter: roomState.chapter, step: roomState.step, ...patch }), [dispatch, roomState.chapter, roomState.step]);
   const setJoinOpen = useCallback(open => dispatch('setJoinOpen', { open }), [dispatch]);
   const removeStudent = useCallback(name => dispatch('removeStudent', { name }), [dispatch]);
@@ -132,9 +135,15 @@ export function RoomProvider({ children }) {
       return { ok: false, error: 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้' };
     }
   }, [acceptSnapshot]);
-  const setVoteItem = useCallback(item => dispatch('voteItem', { item }), [dispatch]);
+  const setVoteItem = useCallback(item => {
+    if (roomState.quizRevealed) dispatch('quizReveal', { reveal: false });
+    return dispatch('voteItem', { item });
+  }, [dispatch, roomState.quizRevealed]);
   const submitVote = useCallback((item, layer, name) => dispatch('architectureVote', { item, layer, name }), [dispatch]);
-  const setCatalogQuestion = useCallback(question => dispatch('setCatalogQuestion', { question }), [dispatch]);
+  const setCatalogQuestion = useCallback(question => {
+    if (roomState.quizRevealed) dispatch('quizReveal', { reveal: false });
+    return dispatch('setCatalogQuestion', { question });
+  }, [dispatch, roomState.quizRevealed]);
   const voteCatalog = useCallback((option, name) => dispatch('catalogVote', { option, name }), [dispatch]);
   const sendFloatingEmoji = useCallback((emoji, name) => dispatch('emoji', { emoji, name }), [dispatch]);
   const addFloatingEmoji = useCallback(emoji => dispatch('emoji', { emoji }), [dispatch]);
@@ -148,7 +157,40 @@ export function RoomProvider({ children }) {
   const voteDigital = useCallback((option, name) => dispatch('digitalVote', { option, name }), [dispatch]);
   const voteAnalog = useCallback((option, name) => dispatch('analogVote', { option, name }), [dispatch]);
   const voteChoice = useCallback((activityId, option, name) => dispatch('choiceVote', { activityId, option, name }), [dispatch]);
-  const skipQuestion = useCallback(() => dispatch('skipQuestion'), [dispatch]);
+  const skipQuestion = useCallback(async () => {
+    try {
+      const response = await fetch('/api/room/actions', {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ type: 'skipQuestion', payload: {} }),
+        signal: AbortSignal.timeout(8000),
+      });
+      const result = await response.json();
+      if (response.ok) {
+        acceptSnapshot(result);
+        setError('');
+        return true;
+      }
+      // If server process is older and does not know 'skipQuestion', use quizReveal + answerRevealed
+      setError('');
+      await dispatch('quizReveal', { reveal: true });
+      await dispatch('presentation', {
+        chapter: roomState.chapter,
+        step: roomState.step,
+        answerRevealed: true,
+      });
+      return true;
+    } catch {
+      setError('');
+      await dispatch('quizReveal', { reveal: true });
+      await dispatch('presentation', {
+        chapter: roomState.chapter,
+        step: roomState.step,
+        answerRevealed: true,
+      });
+      return true;
+    }
+  }, [acceptSnapshot, dispatch, roomState.chapter, roomState.step]);
 
   return (
     <RoomContext.Provider value={{ roomState, connected, error, contentStale, joinUrl,
